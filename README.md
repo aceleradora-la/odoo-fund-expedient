@@ -1,6 +1,15 @@
 # Odoo - Expedientes para Fundación
 
-Módulos de Odoo 18 para la gestión de expedientes en una fundación: expedientes con etapas, partidas presupuestarias, relación con compras y proyectos, y validación por niveles.
+Módulos de Odoo para la gestión de expedientes en una fundación: expedientes con etapas, partidas presupuestarias, relación con compras y proyectos, y validación por niveles.
+
+## Ramas
+
+| Rama   | Versión Odoo | Manifest      |
+|--------|--------------|---------------|
+| **18.0** | Odoo 18      | 18.0.1.0.0   |
+| **19.0** | Odoo 19      | 19.0.1.0.0   |
+
+Clonar o descargar la rama que coincida con tu versión de Odoo.
 
 ## Módulos
 
@@ -14,7 +23,7 @@ Módulos de Odoo 18 para la gestión de expedientes en una fundación: expedient
 1. Añadir esta ruta como directorio de addons en Odoo (solo la ruta que contiene `fund_expedient` y `expedient_tier_validation`).
 2. Actualizar lista de aplicaciones.
 3. Instalar **Fundación - Expedientes**.
-4. Opcional: instalar **base_tier_validation** (OCA server-ux 18.0) y **Expedientes - Validación por niveles**.
+4. Opcional: instalar **base_tier_validation** (OCA server-ux, rama según tu Odoo) y **Expedientes - Validación por niveles**.
 
 ## Dependencias Odoo
 
