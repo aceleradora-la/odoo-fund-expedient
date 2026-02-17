@@ -151,7 +151,7 @@ class FundExpedient(models.Model):
             "type": "ir.actions.act_window",
             "name": "Solicitudes de cotización",
             "res_model": "purchase.order",
-            "view_mode": "tree,form",
+            "view_mode": "list,form",
             "domain": [("expedient_id", "=", self.id)],
             "context": {"default_expedient_id": self.id},
         }

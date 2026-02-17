@@ -4,13 +4,13 @@
         <field name="name">fund.expedient.stage.tree</field>
         <field name="model">fund.expedient.stage</field>
         <field name="arch" type="xml">
-            <tree string="Etapas de expediente" create="1" delete="1">
+            <list string="Etapas de expediente" create="1" delete="1">
                 <field name="sequence" widget="handle"/>
                 <field name="name"/>
                 <field name="state_type"/>
                 <field name="fold"/>
                 <field name="report_id" optional="show"/>
-            </tree>
+            </list>
         </field>
     </record>
 </odoo>
