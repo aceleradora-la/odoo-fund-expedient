@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <record id="encuadre_compra_simple" model="fund.expedient.encuadre">
+            <field name="name">Compra Simple</field>
+            <field name="sequence">1</field>
+        </record>
+        <record id="encuadre_compulsa_abreviada" model="fund.expedient.encuadre">
+            <field name="name">Compulsa Abreviada</field>
+            <field name="sequence">2</field>
+        </record>
+        <record id="encuadre_licitacion" model="fund.expedient.encuadre">
+            <field name="name">Licitación</field>
+            <field name="sequence">3</field>
+        </record>
+    </data>
+</odoo>

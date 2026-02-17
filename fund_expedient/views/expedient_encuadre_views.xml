@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_expedient_encuadre_tree" model="ir.ui.view">
+        <field name="name">fund.expedient.encuadre.tree</field>
+        <field name="model">fund.expedient.encuadre</field>
+        <field name="arch" type="xml">
+            <tree string="Encuadres" create="1" delete="1">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+            </tree>
+        </field>
+    </record>
+</odoo>

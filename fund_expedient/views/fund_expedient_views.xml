@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_fund_expedient_list" model="ir.ui.view">
+        <field name="name">fund.expedient.list</field>
+        <field name="model">fund.expedient</field>
+        <field name="arch" type="xml">
+            <list string="Expedientes" multi_edit="1">
+                <field name="number"/>
+                <field name="request_date"/>
+                <field name="requestor_id"/>
+                <field name="recommended_supplier_id"/>
+                <field name="budget_position_id"/>
+                <field name="encuadre_id"/>
+                <field name="stage_id"/>
+                <field name="state" column_invisible="1"/>
+                <field name="project_id"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_fund_expedient_kanban" model="ir.ui.view">
+        <field name="name">fund.expedient.kanban</field>
+        <field name="model">fund.expedient</field>
+        <field name="arch" type="xml">
+            <kanban default_group_by="stage_id" class="o_kanban_small_column">
+                <field name="number"/>
+                <field name="request_date"/>
+                <field name="requestor_id"/>
+                <field name="recommended_supplier_id"/>
+                <field name="stage_id"/>
+                <field name="state"/>
+                <field name="description"/>
+                <templates>
+                    <t t-name="card">
+                        <div class="d-flex flex-column">
+                            <strong><field name="number"/></strong>
+                            <field name="description" widget="text" class="text-muted mt-1" style="font-size: 0.9em; max-height: 3em; overflow: hidden;"/>
+                            <div class="mt-2">
+                                <field name="request_date" widget="date"/>
+                                <field name="requestor_id"/>
+                            </div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <record id="view_fund_expedient_form" model="ir.ui.view">
+        <field name="name">fund.expedient.form</field>
+        <field name="model">fund.expedient</field>
+        <field name="arch" type="xml">
+            <form string="Expediente">
+                <header/>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_purchase_orders" type="object"
+                                class="oe_stat_button" icon="fa-shopping-cart"
+                                invisible="purchase_order_count == 0">
+                            <field name="purchase_order_count" widget="statinfo" string="Solicitudes"/>
+                        </button>
+                    </div>
+                    <widget name="web_ribbon" title="Cancelado" bg_color="text-bg-danger" invisible="state != 'cancel'"/>
+                    <group>
+                        <group string="Identificación">
+                            <field name="number" readonly="1"/>
+                            <field name="stage_id" widget="statusbar" options="{'clickable': '1'}"/>
+                            <field name="state" invisible="1"/>
+                            <field name="request_date"/>
+                            <field name="estimated_need_date"/>
+                            <field name="requestor_id"/>
+                            <field name="recommended_supplier_id"/>
+                        </group>
+                        <group string="Clasificación">
+                            <field name="budget_position_id"/>
+                            <field name="encuadre_id"/>
+                            <field name="project_id"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Descripción" name="description">
+                            <field name="description" placeholder="Descripción de la solicitud..." nolabel="1"/>
+                        </page>
+                        <page string="Expedientes relacionados" name="children">
+                            <field name="parent_id"/>
+                            <field name="child_ids" nolabel="1" readonly="1">
+                                <tree create="1" delete="1" edit="1">
+                                    <field name="number"/>
+                                    <field name="request_date"/>
+                                    <field name="stage_id"/>
+                                    <field name="requestor_id"/>
+                                </tree>
+                            </field>
+                        </page>
+                        <page string="Solicitudes de cotización" name="purchases">
+                            <field name="purchase_order_ids" nolabel="1">
+                                <tree create="1" delete="0" open="1">
+                                    <field name="name"/>
+                                    <field name="partner_id"/>
+                                    <field name="date_order"/>
+                                    <field name="state"/>
+                                </tree>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_fund_expedient" model="ir.actions.act_window">
+        <field name="name">Expedientes</field>
+        <field name="res_model">fund.expedient</field>
+        <field name="view_mode">kanban,list,form</field>
+        <field name="search_view_id" ref="view_fund_expedient_search"/>
+        <field name="context">{'search_default_my_expedients': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Crear un expediente
+            </p>
+            <p>
+                Los expedientes permiten gestionar solicitudes con etapas, partida presupuestaria,
+                relación con solicitudes de cotización y proyectos.
+            </p>
+        </field>
+    </record>
+
+    <record id="view_fund_expedient_search" model="ir.ui.view">
+        <field name="name">fund.expedient.search</field>
+        <field name="model">fund.expedient</field>
+        <field name="arch" type="xml">
+            <search string="Buscar expedientes">
+                <field name="number"/>
+                <field name="description"/>
+                <field name="requestor_id"/>
+                <field name="recommended_supplier_id"/>
+                <field name="budget_position_id"/>
+                <field name="encuadre_id"/>
+                <field name="project_id"/>
+                <filter string="Mis expedientes" name="my_expedients" domain="[('create_uid', '=', uid)]"/>
+                <separator/>
+                <filter string="Por aprobar" name="to_approve" domain="[('state', '=', 'to_approve')]"/>
+                <filter string="Aprobados" name="approved" domain="[('state', '=', 'approved')]"/>
+                <group expand="0" string="Agrupar por">
+                    <filter string="Etapa" name="group_stage" context="{'group_by': 'stage_id'}"/>
+                    <filter string="Solicitante" name="group_requestor" context="{'group_by': 'requestor_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+</odoo>

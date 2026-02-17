@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_project_form_expedient" model="ir.ui.view">
+        <field name="name">project.project.form.expedient</field>
+        <field name="model">project.project</field>
+        <field name="inherit_id" ref="project.edit_project"/>
+        <field name="arch" type="xml">
+            <!-- Añadir botón de expedientes: intentar dentro de button_box si existe -->
+            <xpath expr="//div[contains(@class, 'oe_button_box')]" position="inside">
+                <button name="action_view_expedients" type="object"
+                        class="oe_stat_button" icon="fa-folder-open"
+                        invisible="expedient_count == 0">
+                    <field name="expedient_count" widget="statinfo" string="Expedientes"/>
+                </button>
+            </xpath>
+        </field>
+    </record>
+</odoo>

@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_budget_position_category_tree" model="ir.ui.view">
+        <field name="name">fund.budget.position.category.tree</field>
+        <field name="model">fund.budget.position.category</field>
+        <field name="arch" type="xml">
+            <tree string="Categorías de partida">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_budget_position_tree" model="ir.ui.view">
+        <field name="name">fund.budget.position.tree</field>
+        <field name="model">fund.budget.position</field>
+        <field name="arch" type="xml">
+            <tree string="Partidas presupuestarias" create="1" delete="1">
+                <field name="sequence" widget="handle"/>
+                <field name="code"/>
+                <field name="name"/>
+                <field name="type"/>
+                <field name="budget_assignment_allowed"/>
+                <field name="category_id"/>
+                <field name="parent_id" optional="hide"/>
+            </tree>
+        </field>
+    </record>
+    <record id="view_budget_position_form" model="ir.ui.view">
+        <field name="name">fund.budget.position.form</field>
+        <field name="model">fund.budget.position</field>
+        <field name="arch" type="xml">
+            <form string="Partida presupuestaria">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="code"/>
+                            <field name="name"/>
+                            <field name="type"/>
+                            <field name="budget_assignment_allowed"/>
+                            <field name="category_id"/>
+                            <field name="parent_id"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+</odoo>

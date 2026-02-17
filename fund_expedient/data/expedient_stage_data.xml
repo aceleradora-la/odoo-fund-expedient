@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <record id="stage_expedient_draft" model="fund.expedient.stage">
+            <field name="name">Borrador</field>
+            <field name="sequence">1</field>
+            <field name="state_type">draft</field>
+        </record>
+        <record id="stage_expedient_in_progress" model="fund.expedient.stage">
+            <field name="name">En progreso</field>
+            <field name="sequence">5</field>
+            <field name="state_type">in_progress</field>
+        </record>
+        <record id="stage_expedient_to_approve" model="fund.expedient.stage">
+            <field name="name">Por aprobar</field>
+            <field name="sequence">10</field>
+            <field name="state_type">to_approve</field>
+        </record>
+        <record id="stage_expedient_approved" model="fund.expedient.stage">
+            <field name="name">Aprobado</field>
+            <field name="sequence">15</field>
+            <field name="state_type">approved</field>
+            <field name="fold">True</field>
+        </record>
+        <record id="stage_expedient_cancel" model="fund.expedient.stage">
+            <field name="name">Cancelado</field>
+            <field name="sequence">20</field>
+            <field name="state_type">cancel</field>
+            <field name="fold">True</field>
+        </record>
+    </data>
+</odoo>

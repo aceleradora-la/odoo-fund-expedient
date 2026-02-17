@@ -1,0 +1,157 @@
+# Copyright 2025
+# License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
+
+from odoo import api, fields, models
+
+
+class FundExpedient(models.Model):
+    _name = "fund.expedient"
+    _description = "Expediente"
+    _inherit = ["mail.thread", "mail.activity.mixin"]
+    _order = "id desc"
+    _rec_names_search = ["number", "description"]
+
+    number = fields.Char(
+        string="Número",
+        copy=False,
+        readonly=True,
+        index=True,
+    )
+    request_date = fields.Date(
+        string="Fecha de solicitud",
+        default=fields.Date.context_today,
+        tracking=True,
+    )
+    estimated_need_date = fields.Date(
+        string="Fecha estimada de la necesidad",
+        tracking=True,
+    )
+    recommended_supplier_id = fields.Many2one(
+        "res.partner",
+        string="Proveedor recomendado",
+        tracking=True,
+        domain=[("is_company", "=", True)],
+    )
+    requestor_id = fields.Many2one(
+        "hr.employee",
+        string="Solicitante",
+        tracking=True,
+    )
+    budget_position_id = fields.Many2one(
+        "fund.budget.position",
+        string="Partida presupuestaria asignada",
+        tracking=True,
+        domain="[('budget_assignment_allowed', '=', True)]",
+    )
+    encuadre_id = fields.Many2one(
+        "fund.expedient.encuadre",
+        string="Encuadre",
+        tracking=True,
+    )
+    description = fields.Text(
+        string="Descripción de la solicitud",
+        tracking=True,
+    )
+    stage_id = fields.Many2one(
+        "fund.expedient.stage",
+        string="Etapa",
+        group_expand="_read_group_stage_ids",
+        tracking=True,
+        copy=False,
+        ondelete="restrict",
+        domain="[('company_id', 'in', [False, company_id])]",
+        default=lambda self: self._default_stage_id(),
+    )
+    state = fields.Selection(
+        selection=[
+            ("draft", "Borrador"),
+            ("in_progress", "En progreso"),
+            ("to_approve", "Por aprobar"),
+            ("approved", "Aprobado"),
+            ("cancel", "Cancelado"),
+        ],
+        string="Estado",
+        compute="_compute_state",
+        store=True,
+        tracking=True,
+        copy=False,
+    )
+    company_id = fields.Many2one(
+        "res.company",
+        default=lambda self: self.env.company,
+        required=True,
+    )
+    # Relación con otros expedientes
+    parent_id = fields.Many2one(
+        "fund.expedient",
+        string="Expediente padre",
+        ondelete="set null",
+        index=True,
+    )
+    child_ids = fields.One2many(
+        "fund.expedient",
+        "parent_id",
+        string="Expedientes relacionados",
+    )
+    # Relaciones con Purchase y Project (campos inversos definidos en purchase_order y project)
+    purchase_order_ids = fields.One2many(
+        "purchase.order",
+        "expedient_id",
+        string="Solicitudes de cotización",
+        copy=False,
+    )
+    purchase_order_count = fields.Integer(
+        compute="_compute_purchase_order_count",
+        string="Nº Solicitudes",
+    )
+    project_id = fields.Many2one(
+        "project.project",
+        string="Proyecto",
+        copy=False,
+    )
+
+    @api.model
+    def _default_stage_id(self):
+        stage = self.env["fund.expedient.stage"].search(
+            [("state_type", "=", "draft")],
+            order="sequence",
+            limit=1,
+        )
+        return stage.id if stage else False
+
+    @api.depends("stage_id", "stage_id.state_type")
+    def _compute_state(self):
+        for rec in self:
+            if rec.stage_id:
+                rec.state = rec.stage_id.state_type or "draft"
+            else:
+                rec.state = "draft"
+
+    def _read_group_stage_ids(self, stages, domain, order):
+        return stages.search(
+            domain or [],
+            order=order,
+        )
+
+    @api.depends("purchase_order_ids")
+    def _compute_purchase_order_count(self):
+        for rec in self:
+            rec.purchase_order_count = len(rec.purchase_order_ids)
+
+    @api.model
+    def create(self, vals):
+        if vals.get("number", "/") == "/":
+            seq = self.env["ir.sequence"].next_by_code("fund.expedient") or "/"
+            vals["number"] = seq
+        return super().create(vals)
+
+    def action_view_purchase_orders(self):
+        self.ensure_one()
+        return {
+            "type": "ir.actions.act_window",
+            "name": "Solicitudes de cotización",
+            "res_model": "purchase.order",
+            "view_mode": "tree,form",
+            "domain": [("expedient_id", "=", self.id)],
+            "context": {"default_expedient_id": self.id},
+        }
