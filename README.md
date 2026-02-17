@@ -6,8 +6,8 @@ Módulos de Odoo para la gestión de expedientes en una fundación: expedientes 
 
 | Rama   | Versión Odoo | Manifest      |
 |--------|--------------|---------------|
-| **18.0** | Odoo 18      | 18.0.1.0.0   |
-| **19.0** | Odoo 19      | 19.0.1.0.0   |
+| **18.0** | Odoo 18      | 18.0.1.0   |
+| **19.0** | Odoo 19      | 19.0.1.0   |
 
 Clonar o descargar la rama que coincida con tu versión de Odoo.
 
