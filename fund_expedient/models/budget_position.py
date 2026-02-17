@@ -73,6 +73,7 @@ class BudgetPosition(models.Model):
                             "En una misma rama solo una partida puede tener "
                             "'Permite asignación presupuestaria'."
                         )
+                    )
                 children_allowed = self.search(
                     [
                         ("id", "child_of", rec.id),
