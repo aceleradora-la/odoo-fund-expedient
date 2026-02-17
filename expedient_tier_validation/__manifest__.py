@@ -4,7 +4,7 @@
 {
     "name": "Expedientes - Validación por niveles",
     "summary": "Extiende los expedientes con un proceso de validación por niveles (tier validation).",
-    "version": "18.0.1.0.0",
+    "version": "18.0.1.0",
     "category": "Administration",
     "website": "",
     "author": "",
