@@ -4,10 +4,10 @@
         <field name="name">fund.expedient.encuadre.tree</field>
         <field name="model">fund.expedient.encuadre</field>
         <field name="arch" type="xml">
-            <tree string="Encuadres" create="1" delete="1">
+            <list string="Encuadres" create="1" delete="1">
                 <field name="sequence" widget="handle"/>
                 <field name="name"/>
-            </tree>
+            </list>
         </field>
     </record>
 </odoo>

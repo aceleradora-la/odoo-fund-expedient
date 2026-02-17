@@ -86,22 +86,22 @@
                         <page string="Expedientes relacionados" name="children">
                             <field name="parent_id"/>
                             <field name="child_ids" nolabel="1" readonly="1">
-                                <tree create="1" delete="1" edit="1">
+                                <list create="1" delete="1" edit="1">
                                     <field name="number"/>
                                     <field name="request_date"/>
                                     <field name="stage_id"/>
                                     <field name="requestor_id"/>
-                                </tree>
+                                </list>
                             </field>
                         </page>
                         <page string="Solicitudes de cotización" name="purchases">
                             <field name="purchase_order_ids" nolabel="1">
-                                <tree create="1" delete="0" open="1">
+                                <list create="1" delete="0" open="0">
                                     <field name="name"/>
                                     <field name="partner_id"/>
                                     <field name="date_order"/>
                                     <field name="state"/>
-                                </tree>
+                                </list>
                             </field>
                         </page>
                     </notebook>
