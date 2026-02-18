@@ -112,23 +112,6 @@
         </field>
     </record>
 
-    <record id="action_fund_expedient" model="ir.actions.act_window">
-        <field name="name">Expedientes</field>
-        <field name="res_model">fund.expedient</field>
-        <field name="view_mode">kanban,list,form</field>
-        <field name="search_view_id" ref="view_fund_expedient_search"/>
-        <field name="context">{'search_default_my_expedients': 1}</field>
-        <field name="help" type="html">
-            <p class="o_view_nocontent_smiling_face">
-                Crear un expediente
-            </p>
-            <p>
-                Los expedientes permiten gestionar solicitudes con etapas, partida presupuestaria,
-                relación con solicitudes de cotización y proyectos.
-            </p>
-        </field>
-    </record>
-
     <record id="view_fund_expedient_search" model="ir.ui.view">
         <field name="name">fund.expedient.search</field>
         <field name="model">fund.expedient</field>
@@ -150,6 +133,23 @@
                     <filter string="Solicitante" name="group_requestor" context="{'group_by': 'requestor_id'}"/>
                 </group>
             </search>
+        </field>
+    </record>
+
+    <record id="action_fund_expedient" model="ir.actions.act_window">
+        <field name="name">Expedientes</field>
+        <field name="res_model">fund.expedient</field>
+        <field name="view_mode">kanban,list,form</field>
+        <field name="search_view_id" ref="view_fund_expedient_search"/>
+        <field name="context">{'search_default_my_expedients': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Crear un expediente
+            </p>
+            <p>
+                Los expedientes permiten gestionar solicitudes con etapas, partida presupuestaria,
+                relación con solicitudes de cotización y proyectos.
+            </p>
         </field>
     </record>
 </odoo>
