@@ -5,7 +5,7 @@
         <field name="model">fund.expedient</field>
         <field name="type">list</field>
         <field name="arch" type="xml">
-            <list string="Expedientes" multi_edit="1">
+            <list string="Expedientes" multi_edit="1" create="1">
                 <field name="number"/>
                 <field name="request_date"/>
                 <field name="requestor_id"/>
@@ -24,7 +24,7 @@
         <field name="name">fund.expedient.kanban</field>
         <field name="model">fund.expedient</field>
         <field name="arch" type="xml">
-            <kanban default_group_by="stage_id" class="o_kanban_small_column">
+            <kanban default_group_by="stage_id" class="o_kanban_small_column" create="1">
                 <field name="number"/>
                 <field name="request_date"/>
                 <field name="requestor_id"/>

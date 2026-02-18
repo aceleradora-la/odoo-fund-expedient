@@ -19,26 +19,53 @@ class ExpedientEncuadre(models.Model):
 
     @api.model
     def init_expedient_encuadre_view(self):
-        """Crear vista lista de encuadres vía código (Odoo 18 list vs tree)."""
+        """Crear vistas de encuadres vía código (Odoo 18 list vs tree)."""
         module = "fund_expedient"
-        if self.env["ir.model.data"].search(
+        View = self.env["ir.ui.view"]
+        # Vista lista
+        if not self.env["ir.model.data"].search(
             [("module", "=", module), ("name", "=", "view_expedient_encuadre_tree")]
         ):
-            return
-        view = self.env["ir.ui.view"].create({
-            "name": "fund.expedient.encuadre.list",
-            "model": "fund.expedient.encuadre",
-            "type": "list",
-            "arch": """<?xml version="1.0"?>
-<list string="Encuadres" create="1" delete="1">
+            view = View.create({
+                "name": "fund.expedient.encuadre.list",
+                "model": "fund.expedient.encuadre",
+                "type": "list",
+                "arch": """<?xml version="1.0"?>
+<list string="Encuadres" create="1" delete="1" edit="1">
     <field name="sequence" widget="handle"/>
     <field name="name"/>
 </list>""",
-        })
-        self.env["ir.model.data"].create({
-            "name": "view_expedient_encuadre_tree",
-            "module": module,
-            "model": "ir.ui.view",
-            "res_id": view.id,
-            "noupdate": True,
-        })
+            })
+            self.env["ir.model.data"].create({
+                "name": "view_expedient_encuadre_tree",
+                "module": module,
+                "model": "ir.ui.view",
+                "res_id": view.id,
+                "noupdate": True,
+            })
+        # Vista formulario para editar encuadres
+        if not self.env["ir.model.data"].search(
+            [("module", "=", module), ("name", "=", "view_expedient_encuadre_form")]
+        ):
+            form_view = View.create({
+                "name": "fund.expedient.encuadre.form",
+                "model": "fund.expedient.encuadre",
+                "type": "form",
+                "arch": """<?xml version="1.0"?>
+<form string="Encuadre">
+    <sheet>
+        <group>
+            <field name="name"/>
+            <field name="sequence"/>
+            <field name="company_id" groups="base.group_multi_company"/>
+        </group>
+    </sheet>
+</form>""",
+            })
+            self.env["ir.model.data"].create({
+                "name": "view_expedient_encuadre_form",
+                "module": module,
+                "model": "ir.ui.view",
+                "res_id": form_view.id,
+                "noupdate": True,
+            })

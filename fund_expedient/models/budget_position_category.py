@@ -26,7 +26,7 @@ class BudgetPositionCategory(models.Model):
                 "model": "fund.budget.position.category",
                 "type": "list",
                 "arch": """<?xml version="1.0"?>
-<list string="Categorías de partida">
+<list string="Categorías de partida" create="1" delete="1" edit="1">
     <field name="sequence" widget="handle"/>
     <field name="name"/>
 </list>""",
@@ -41,6 +41,28 @@ class BudgetPositionCategory(models.Model):
                     "noupdate": True,
                 }
             )
+            # Vista formulario categorías
+            form_view = View.create({
+                "name": "fund.budget.position.category.form",
+                "model": "fund.budget.position.category",
+                "type": "form",
+                "arch": """<?xml version="1.0"?>
+<form string="Categoría de partida">
+    <sheet>
+        <group>
+            <field name="name"/>
+            <field name="sequence"/>
+        </group>
+    </sheet>
+</form>""",
+            })
+            self.env["ir.model.data"].create({
+                "name": "view_budget_position_category_form",
+                "module": module,
+                "model": "ir.ui.view",
+                "res_id": form_view.id,
+                "noupdate": True,
+            })
 
         # Vista lista partidas
         if not self.env["ir.model.data"].search(

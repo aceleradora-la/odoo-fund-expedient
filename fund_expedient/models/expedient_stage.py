@@ -42,29 +42,63 @@ class ExpedientStage(models.Model):
 
     @api.model
     def init_expedient_stage_view(self):
-        """Crear vista lista de etapas vía código (Odoo 18 list vs tree)."""
+        """Crear vistas de etapas vía código (Odoo 18 list vs tree)."""
         module = "fund_expedient"
-        if self.env["ir.model.data"].search(
+        View = self.env["ir.ui.view"]
+        # Vista lista
+        if not self.env["ir.model.data"].search(
             [("module", "=", module), ("name", "=", "view_expedient_stage_tree")]
         ):
-            return
-        view = self.env["ir.ui.view"].create({
-            "name": "fund.expedient.stage.list",
-            "model": "fund.expedient.stage",
-            "type": "list",
-            "arch": """<?xml version="1.0"?>
-<list string="Etapas de expediente" create="1" delete="1">
+            view = View.create({
+                "name": "fund.expedient.stage.list",
+                "model": "fund.expedient.stage",
+                "type": "list",
+                "arch": """<?xml version="1.0"?>
+<list string="Etapas de expediente" create="1" delete="1" edit="1">
     <field name="sequence" widget="handle"/>
     <field name="name"/>
     <field name="state_type"/>
     <field name="fold"/>
     <field name="report_id" optional="show"/>
 </list>""",
-        })
-        self.env["ir.model.data"].create({
-            "name": "view_expedient_stage_tree",
-            "module": module,
-            "model": "ir.ui.view",
-            "res_id": view.id,
-            "noupdate": True,
-        })
+            })
+            self.env["ir.model.data"].create({
+                "name": "view_expedient_stage_tree",
+                "module": module,
+                "model": "ir.ui.view",
+                "res_id": view.id,
+                "noupdate": True,
+            })
+        # Vista formulario para editar etapas
+        if not self.env["ir.model.data"].search(
+            [("module", "=", module), ("name", "=", "view_expedient_stage_form")]
+        ):
+            form_view = View.create({
+                "name": "fund.expedient.stage.form",
+                "model": "fund.expedient.stage",
+                "type": "form",
+                "arch": """<?xml version="1.0"?>
+<form string="Etapa de expediente">
+    <sheet>
+        <group>
+            <group>
+                <field name="name"/>
+                <field name="sequence"/>
+                <field name="state_type"/>
+                <field name="fold"/>
+            </group>
+            <group>
+                <field name="report_id"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+            </group>
+        </group>
+    </sheet>
+</form>""",
+            })
+            self.env["ir.model.data"].create({
+                "name": "view_expedient_stage_form",
+                "module": module,
+                "model": "ir.ui.view",
+                "res_id": form_view.id,
+                "noupdate": True,
+            })
