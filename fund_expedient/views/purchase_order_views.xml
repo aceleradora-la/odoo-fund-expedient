@@ -6,7 +6,7 @@
         <field name="inherit_id" ref="purchase.purchase_order_form"/>
         <field name="arch" type="xml">
             <xpath expr="//field[@name='partner_ref']" position="after">
-                <field name="expedient_id" options="{'no_create': True}"/>
+                <field name="expedient_ids" widget="many2many_tags" options="{'no_create': True}"/>
             </xpath>
         </field>
     </record>

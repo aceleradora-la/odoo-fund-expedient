@@ -14,7 +14,7 @@
                 <field name="encuadre_id"/>
                 <field name="stage_id"/>
                 <field name="state" column_invisible="1"/>
-                <field name="project_id"/>
+                <field name="project_ids" widget="many2many_tags"/>
                 <field name="company_id" groups="base.group_multi_company"/>
             </list>
         </field>
@@ -57,9 +57,18 @@
                 <sheet>
                     <div class="oe_button_box" name="button_box">
                         <button name="action_view_purchase_orders" type="object"
-                                class="oe_stat_button" icon="fa-shopping-cart"
-                                invisible="purchase_order_count == 0">
-                            <field name="purchase_order_count" widget="statinfo" string="Solicitudes"/>
+                                class="oe_stat_button" icon="fa-shopping-cart">
+                            <div class="o_field_widget o_stat_info">
+                                <span class="o_stat_value"><field name="purchase_order_count"/></span>
+                                <span class="o_stat_text">Solicitudes</span>
+                            </div>
+                        </button>
+                        <button name="action_view_projects" type="object"
+                                class="oe_stat_button" icon="fa-folder-open">
+                            <div class="o_field_widget o_stat_info">
+                                <span class="o_stat_value"><field name="project_count"/></span>
+                                <span class="o_stat_text">Proyectos</span>
+                            </div>
                         </button>
                     </div>
                     <widget name="web_ribbon" title="Cancelado" bg_color="text-bg-danger" invisible="state != 'cancel'"/>
@@ -76,7 +85,7 @@
                         <group string="Clasificación">
                             <field name="budget_position_id"/>
                             <field name="encuadre_id"/>
-                            <field name="project_id"/>
+                            <field name="project_ids" widget="many2many_tags"/>
                             <field name="company_id" groups="base.group_multi_company"/>
                         </group>
                     </group>
@@ -123,7 +132,7 @@
                 <field name="recommended_supplier_id"/>
                 <field name="budget_position_id"/>
                 <field name="encuadre_id"/>
-                <field name="project_id"/>
+                <field name="project_ids"/>
                 <filter string="Mis expedientes" name="my_expedients" domain="[('create_uid', '=', uid)]"/>
                 <separator/>
                 <filter string="Por aprobar" name="to_approve" domain="[('state', '=', 'to_approve')]"/>

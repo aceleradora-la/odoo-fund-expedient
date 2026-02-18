@@ -8,9 +8,11 @@
             <!-- Añadir botón de expedientes: intentar dentro de button_box si existe -->
             <xpath expr="//div[contains(@class, 'oe_button_box')]" position="inside">
                 <button name="action_view_expedients" type="object"
-                        class="oe_stat_button" icon="fa-folder-open"
-                        invisible="expedient_count == 0">
-                    <field name="expedient_count" widget="statinfo" string="Expedientes"/>
+                        class="oe_stat_button" icon="fa-folder-open">
+                    <div class="o_field_widget o_stat_info">
+                        <span class="o_stat_value"><field name="expedient_count"/></span>
+                        <span class="o_stat_text">Expedientes</span>
+                    </div>
                 </button>
             </xpath>
         </field>

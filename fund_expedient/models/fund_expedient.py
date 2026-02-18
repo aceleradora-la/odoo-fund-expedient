@@ -9,6 +9,7 @@ class FundExpedient(models.Model):
     _description = "Expediente"
     _inherit = ["mail.thread", "mail.activity.mixin"]
     _order = "id desc"
+    _rec_name = "number"
     _rec_names_search = ["number", "description"]
 
     number = fields.Char(
@@ -93,10 +94,12 @@ class FundExpedient(models.Model):
         "parent_id",
         string="Expedientes relacionados",
     )
-    # Relaciones con Purchase y Project (campos inversos definidos en purchase_order y project)
-    purchase_order_ids = fields.One2many(
+    # Relaciones con Purchase y Project (many2many: un expediente puede tener muchas)
+    purchase_order_ids = fields.Many2many(
         "purchase.order",
+        "fund_expedient_purchase_order_rel",
         "expedient_id",
+        "order_id",
         string="Solicitudes de cotización",
         copy=False,
     )
@@ -104,10 +107,17 @@ class FundExpedient(models.Model):
         compute="_compute_purchase_order_count",
         string="Nº Solicitudes",
     )
-    project_id = fields.Many2one(
+    project_ids = fields.Many2many(
         "project.project",
-        string="Proyecto",
+        "fund_expedient_project_rel",
+        "expedient_id",
+        "project_id",
+        string="Proyectos",
         copy=False,
+    )
+    project_count = fields.Integer(
+        compute="_compute_project_count",
+        string="Nº Proyectos",
     )
 
     @api.model
@@ -135,6 +145,11 @@ class FundExpedient(models.Model):
         for rec in self:
             rec.purchase_order_count = len(rec.purchase_order_ids)
 
+    @api.depends("project_ids")
+    def _compute_project_count(self):
+        for rec in self:
+            rec.project_count = len(rec.project_ids)
+
     @api.model
     def create(self, vals):
         if vals.get("number", "/") == "/":
@@ -149,6 +164,17 @@ class FundExpedient(models.Model):
             "name": "Solicitudes de cotización",
             "res_model": "purchase.order",
             "view_mode": "list,form",
-            "domain": [("expedient_id", "=", self.id)],
-            "context": {"default_expedient_id": self.id},
+            "domain": [("id", "in", self.purchase_order_ids.ids)],
+            "context": {"default_expedient_ids": [(4, self.id)]},
+        }
+
+    def action_view_projects(self):
+        self.ensure_one()
+        return {
+            "type": "ir.actions.act_window",
+            "name": "Proyectos",
+            "res_model": "project.project",
+            "view_mode": "list,form",
+            "domain": [("id", "in", self.project_ids.ids)],
+            "context": {"default_expedient_ids": [(4, self.id)]},
         }

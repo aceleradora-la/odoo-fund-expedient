@@ -7,10 +7,11 @@ from odoo import fields, models
 class PurchaseOrder(models.Model):
     _inherit = "purchase.order"
 
-    expedient_id = fields.Many2one(
+    expedient_ids = fields.Many2many(
         "fund.expedient",
-        string="Expediente",
-        ondelete="set null",
-        index=True,
+        "fund_expedient_purchase_order_rel",
+        "order_id",
+        "expedient_id",
+        string="Expedientes",
         tracking=True,
     )
