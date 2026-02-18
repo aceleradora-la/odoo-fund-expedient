@@ -11,6 +11,11 @@
             <field name="sequence">5</field>
             <field name="state_type">in_progress</field>
         </record>
+        <record id="stage_expedient_purchases" model="fund.expedient.stage">
+            <field name="name">Compras</field>
+            <field name="sequence">7</field>
+            <field name="state_type">purchases</field>
+        </record>
         <record id="stage_expedient_to_approve" model="fund.expedient.stage">
             <field name="name">Por aprobar</field>
             <field name="sequence">10</field>

@@ -4,7 +4,7 @@
         <field name="name">fund.uf.rate.list</field>
         <field name="model">fund.uf.rate</field>
         <field name="arch" type="xml">
-            <list string="Cotización UF" create="1" delete="1" edit="1">
+            <list string="Cotización UR" create="1" delete="1" edit="1">
                 <field name="name"/>
                 <field name="rate"/>
                 <field name="company_id" groups="base.group_multi_company"/>
@@ -16,7 +16,7 @@
         <field name="name">fund.uf.rate.form</field>
         <field name="model">fund.uf.rate</field>
         <field name="arch" type="xml">
-            <form string="Cotización UF">
+            <form string="Cotización UR">
                 <sheet>
                     <group>
                         <field name="name"/>
@@ -29,14 +29,14 @@
     </record>
 
     <record id="action_fund_uf_rate" model="ir.actions.act_window">
-        <field name="name">Cotización UF</field>
+        <field name="name">Cotización UR</field>
         <field name="res_model">fund.uf.rate</field>
         <field name="view_mode">list,form</field>
         <field name="help" type="html">
             <p>
-                Configure las cotizaciones de la Unidad Funcional (UF) por fecha.
+                Configure las cotizaciones de la Unidad Retributiva (UR) por fecha.
                 Se utiliza la cotización vigente a la fecha del documento (OC o factura)
-                para expresar los totales del expediente en UF.
+                para expresar los totales del expediente en UR.
             </p>
         </field>
     </record>

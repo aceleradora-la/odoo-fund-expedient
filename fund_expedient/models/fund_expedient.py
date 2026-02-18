@@ -56,7 +56,7 @@ class FundExpedient(models.Model):
         tracking=True,
     )
     description = fields.Text(
-        string="Descripción de la solicitud",
+        string="Descripción/Memo",
         tracking=True,
     )
     stage_id = fields.Many2one(
@@ -73,6 +73,7 @@ class FundExpedient(models.Model):
         selection=[
             ("draft", "Borrador"),
             ("in_progress", "En progreso"),
+            ("purchases", "Compras"),
             ("to_approve", "Por aprobar"),
             ("approved", "Aprobado"),
             ("cancel", "Cancelado"),
@@ -100,6 +101,12 @@ class FundExpedient(models.Model):
         "parent_id",
         string="Expedientes relacionados",
     )
+    line_ids = fields.One2many(
+        "fund.expedient.line",
+        "expedient_id",
+        string="Líneas",
+        copy=True,
+    )
     # Relaciones con Purchase y Project (many2many: un expediente puede tener muchas)
     purchase_order_ids = fields.Many2many(
         "purchase.order",
@@ -112,6 +119,10 @@ class FundExpedient(models.Model):
     purchase_order_count = fields.Integer(
         compute="_compute_purchase_order_count",
         string="Nº Solicitudes",
+    )
+    can_create_purchase = fields.Boolean(
+        compute="_compute_can_create_purchase",
+        string="Puede crear solicitudes",
     )
     project_ids = fields.Many2many(
         "project.project",
@@ -160,7 +171,7 @@ class FundExpedient(models.Model):
         string="Nº Facturas",
     )
 
-    # Totales (moneda compañía y UF)
+    # Totales (moneda compañía y UR)
     currency_id = fields.Many2one(
         related="company_id.currency_id",
         string="Moneda",
@@ -171,7 +182,7 @@ class FundExpedient(models.Model):
         tracking=True,
     )
     amount_estimated_uf = fields.Float(
-        string="Total Estimado (UF)",
+        string="Total Estimado (UR)",
         compute="_compute_amount_estimated_uf",
         store=True,
         digits=(16, 4),
@@ -183,7 +194,7 @@ class FundExpedient(models.Model):
         currency_field="currency_id",
     )
     amount_committed_uf = fields.Float(
-        string="Total Comprometido (UF)",
+        string="Total Comprometido (UR)",
         compute="_compute_amounts",
         store=True,
         digits=(16, 4),
@@ -195,7 +206,7 @@ class FundExpedient(models.Model):
         currency_field="currency_id",
     )
     amount_real_uf = fields.Float(
-        string="Total Real (UF)",
+        string="Total Real (UR)",
         compute="_compute_amounts",
         store=True,
         digits=(16, 4),
@@ -225,6 +236,11 @@ class FundExpedient(models.Model):
     def _compute_purchase_order_count(self):
         for rec in self:
             rec.purchase_order_count = len(rec.purchase_order_ids)
+
+    @api.depends("stage_id", "stage_id.state_type")
+    def _compute_can_create_purchase(self):
+        for rec in self:
+            rec.can_create_purchase = rec.stage_id.state_type == "purchases"
 
     @api.depends("project_ids")
     def _compute_project_count(self):
@@ -306,7 +322,7 @@ class FundExpedient(models.Model):
                 )
             rec.amount_committed = amount_committed
 
-            # Total Comprometido en UF
+            # Total Comprometido en UR
             committed_uf = 0.0
             for po in pos_committed:
                 po_amount_to_invoice = 0.0
@@ -402,6 +418,17 @@ class FundExpedient(models.Model):
                 "default_expedient_ids": [(4, self.id)],
                 "default_move_type": "in_invoice",
             },
+        }
+
+    def action_wizard_create_purchase(self):
+        self.ensure_one()
+        return {
+            "type": "ir.actions.act_window",
+            "name": "Crear solicitudes desde líneas",
+            "res_model": "fund.expedient.line.wizard",
+            "view_mode": "form",
+            "target": "new",
+            "context": {"active_model": "fund.expedient", "active_id": self.id},
         }
 
     def action_view_payments(self):

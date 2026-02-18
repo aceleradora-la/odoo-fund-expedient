@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_expedient_line_wizard_form" model="ir.ui.view">
+        <field name="name">fund.expedient.line.wizard.form</field>
+        <field name="model">fund.expedient.line.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Crear solicitudes de cotización">
+                <group>
+                    <field name="expedient_id"/>
+                    <field name="partner_id"/>
+                    <field name="supplier_summary" colspan="2"/>
+                </group>
+                <group string="Líneas a incluir (quitar las que no desee)">
+                    <field name="line_ids" nolabel="1">
+                        <list create="0" delete="1" editable="bottom">
+                            <field name="product_id"/>
+                            <field name="name"/>
+                            <field name="product_qty"/>
+                            <field name="recommended_supplier_id"/>
+                        </list>
+                    </field>
+                </group>
+                <footer>
+                    <button name="action_confirm" string="Crear solicitudes" type="object" class="btn-primary"/>
+                    <button string="Cancelar" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_expedient_line_wizard" model="ir.actions.act_window">
+        <field name="name">Crear solicitudes desde líneas</field>
+        <field name="res_model">fund.expedient.line.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+</odoo>

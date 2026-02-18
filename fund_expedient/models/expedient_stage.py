@@ -15,6 +15,7 @@ class ExpedientStage(models.Model):
         selection=[
             ("draft", "Borrador"),
             ("in_progress", "En progreso"),
+            ("purchases", "Compras"),
             ("to_approve", "Por aprobar"),
             ("approved", "Aprobado"),
             ("cancel", "Cancelado"),

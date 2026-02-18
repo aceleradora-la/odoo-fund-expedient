@@ -4,7 +4,7 @@
 {
     "name": "Fundación - Expedientes",
     "summary": "Gestión de expedientes con etapas, partidas presupuestarias y relaciones con compras y proyectos",
-    "version": "18.0.2.2",
+    "version": "18.0.2.3",
     "category": "Administration",
     "website": "",
     "author": "",
@@ -29,7 +29,9 @@
         "data/budget_position_views_init.xml",
         "views/uf_rate_views.xml",
         "views/fund_expedient_views.xml",
+        "wizard/expedient_line_wizard_views.xml",
         "views/expedient_type_views.xml",
+        "views/res_company_views.xml",
         "views/purchase_order_views.xml",
         "views/project_views.xml",
         "views/account_move_views.xml",

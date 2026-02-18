@@ -99,7 +99,7 @@
               groups="fund_expedient.group_fund_expedient_manager"/>
 
     <menuitem id="menu_fund_uf_rate"
-              name="Cotización UF"
+              name="Cotización UR"
               parent="menu_fund_expedient_config"
               action="action_fund_uf_rate"
               sequence="45"

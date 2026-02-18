@@ -116,15 +116,33 @@
                             <field name="amount_committed" readonly="1"/>
                             <field name="amount_real" readonly="1"/>
                         </group>
-                        <group string="Unidades Funcionales (UF)">
+                        <group string="Unidades Retributivas (UR)">
                             <field name="amount_estimated_uf" readonly="1"/>
                             <field name="amount_committed_uf" readonly="1"/>
                             <field name="amount_real_uf" readonly="1"/>
                         </group>
                     </group>
                     <notebook>
-                        <page string="Descripción" name="description">
-                            <field name="description" placeholder="Descripción de la solicitud..." nolabel="1"/>
+                        <page string="Descripción/Memo" name="description">
+                            <field name="description" placeholder="Descripción o memo de la solicitud..." nolabel="1"/>
+                        </page>
+                        <page string="Líneas" name="lines">
+                            <field name="can_create_purchase" invisible="1"/>
+                            <button name="action_wizard_create_purchase" type="object"
+                                    string="Crear solicitud desde líneas"
+                                    class="btn-primary mb-2"
+                                    invisible="not can_create_purchase or not line_ids"/>
+                            <field name="line_ids" nolabel="1">
+                                <list create="1" delete="1" edit="1">
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="display_type" column_invisible="1"/>
+                                    <field name="product_id"/>
+                                    <field name="name"/>
+                                    <field name="product_qty"/>
+                                    <field name="product_uom_id"/>
+                                    <field name="recommended_supplier_id"/>
+                                </list>
+                            </field>
                         </page>
                         <page string="Expedientes relacionados" name="children">
                             <field name="parent_id"/>
@@ -138,8 +156,9 @@
                             </field>
                         </page>
                         <page string="Solicitudes de cotización" name="purchases">
+                            <field name="can_create_purchase" invisible="1"/>
                             <field name="purchase_order_ids" nolabel="1">
-                                <list create="1" delete="0" open="0">
+                                <list create="can_create_purchase" delete="0" open="0">
                                     <field name="name"/>
                                     <field name="partner_id"/>
                                     <field name="date_order"/>
