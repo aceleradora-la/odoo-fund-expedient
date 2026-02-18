@@ -1,7 +1,7 @@
 # Copyright 2025
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 
-from odoo import fields, models
+from odoo import api, fields, models
 
 
 class ExpedientEncuadre(models.Model):
@@ -16,3 +16,29 @@ class ExpedientEncuadre(models.Model):
         string="Compañía",
         default=lambda self: self.env.company,
     )
+
+    @api.model
+    def init_expedient_encuadre_view(self):
+        """Crear vista lista de encuadres vía código (Odoo 18 list vs tree)."""
+        module = "fund_expedient"
+        if self.env["ir.model.data"].search(
+            [("module", "=", module), ("name", "=", "view_expedient_encuadre_tree")]
+        ):
+            return
+        view = self.env["ir.ui.view"].create({
+            "name": "fund.expedient.encuadre.list",
+            "model": "fund.expedient.encuadre",
+            "type": "list",
+            "arch": """<?xml version="1.0"?>
+<list string="Encuadres" create="1" delete="1">
+    <field name="sequence" widget="handle"/>
+    <field name="name"/>
+</list>""",
+        })
+        self.env["ir.model.data"].create({
+            "name": "view_expedient_encuadre_tree",
+            "module": module,
+            "model": "ir.ui.view",
+            "res_id": view.id,
+            "noupdate": True,
+        })

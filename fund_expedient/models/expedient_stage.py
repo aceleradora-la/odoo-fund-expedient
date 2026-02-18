@@ -1,7 +1,7 @@
 # Copyright 2025
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 
-from odoo import fields, models
+from odoo import api, fields, models
 
 
 class ExpedientStage(models.Model):
@@ -39,3 +39,32 @@ class ExpedientStage(models.Model):
         string="Compañía",
         default=lambda self: self.env.company,
     )
+
+    @api.model
+    def init_expedient_stage_view(self):
+        """Crear vista lista de etapas vía código (Odoo 18 list vs tree)."""
+        module = "fund_expedient"
+        if self.env["ir.model.data"].search(
+            [("module", "=", module), ("name", "=", "view_expedient_stage_tree")]
+        ):
+            return
+        view = self.env["ir.ui.view"].create({
+            "name": "fund.expedient.stage.list",
+            "model": "fund.expedient.stage",
+            "type": "list",
+            "arch": """<?xml version="1.0"?>
+<list string="Etapas de expediente" create="1" delete="1">
+    <field name="sequence" widget="handle"/>
+    <field name="name"/>
+    <field name="state_type"/>
+    <field name="fold"/>
+    <field name="report_id" optional="show"/>
+</list>""",
+        })
+        self.env["ir.model.data"].create({
+            "name": "view_expedient_stage_tree",
+            "module": module,
+            "model": "ir.ui.view",
+            "res_id": view.id,
+            "noupdate": True,
+        })
