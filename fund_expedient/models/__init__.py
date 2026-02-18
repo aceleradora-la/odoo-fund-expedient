@@ -7,7 +7,7 @@ from . import expedient_encuadre
 from . import expedient_type
 from . import expedient_line
 from . import fund_expedient
-from . import res_company
+from . import expedient_config
 from . import uf_rate
 from . import purchase_order
 from . import project_project

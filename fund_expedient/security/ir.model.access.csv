@@ -9,6 +9,8 @@ access_fund_expedient_stage_user,fund.expedient.stage.user,model_fund_expedient_
 access_fund_expedient_stage_manager,fund.expedient.stage.manager,model_fund_expedient_stage,group_fund_expedient_manager,1,1,1,1
 access_fund_expedient_encuadre_user,fund.expedient.encuadre.user,model_fund_expedient_encuadre,group_fund_expedient_user,1,0,0,0
 access_fund_expedient_encuadre_manager,fund.expedient.encuadre.manager,model_fund_expedient_encuadre,group_fund_expedient_manager,1,1,1,1
+access_fund_expedient_config_user,fund.expedient.config.user,model_fund_expedient_config,group_fund_expedient_user,1,0,0,0
+access_fund_expedient_config_manager,fund.expedient.config.manager,model_fund_expedient_config,group_fund_expedient_manager,1,1,1,1
 access_fund_expedient_line_user,fund.expedient.line.user,model_fund_expedient_line,group_fund_expedient_user,1,1,1,0
 access_fund_expedient_line_manager,fund.expedient.line.manager,model_fund_expedient_line,group_fund_expedient_manager,1,1,1,1
 access_fund_expedient_type_stage_assign_user,fund.expedient.type.stage.assign.user,model_fund_expedient_type_stage_assign,group_fund_expedient_user,1,0,0,0

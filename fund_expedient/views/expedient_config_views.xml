@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_expedient_config_list" model="ir.ui.view">
+        <field name="name">fund.expedient.config.list</field>
+        <field name="model">fund.expedient.config</field>
+        <field name="arch" type="xml">
+            <list string="Configuración" create="1" delete="1" edit="1">
+                <field name="company_id"/>
+                <field name="expedient_service_product_id"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_expedient_config_form" model="ir.ui.view">
+        <field name="name">fund.expedient.config.form</field>
+        <field name="model">fund.expedient.config</field>
+        <field name="arch" type="xml">
+            <form string="Configuración de expedientes">
+                <sheet>
+                    <group>
+                        <field name="company_id" groups="base.group_multi_company"/>
+                        <field name="expedient_service_product_id"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_expedient_config" model="ir.actions.act_window">
+        <field name="name">Configuración de expedientes</field>
+        <field name="res_model">fund.expedient.config</field>
+        <field name="view_mode">list,form</field>
+        <field name="target">current</field>
+        <field name="help" type="html">
+            <p>
+                Configure el producto de tipo servicio que se usará cuando una línea
+                del expediente solo tiene descripción (sin producto asignado).
+            </p>
+        </field>
+    </record>
+</odoo>

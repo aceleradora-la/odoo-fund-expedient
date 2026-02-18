@@ -69,11 +69,13 @@ class ExpedientLineWizard(models.TransientModel):
         return grouped
 
     def _get_service_product(self):
-        product = self.expedient_id.company_id.expedient_service_product_id
+        product = self.env["fund.expedient.config"].get_service_product(
+            self.expedient_id.company_id
+        )
         if not product:
             raise UserError(
                 "Configure el producto servicio para líneas sin producto en "
-                "Configuración > Compañía > Expedientes."
+                "Expedientes > Configuración > Configuración de expedientes."
             )
         return product
 
