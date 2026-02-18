@@ -120,6 +120,29 @@ class FundExpedient(models.Model):
         compute="_compute_project_count",
         string="Nº Proyectos",
     )
+    payment_ids = fields.Many2many(
+        "account.payment",
+        compute="_compute_payment_ids",
+        string="Pagos",
+        copy=False,
+        help="Pagos relacionados: por vinculación directa, por factura directa "
+        "o por factura de orden de compra.",
+    )
+    payment_count = fields.Integer(
+        compute="_compute_payment_ids",
+        string="Nº Pagos",
+    )
+    invoice_ids = fields.Many2many(
+        "account.move",
+        compute="_compute_invoice_ids",
+        string="Facturas",
+        copy=False,
+        help="Facturas de proveedor: desde órdenes de compra o directas.",
+    )
+    invoice_count = fields.Integer(
+        compute="_compute_invoice_ids",
+        string="Nº Facturas",
+    )
 
     # Totales (moneda compañía y UF)
     currency_id = fields.Many2one(
@@ -191,6 +214,40 @@ class FundExpedient(models.Model):
     def _compute_project_count(self):
         for rec in self:
             rec.project_count = len(rec.project_ids)
+
+    def _compute_payment_ids(self):
+        for rec in self:
+            # 1. Pagos con vinculación directa
+            payments_direct = self.env["account.payment"].search(
+                [("expedient_ids", "in", rec.ids)]
+            )
+            # 2. Facturas del expediente (OC + directas)
+            invoices_po = rec.purchase_order_ids.mapped("invoice_ids")
+            invoices_direct = self.env["account.move"].search(
+                [
+                    ("expedient_ids", "in", rec.ids),
+                    ("move_type", "in", ("in_invoice", "in_refund")),
+                ]
+            )
+            all_invoices = invoices_po | invoices_direct
+            # 3. Pagos reconciliados con esas facturas
+            payments_via_invoice = all_invoices.mapped("reconciled_payment_ids")
+            all_payments = payments_direct | payments_via_invoice
+            rec.payment_ids = all_payments
+            rec.payment_count = len(all_payments)
+
+    def _compute_invoice_ids(self):
+        for rec in self:
+            invoices_po = rec.purchase_order_ids.mapped("invoice_ids")
+            invoices_direct = self.env["account.move"].search(
+                [
+                    ("expedient_ids", "in", rec.ids),
+                    ("move_type", "in", ("in_invoice", "in_refund")),
+                ]
+            )
+            all_invoices = invoices_po | invoices_direct
+            rec.invoice_ids = all_invoices
+            rec.invoice_count = len(all_invoices)
 
     @api.depends("amount_estimated", "request_date", "company_id")
     def _compute_amount_estimated_uf(self):
@@ -314,4 +371,47 @@ class FundExpedient(models.Model):
             "view_mode": "list,form",
             "domain": [("id", "in", self.project_ids.ids)],
             "context": {"default_expedient_ids": [(4, self.id)]},
+        }
+
+    def action_view_invoices(self):
+        self.ensure_one()
+        return {
+            "type": "ir.actions.act_window",
+            "name": "Facturas",
+            "res_model": "account.move",
+            "view_mode": "list,form",
+            "domain": [("id", "in", self.invoice_ids.ids)],
+            "context": {
+                "default_expedient_ids": [(4, self.id)],
+                "default_move_type": "in_invoice",
+            },
+        }
+
+    def action_create_direct_invoice(self):
+        """Abrir formulario de factura de proveedor con expediente preasignado."""
+        self.ensure_one()
+        return {
+            "type": "ir.actions.act_window",
+            "name": "Nueva factura de proveedor",
+            "res_model": "account.move",
+            "view_mode": "form",
+            "target": "current",
+            "context": {
+                "default_expedient_ids": [(4, self.id)],
+                "default_move_type": "in_invoice",
+            },
+        }
+
+    def action_view_payments(self):
+        self.ensure_one()
+        return {
+            "type": "ir.actions.act_window",
+            "name": "Pagos",
+            "res_model": "account.payment",
+            "view_mode": "list,form",
+            "domain": [("id", "in", self.payment_ids.ids)],
+            "context": {
+                "default_expedient_ids": [(4, self.id)],
+                "default_partner_type": "supplier",
+            },
         }

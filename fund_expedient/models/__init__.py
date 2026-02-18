@@ -9,3 +9,4 @@ from . import uf_rate
 from . import purchase_order
 from . import project_project
 from . import account_move
+from . import account_payment
