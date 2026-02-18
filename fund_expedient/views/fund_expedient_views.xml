@@ -53,7 +53,11 @@
         <field name="model">fund.expedient</field>
         <field name="arch" type="xml">
             <form string="Expediente">
-                <header/>
+                <header>
+                    <button name="action_cancel" type="object" string="Cancelar"
+                            class="btn-danger" invisible="state == 'cancel'"
+                            confirm="¿Está seguro de que desea cancelar este expediente?"/>
+                </header>
                 <sheet>
                     <div class="oe_button_box" name="button_box">
                         <button name="action_view_purchase_orders" type="object"
@@ -137,6 +141,7 @@
                 <separator/>
                 <filter string="Por aprobar" name="to_approve" domain="[('state', '=', 'to_approve')]"/>
                 <filter string="Aprobados" name="approved" domain="[('state', '=', 'approved')]"/>
+                <filter string="Cancelados" name="cancelled" domain="[('state', '=', 'cancel')]"/>
                 <group expand="0" string="Agrupar por">
                     <filter string="Etapa" name="group_stage" context="{'group_by': 'stage_id'}"/>
                     <filter string="Solicitante" name="group_requestor" context="{'group_by': 'requestor_id'}"/>

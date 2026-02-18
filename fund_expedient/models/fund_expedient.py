@@ -2,6 +2,7 @@
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 
 from odoo import api, fields, models
+from odoo.exceptions import UserError
 
 
 class FundExpedient(models.Model):
@@ -156,6 +157,21 @@ class FundExpedient(models.Model):
             seq = self.env["ir.sequence"].next_by_code("fund.expedient") or "/"
             vals["number"] = seq
         return super().create(vals)
+
+    def unlink(self):
+        raise UserError(
+            "No se pueden eliminar expedientes para mantener la secuencia sin huecos. "
+            "Use la opción 'Cancelar' para anular un expediente."
+        )
+
+    def action_cancel(self):
+        """Mover expediente a estado Cancelado."""
+        cancel_stage = self.env["fund.expedient.stage"].search(
+            [("state_type", "=", "cancel")], limit=1
+        )
+        if not cancel_stage:
+            raise UserError("No existe una etapa de tipo 'Cancelado' configurada.")
+        return self.write({"stage_id": cancel_stage.id})
 
     def action_view_purchase_orders(self):
         self.ensure_one()
