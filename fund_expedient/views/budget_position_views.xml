@@ -6,10 +6,26 @@
         <field name="model">fund.budget.position.category</field>
         <field name="type">list</field>
         <field name="arch" type="xml">
-            <list string="Categorías de partida">
+            <list string="Categorías de partida" create="1" delete="1" edit="1">
                 <field name="sequence" widget="handle"/>
                 <field name="name"/>
             </list>
+        </field>
+    </record>
+
+    <record id="view_budget_position_category_form" model="ir.ui.view">
+        <field name="name">fund.budget.position.category.form</field>
+        <field name="model">fund.budget.position.category</field>
+        <field name="type">form</field>
+        <field name="arch" type="xml">
+            <form string="Categoría de partida">
+                <sheet>
+                    <group>
+                        <field name="name"/>
+                        <field name="sequence"/>
+                    </group>
+                </sheet>
+            </form>
         </field>
     </record>
 
@@ -32,6 +48,7 @@
     <record id="view_budget_position_form" model="ir.ui.view">
         <field name="name">fund.budget.position.form</field>
         <field name="model">fund.budget.position</field>
+        <field name="type">form</field>
         <field name="arch" type="xml">
             <form string="Partida presupuestaria">
                 <sheet>

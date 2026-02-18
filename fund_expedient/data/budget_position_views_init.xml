@@ -1,9 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <data noupdate="0">
-        <!-- Crear vistas vía código para evitar XML tree/list en Odoo 18
-             (cuando el deployment usa código antiguo) -->
-        <function model="fund.budget.position.category" name="init_budget_position_views"/>
+        <!-- Crear vistas stage/encuadre vía código (Odoo 18 list vs tree) -->
         <function model="fund.expedient.stage" name="init_expedient_stage_view"/>
         <function model="fund.expedient.encuadre" name="init_expedient_encuadre_view"/>
     </data>
