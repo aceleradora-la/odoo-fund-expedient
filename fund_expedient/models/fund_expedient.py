@@ -266,6 +266,10 @@ class FundExpedient(models.Model):
         "purchase_order_ids.amount_total_cc",
         "purchase_order_ids.date_order",
         "purchase_order_ids.currency_id",
+        "purchase_order_ids.order_line",
+        "purchase_order_ids.order_line.qty_to_invoice",
+        "purchase_order_ids.order_line.product_qty",
+        "purchase_order_ids.order_line.price_total",
         "purchase_order_ids.invoice_ids",
         "purchase_order_ids.invoice_ids.state",
         "purchase_order_ids.invoice_ids.amount_total_signed",
@@ -279,26 +283,36 @@ class FundExpedient(models.Model):
         for rec in self:
             company_currency = rec.company_id.currency_id
 
-            # Total Comprometido: OC confirmadas sin factura (o no totalmente facturadas)
+            # Total Comprometido: monto pendiente de facturar en OC confirmadas
             pos_committed = rec.purchase_order_ids.filtered(
                 lambda po: po.state in ("purchase", "done")
                 and po.invoice_status != "invoiced"
             )
-            amount_committed = sum(
-                po.currency_id._convert(
-                    po.amount_total, company_currency, rec.company_id, po.date_order.date()
+            amount_committed = 0.0
+            for po in pos_committed:
+                # Monto pendiente = suma por línea de (qty_to_invoice / product_qty * price_total)
+                po_amount_to_invoice = 0.0
+                for line in po.order_line.filtered(lambda l: not l.display_type and l.product_qty):
+                    po_amount_to_invoice += (
+                        line.price_total * (line.qty_to_invoice / line.product_qty)
+                    )
+                amount_committed += po.currency_id._convert(
+                    po_amount_to_invoice, company_currency, rec.company_id, po.date_order.date()
                 )
-                for po in pos_committed
-            )
             rec.amount_committed = amount_committed
 
             # Total Comprometido en UF
             committed_uf = 0.0
             for po in pos_committed:
+                po_amount_to_invoice = 0.0
+                for line in po.order_line.filtered(lambda l: not l.display_type and l.product_qty):
+                    po_amount_to_invoice += (
+                        line.price_total * (line.qty_to_invoice / line.product_qty)
+                    )
                 rate = UfRate.get_rate(rec.company_id, po.date_order.date())
                 if rate:
                     amt_cc = po.currency_id._convert(
-                        po.amount_total, company_currency, rec.company_id, po.date_order.date()
+                        po_amount_to_invoice, company_currency, rec.company_id, po.date_order.date()
                     )
                     committed_uf += amt_cc / rate
             rec.amount_committed_uf = committed_uf
