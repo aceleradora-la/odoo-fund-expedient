@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <record id="view_expedient_encuadre_tree" model="ir.ui.view">
-        <field name="name">fund.expedient.encuadre.tree</field>
+        <field name="name">fund.expedient.encuadre.list</field>
         <field name="model">fund.expedient.encuadre</field>
         <field name="type">list</field>
         <field name="arch" type="xml">
