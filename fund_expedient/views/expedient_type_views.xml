@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_expedient_type_list" model="ir.ui.view">
+        <field name="name">fund.expedient.type.list</field>
+        <field name="model">fund.expedient.type</field>
+        <field name="type">list</field>
+        <field name="arch" type="xml">
+            <list string="Tipos de expediente" create="1" delete="1" edit="1">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_expedient_type_form" model="ir.ui.view">
+        <field name="name">fund.expedient.type.form</field>
+        <field name="model">fund.expedient.type</field>
+        <field name="type">form</field>
+        <field name="arch" type="xml">
+            <form string="Tipo de expediente">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="sequence"/>
+                        </group>
+                        <group>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Asignaciones por etapa" name="stage_assign">
+                            <field name="stage_assign_ids" nolabel="1">
+                                <list create="1" delete="1" edit="1">
+                                    <field name="stage_id" options="{'no_create': True}"/>
+                                    <field name="group_ids" widget="many2many_tags"/>
+                                    <field name="job_ids" widget="many2many_tags"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+</odoo>

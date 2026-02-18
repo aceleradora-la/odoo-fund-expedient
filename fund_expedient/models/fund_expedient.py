@@ -50,6 +50,11 @@ class FundExpedient(models.Model):
         string="Encuadre",
         tracking=True,
     )
+    type_id = fields.Many2one(
+        "fund.expedient.type",
+        string="Tipo",
+        tracking=True,
+    )
     description = fields.Text(
         string="Descripción de la solicitud",
         tracking=True,
@@ -412,3 +417,25 @@ class FundExpedient(models.Model):
                 "default_partner_type": "supplier",
             },
         }
+
+    def _get_assignable_user_ids(self):
+        """Usuarios asignables según tipo y etapa (grupos + puestos del organigrama)."""
+        self.ensure_one()
+        if not self.type_id or not self.stage_id:
+            return self.env["res.users"]
+        assign = self.env["fund.expedient.type.stage.assign"].search(
+            [
+                ("type_id", "=", self.type_id.id),
+                ("stage_id", "=", self.stage_id.id),
+            ],
+            limit=1,
+        )
+        if not assign:
+            return self.env["res.users"]
+        user_ids = assign.group_ids.users
+        if assign.job_ids:
+            employees = self.env["hr.employee"].search(
+                [("job_id", "in", assign.job_ids.ids)]
+            )
+            user_ids |= employees.mapped("user_id").filtered(lambda u: u)
+        return user_ids
