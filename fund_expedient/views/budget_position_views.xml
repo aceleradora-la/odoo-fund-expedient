@@ -3,6 +3,7 @@
     <record id="view_budget_position_category_tree" model="ir.ui.view">
         <field name="name">fund.budget.position.category.tree</field>
         <field name="model">fund.budget.position.category</field>
+        <field name="type">list</field>
         <field name="arch" type="xml">
             <list string="Categorías de partida">
                 <field name="sequence" widget="handle"/>
@@ -14,6 +15,7 @@
     <record id="view_budget_position_tree" model="ir.ui.view">
         <field name="name">fund.budget.position.tree</field>
         <field name="model">fund.budget.position</field>
+        <field name="type">list</field>
         <field name="arch" type="xml">
             <list string="Partidas presupuestarias" create="1" delete="1">
                 <field name="sequence" widget="handle"/>
