@@ -132,6 +132,17 @@ class FundExpedient(models.Model):
         compute="_compute_payment_ids",
         string="Nº Pagos",
     )
+    direct_invoice_ids = fields.Many2many(
+        "account.move",
+        "fund_expedient_account_move_rel",
+        "expedient_id",
+        "move_id",
+        string="Facturas directas",
+        copy=False,
+        domain="[('move_type', 'in', ('in_invoice', 'in_refund'))]",
+        help="Facturas de proveedor sin orden de compra. "
+        "Las facturas desde OC se vinculan automáticamente.",
+    )
     invoice_ids = fields.Many2many(
         "account.move",
         compute="_compute_invoice_ids",
@@ -222,30 +233,18 @@ class FundExpedient(models.Model):
                 [("expedient_ids", "in", rec.ids)]
             )
             # 2. Facturas del expediente (OC + directas)
-            invoices_po = rec.purchase_order_ids.mapped("invoice_ids")
-            invoices_direct = self.env["account.move"].search(
-                [
-                    ("expedient_ids", "in", rec.ids),
-                    ("move_type", "in", ("in_invoice", "in_refund")),
-                ]
-            )
-            all_invoices = invoices_po | invoices_direct
+            all_invoices = rec.purchase_order_ids.mapped("invoice_ids") | rec.direct_invoice_ids
             # 3. Pagos reconciliados con esas facturas
             payments_via_invoice = all_invoices.mapped("reconciled_payment_ids")
             all_payments = payments_direct | payments_via_invoice
             rec.payment_ids = all_payments
             rec.payment_count = len(all_payments)
 
+    @api.depends("purchase_order_ids", "purchase_order_ids.invoice_ids", "direct_invoice_ids")
     def _compute_invoice_ids(self):
         for rec in self:
             invoices_po = rec.purchase_order_ids.mapped("invoice_ids")
-            invoices_direct = self.env["account.move"].search(
-                [
-                    ("expedient_ids", "in", rec.ids),
-                    ("move_type", "in", ("in_invoice", "in_refund")),
-                ]
-            )
-            all_invoices = invoices_po | invoices_direct
+            all_invoices = invoices_po | rec.direct_invoice_ids
             rec.invoice_ids = all_invoices
             rec.invoice_count = len(all_invoices)
 
@@ -270,6 +269,9 @@ class FundExpedient(models.Model):
         "purchase_order_ids.invoice_ids",
         "purchase_order_ids.invoice_ids.state",
         "purchase_order_ids.invoice_ids.amount_total_signed",
+        "direct_invoice_ids",
+        "direct_invoice_ids.state",
+        "direct_invoice_ids.amount_total_signed",
         "company_id",
     )
     def _compute_amounts(self):
@@ -305,12 +307,8 @@ class FundExpedient(models.Model):
             invoices_po = rec.purchase_order_ids.mapped("invoice_ids").filtered(
                 lambda m: m.state == "posted"
             )
-            invoices_direct = self.env["account.move"].search(
-                [
-                    ("expedient_ids", "in", rec.ids),
-                    ("move_type", "in", ("in_invoice", "in_refund")),
-                    ("state", "=", "posted"),
-                ]
+            invoices_direct = rec.direct_invoice_ids.filtered(
+                lambda m: m.state == "posted"
             )
             all_invoices = invoices_po | invoices_direct
             amount_real = 0.0
@@ -381,21 +379,6 @@ class FundExpedient(models.Model):
             "res_model": "account.move",
             "view_mode": "list,form",
             "domain": [("id", "in", self.invoice_ids.ids)],
-            "context": {
-                "default_expedient_ids": [(4, self.id)],
-                "default_move_type": "in_invoice",
-            },
-        }
-
-    def action_create_direct_invoice(self):
-        """Abrir formulario de factura de proveedor con expediente preasignado."""
-        self.ensure_one()
-        return {
-            "type": "ir.actions.act_window",
-            "name": "Nueva factura de proveedor",
-            "res_model": "account.move",
-            "view_mode": "form",
-            "target": "current",
             "context": {
                 "default_expedient_ids": [(4, self.id)],
                 "default_move_type": "in_invoice",
