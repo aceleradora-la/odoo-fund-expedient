@@ -3,6 +3,7 @@
     <record id="view_fund_expedient_list" model="ir.ui.view">
         <field name="name">fund.expedient.list</field>
         <field name="model">fund.expedient</field>
+        <field name="type">list</field>
         <field name="arch" type="xml">
             <list string="Expedientes" multi_edit="1">
                 <field name="number"/>
