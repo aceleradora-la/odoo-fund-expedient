@@ -4,13 +4,14 @@
 {
     "name": "Fundación - Expedientes",
     "summary": "Gestión de expedientes con etapas, partidas presupuestarias y relaciones con compras y proyectos",
-    "version": "18.0.2.3",
+    "version": "18.0.2.4",
     "category": "Administration",
     "website": "",
     "author": "",
     "license": "AGPL-3",
     "application": False,
     "installable": True,
+    "pre_init_hook": "fund_expedient.hooks.pre_init_hook",
     "depends": [
         "mail",
         "hr",
