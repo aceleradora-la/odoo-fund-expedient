@@ -127,11 +127,8 @@ class FundExpedient(models.Model):
             else:
                 rec.state = "draft"
 
-    def _read_group_stage_ids(self, stages, domain, order):
-        return stages.search(
-            domain or [],
-            order=order,
-        )
+    def _read_group_stage_ids(self, stages, domain):
+        return stages.search(domain or [], order="sequence")
 
     @api.depends("purchase_order_ids")
     def _compute_purchase_order_count(self):
