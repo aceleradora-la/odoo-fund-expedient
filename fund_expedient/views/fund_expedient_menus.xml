@@ -4,45 +4,12 @@
               name="Expedientes"
               sequence="50"/>
 
-    <menuitem id="menu_fund_expedient_list"
-              name="Expedientes"
-              parent="menu_fund_expedient_root"
-              action="action_fund_expedient"
-              sequence="10"/>
-
     <menuitem id="menu_fund_expedient_config"
               name="Configuración"
               parent="menu_fund_expedient_root"
               sequence="100"/>
 
-    <menuitem id="menu_expedient_stage"
-              name="Etapas de expediente"
-              parent="menu_fund_expedient_config"
-              action="action_fund_expedient_stage"
-              sequence="10"
-              groups="fund_expedient.group_fund_expedient_manager"/>
-
-    <menuitem id="menu_expedient_encuadre"
-              name="Encuadres"
-              parent="menu_fund_expedient_config"
-              action="action_fund_expedient_encuadre"
-              sequence="20"
-              groups="fund_expedient.group_fund_expedient_manager"/>
-
-    <menuitem id="menu_budget_position"
-              name="Partidas presupuestarias"
-              parent="menu_fund_expedient_config"
-              action="action_fund_budget_position"
-              sequence="30"
-              groups="fund_expedient.group_fund_expedient_manager"/>
-
-    <menuitem id="menu_budget_position_category"
-              name="Categorías de partida"
-              parent="menu_fund_expedient_config"
-              action="action_fund_budget_position_category"
-              sequence="40"
-              groups="fund_expedient.group_fund_expedient_manager"/>
-
+    <!-- Acciones (definir antes de los menuitems que las referencian) -->
     <record id="action_fund_expedient_stage" model="ir.actions.act_window">
         <field name="name">Etapas de expediente</field>
         <field name="res_model">fund.expedient.stage</field>
@@ -75,6 +42,41 @@
         <field name="res_id" ref="sequence_fund_expedient"/>
         <field name="target">current</field>
     </record>
+
+    <!-- Menuitems (después de las acciones) -->
+    <menuitem id="menu_fund_expedient_list"
+              name="Expedientes"
+              parent="menu_fund_expedient_root"
+              action="action_fund_expedient"
+              sequence="10"/>
+
+    <menuitem id="menu_expedient_stage"
+              name="Etapas de expediente"
+              parent="menu_fund_expedient_config"
+              action="action_fund_expedient_stage"
+              sequence="10"
+              groups="fund_expedient.group_fund_expedient_manager"/>
+
+    <menuitem id="menu_expedient_encuadre"
+              name="Encuadres"
+              parent="menu_fund_expedient_config"
+              action="action_fund_expedient_encuadre"
+              sequence="20"
+              groups="fund_expedient.group_fund_expedient_manager"/>
+
+    <menuitem id="menu_budget_position"
+              name="Partidas presupuestarias"
+              parent="menu_fund_expedient_config"
+              action="action_fund_budget_position"
+              sequence="30"
+              groups="fund_expedient.group_fund_expedient_manager"/>
+
+    <menuitem id="menu_budget_position_category"
+              name="Categorías de partida"
+              parent="menu_fund_expedient_config"
+              action="action_fund_budget_position_category"
+              sequence="40"
+              groups="fund_expedient.group_fund_expedient_manager"/>
 
     <menuitem id="menu_expedient_sequence"
               name="Numeración de expedientes"
