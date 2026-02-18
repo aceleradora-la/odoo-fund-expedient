@@ -93,6 +93,19 @@
                             <field name="company_id" groups="base.group_multi_company"/>
                         </group>
                     </group>
+                    <group string="Totales" name="totals">
+                        <group string="Moneda (compañía)">
+                            <field name="currency_id" column_invisible="1"/>
+                            <field name="amount_estimated"/>
+                            <field name="amount_committed" readonly="1"/>
+                            <field name="amount_real" readonly="1"/>
+                        </group>
+                        <group string="Unidades Funcionales (UF)">
+                            <field name="amount_estimated_uf" readonly="1"/>
+                            <field name="amount_committed_uf" readonly="1"/>
+                            <field name="amount_real_uf" readonly="1"/>
+                        </group>
+                    </group>
                     <notebook>
                         <page string="Descripción" name="description">
                             <field name="description" placeholder="Descripción de la solicitud..." nolabel="1"/>

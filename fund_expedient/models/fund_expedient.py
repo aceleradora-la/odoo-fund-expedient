@@ -121,6 +121,47 @@ class FundExpedient(models.Model):
         string="Nº Proyectos",
     )
 
+    # Totales (moneda compañía y UF)
+    currency_id = fields.Many2one(
+        related="company_id.currency_id",
+        string="Moneda",
+    )
+    amount_estimated = fields.Monetary(
+        string="Total Estimado",
+        currency_field="currency_id",
+        tracking=True,
+    )
+    amount_estimated_uf = fields.Float(
+        string="Total Estimado (UF)",
+        compute="_compute_amount_estimated_uf",
+        store=True,
+        digits=(16, 4),
+    )
+    amount_committed = fields.Monetary(
+        string="Total Comprometido",
+        compute="_compute_amounts",
+        store=True,
+        currency_field="currency_id",
+    )
+    amount_committed_uf = fields.Float(
+        string="Total Comprometido (UF)",
+        compute="_compute_amounts",
+        store=True,
+        digits=(16, 4),
+    )
+    amount_real = fields.Monetary(
+        string="Total Real",
+        compute="_compute_amounts",
+        store=True,
+        currency_field="currency_id",
+    )
+    amount_real_uf = fields.Float(
+        string="Total Real (UF)",
+        compute="_compute_amounts",
+        store=True,
+        digits=(16, 4),
+    )
+
     @api.model
     def _default_stage_id(self):
         stage = self.env["fund.expedient.stage"].search(
@@ -150,6 +191,86 @@ class FundExpedient(models.Model):
     def _compute_project_count(self):
         for rec in self:
             rec.project_count = len(rec.project_ids)
+
+    @api.depends("amount_estimated", "request_date", "company_id")
+    def _compute_amount_estimated_uf(self):
+        UfRate = self.env["fund.uf.rate"]
+        for rec in self:
+            if not rec.amount_estimated or not rec.request_date:
+                rec.amount_estimated_uf = 0.0
+                continue
+            rate = UfRate.get_rate(rec.company_id, rec.request_date)
+            rec.amount_estimated_uf = rate and (rec.amount_estimated / rate) or 0.0
+
+    @api.depends(
+        "purchase_order_ids",
+        "purchase_order_ids.state",
+        "purchase_order_ids.invoice_status",
+        "purchase_order_ids.amount_total",
+        "purchase_order_ids.amount_total_cc",
+        "purchase_order_ids.date_order",
+        "purchase_order_ids.currency_id",
+        "purchase_order_ids.invoice_ids",
+        "purchase_order_ids.invoice_ids.state",
+        "purchase_order_ids.invoice_ids.amount_total_signed",
+        "company_id",
+    )
+    def _compute_amounts(self):
+        UfRate = self.env["fund.uf.rate"]
+        for rec in self:
+            company_currency = rec.company_id.currency_id
+
+            # Total Comprometido: OC confirmadas sin factura (o no totalmente facturadas)
+            pos_committed = rec.purchase_order_ids.filtered(
+                lambda po: po.state in ("purchase", "done")
+                and po.invoice_status != "invoiced"
+            )
+            amount_committed = sum(
+                po.currency_id.with_context(date=po.date_order).compute(
+                    po.amount_total, company_currency
+                )
+                for po in pos_committed
+            )
+            rec.amount_committed = amount_committed
+
+            # Total Comprometido en UF
+            committed_uf = 0.0
+            for po in pos_committed:
+                rate = UfRate.get_rate(rec.company_id, po.date_order.date())
+                if rate:
+                    amt_cc = po.currency_id.with_context(
+                        date=po.date_order
+                    ).compute(po.amount_total, company_currency)
+                    committed_uf += amt_cc / rate
+            rec.amount_committed_uf = committed_uf
+
+            # Total Real: facturas posteadas (desde OC o directas)
+            invoices_po = rec.purchase_order_ids.mapped("invoice_ids").filtered(
+                lambda m: m.state == "posted"
+            )
+            invoices_direct = self.env["account.move"].search(
+                [
+                    ("expedient_ids", "in", rec.ids),
+                    ("move_type", "in", ("in_invoice", "in_refund")),
+                    ("state", "=", "posted"),
+                ]
+            )
+            all_invoices = invoices_po | invoices_direct
+            amount_real = 0.0
+            amount_real_uf = 0.0
+            for inv in all_invoices:
+                inv_date = inv.invoice_date or inv.date
+                # amount_total_signed: negativo para facturas, positivo para devoluciones
+                signed = -inv.amount_total_signed
+                amt_cc = inv.currency_id.with_context(date=inv_date).compute(
+                    signed, company_currency
+                )
+                amount_real += amt_cc
+                rate = UfRate.get_rate(rec.company_id, inv_date)
+                if rate:
+                    amount_real_uf += amt_cc / rate
+            rec.amount_real = amount_real
+            rec.amount_real_uf = amount_real_uf
 
     @api.model
     def create(self, vals):

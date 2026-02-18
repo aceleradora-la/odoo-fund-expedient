@@ -1,4 +1,6 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_fund_uf_rate_user,fund.uf.rate.user,model_fund_uf_rate,group_fund_expedient_user,1,0,0,0
+access_fund_uf_rate_manager,fund.uf.rate.manager,model_fund_uf_rate,group_fund_expedient_manager,1,1,1,1
 access_fund_budget_position_category_user,fund.budget.position.category.user,model_fund_budget_position_category,group_fund_expedient_user,1,0,0,0
 access_fund_budget_position_category_manager,fund.budget.position.category.manager,model_fund_budget_position_category,group_fund_expedient_manager,1,1,1,1
 access_fund_budget_position_user,fund.budget.position.user,model_fund_budget_position,group_fund_expedient_user,1,0,0,0

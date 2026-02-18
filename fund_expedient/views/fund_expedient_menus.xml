@@ -84,4 +84,11 @@
               action="action_fund_expedient_sequence"
               sequence="5"
               groups="fund_expedient.group_fund_expedient_manager"/>
+
+    <menuitem id="menu_fund_uf_rate"
+              name="Cotización UF"
+              parent="menu_fund_expedient_config"
+              action="action_fund_uf_rate"
+              sequence="45"
+              groups="fund_expedient.group_fund_expedient_manager"/>
 </odoo>
