@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <record id="view_budget_position_category_tree" model="ir.ui.view">
+    <data noupdate="0">
+    <!-- Eliminar vistas antiguas con type=tree si existen (migración Odoo 18) -->
+    <delete model="ir.ui.view" id="fund_expedient.view_budget_position_category_tree"/>
+    <delete model="ir.ui.view" id="fund_expedient.view_budget_position_tree"/>
+    <record id="view_budget_position_category_list" model="ir.ui.view">
         <field name="name">fund.budget.position.category.list</field>
         <field name="model">fund.budget.position.category</field>
         <field name="type">list</field>
@@ -12,7 +16,7 @@
         </field>
     </record>
 
-    <record id="view_budget_position_tree" model="ir.ui.view">
+    <record id="view_budget_position_list" model="ir.ui.view">
         <field name="name">fund.budget.position.list</field>
         <field name="model">fund.budget.position</field>
         <field name="type">list</field>
@@ -48,4 +52,5 @@
             </form>
         </field>
     </record>
+    </data>
 </odoo>
