@@ -285,8 +285,8 @@ class FundExpedient(models.Model):
                 and po.invoice_status != "invoiced"
             )
             amount_committed = sum(
-                po.currency_id.with_context(date=po.date_order).compute(
-                    po.amount_total, company_currency
+                po.currency_id._convert(
+                    po.amount_total, company_currency, rec.company_id, po.date_order.date()
                 )
                 for po in pos_committed
             )
@@ -297,9 +297,9 @@ class FundExpedient(models.Model):
             for po in pos_committed:
                 rate = UfRate.get_rate(rec.company_id, po.date_order.date())
                 if rate:
-                    amt_cc = po.currency_id.with_context(
-                        date=po.date_order
-                    ).compute(po.amount_total, company_currency)
+                    amt_cc = po.currency_id._convert(
+                        po.amount_total, company_currency, rec.company_id, po.date_order.date()
+                    )
                     committed_uf += amt_cc / rate
             rec.amount_committed_uf = committed_uf
 
@@ -317,8 +317,8 @@ class FundExpedient(models.Model):
                 inv_date = inv.invoice_date or inv.date
                 # amount_total_signed: negativo para facturas, positivo para devoluciones
                 signed = -inv.amount_total_signed
-                amt_cc = inv.currency_id.with_context(date=inv_date).compute(
-                    signed, company_currency
+                amt_cc = inv.currency_id._convert(
+                    signed, company_currency, rec.company_id, inv_date
                 )
                 amount_real += amt_cc
                 rate = UfRate.get_rate(rec.company_id, inv_date)
