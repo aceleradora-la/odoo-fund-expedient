@@ -147,7 +147,7 @@
                         </page>
                         <page string="Facturas" name="invoices">
                             <field name="direct_invoice_ids" nolabel="1"
-                                   context="{'default_move_type': 'in_invoice', 'default_expedient_ids': [(4, active_id)]}">
+                                   context="{'default_move_type': 'in_invoice'}">
                                 <list create="1" delete="1" open="1">
                                     <field name="name"/>
                                     <field name="partner_id"/>
