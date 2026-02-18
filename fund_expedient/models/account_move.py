@@ -24,9 +24,22 @@ class AccountMove(models.Model):
             f in vals
             for f in ("expedient_ids", "state", "amount_total", "currency_id")
         ):
+            # Facturas directas: expedient_ids
             expedients = self.mapped("expedient_ids")
+            # Facturas desde OC: expedientes vía líneas con purchase_line_id
+            for move in self:
+                if move.move_type in ("in_invoice", "in_refund"):
+                    pos = move.invoice_line_ids.purchase_line_id.order_id
+                    for po in pos:
+                        if po.expedient_ids:
+                            expedients |= po.expedient_ids
             if expedients:
                 expedients.invalidate_recordset(
-                    ["amount_real", "amount_real_uf"]
+                    [
+                        "amount_committed",
+                        "amount_committed_uf",
+                        "amount_real",
+                        "amount_real_uf",
+                    ]
                 )
         return res
