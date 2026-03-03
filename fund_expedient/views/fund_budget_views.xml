@@ -1,0 +1,198 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_fund_budget_line_list" model="ir.ui.view">
+        <field name="name">fund.budget.line.list</field>
+        <field name="model">fund.budget.line</field>
+        <field name="type">list</field>
+        <field name="arch" type="xml">
+            <list string="Líneas de presupuesto" create="1" delete="1" edit="1">
+                <field name="budget_position_id"/>
+                <field name="initial_amount"/>
+                <field name="adjustment_amount" readonly="1"/>
+                <field name="amount_total" readonly="1"/>
+                <field name="committed_amount" readonly="1"/>
+                <field name="real_amount" readonly="1"/>
+                <field name="balance_amount" readonly="1"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_fund_budget_adjustment_line_list" model="ir.ui.view">
+        <field name="name">fund.budget.adjustment.line.list</field>
+        <field name="model">fund.budget.adjustment.line</field>
+        <field name="type">list</field>
+        <field name="arch" type="xml">
+            <list string="Líneas de ajuste" create="1" delete="1" edit="1">
+                <field name="budget_position_id"/>
+                <field name="amount"/>
+                <field name="note"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_fund_budget_adjustment_form" model="ir.ui.view">
+        <field name="name">fund.budget.adjustment.form</field>
+        <field name="model">fund.budget.adjustment</field>
+        <field name="arch" type="xml">
+            <form string="Ajuste presupuestario">
+                <header>
+                    <button name="action_post" type="object" string="Publicar"
+                            class="btn-primary" invisible="state != 'draft'"/>
+                    <button name="action_to_draft" type="object" string="Borrador"
+                            invisible="state != 'cancel'"/>
+                    <button name="action_cancel" type="object" string="Cancelar"
+                            class="btn-danger" invisible="state not in ('draft', 'posted')"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,posted,cancel"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="budget_id"/>
+                            <field name="date"/>
+                        </group>
+                        <group>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                            <field name="amount_total" readonly="1"/>
+                        </group>
+                    </group>
+                    <field name="line_ids" nolabel="1" readonly="state != 'draft'">
+                        <list create="1" delete="1" edit="1">
+                            <field name="budget_position_id"/>
+                            <field name="amount"/>
+                            <field name="note"/>
+                        </list>
+                    </field>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_fund_budget_adjustment_list" model="ir.ui.view">
+        <field name="name">fund.budget.adjustment.list</field>
+        <field name="model">fund.budget.adjustment</field>
+        <field name="type">list</field>
+        <field name="arch" type="xml">
+            <list string="Ajustes presupuestarios" create="1" delete="1" edit="1">
+                <field name="name"/>
+                <field name="budget_id"/>
+                <field name="date"/>
+                <field name="amount_total"/>
+                <field name="state"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_fund_budget_form" model="ir.ui.view">
+        <field name="name">fund.budget.form</field>
+        <field name="model">fund.budget</field>
+        <field name="arch" type="xml">
+            <form string="Presupuesto">
+                <header>
+                    <button name="action_open" type="object" string="Abrir"
+                            class="btn-primary" invisible="state != 'draft'"/>
+                    <button name="action_close" type="object" string="Cerrar"
+                            class="btn-primary" invisible="state != 'open'"/>
+                    <button name="action_to_draft" type="object" string="Borrador"
+                            invisible="state != 'cancel'"/>
+                    <button name="action_cancel" type="object" string="Cancelar"
+                            class="btn-danger" invisible="state == 'cancel'"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,open,closed,cancel"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="fiscalyear"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                        </group>
+                        <group string="Totales">
+                            <field name="total_budget" readonly="1"/>
+                            <field name="total_committed" readonly="1"/>
+                            <field name="total_real" readonly="1"/>
+                            <field name="total_balance" readonly="1"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Partidas">
+                            <field name="line_ids" nolabel="1" readonly="state != 'draft'">
+                                <list create="1" delete="1" edit="1">
+                                    <field name="budget_position_id"/>
+                                    <field name="initial_amount"/>
+                                    <field name="adjustment_amount" readonly="1"/>
+                                    <field name="amount_total" readonly="1"/>
+                                    <field name="committed_amount" readonly="1"/>
+                                    <field name="real_amount" readonly="1"/>
+                                    <field name="balance_amount" readonly="1"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Ajustes">
+                            <field name="adjustment_ids" nolabel="1">
+                                <list create="1" delete="0" edit="0">
+                                    <field name="name"/>
+                                    <field name="date"/>
+                                    <field name="amount_total"/>
+                                    <field name="state"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_fund_budget_list" model="ir.ui.view">
+        <field name="name">fund.budget.list</field>
+        <field name="model">fund.budget</field>
+        <field name="type">list</field>
+        <field name="arch" type="xml">
+            <list string="Presupuestos">
+                <field name="name"/>
+                <field name="fiscalyear"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+                <field name="total_budget"/>
+                <field name="total_committed"/>
+                <field name="total_real"/>
+                <field name="total_balance"/>
+                <field name="state"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_fund_budget_search" model="ir.ui.view">
+        <field name="name">fund.budget.search</field>
+        <field name="model">fund.budget</field>
+        <field name="arch" type="xml">
+            <search string="Buscar presupuestos">
+                <field name="name"/>
+                <field name="fiscalyear"/>
+                <field name="company_id"/>
+                <filter string="Borrador" name="draft" domain="[('state', '=', 'draft')]"/>
+                <filter string="Abierto" name="open" domain="[('state', '=', 'open')]"/>
+                <filter string="Cerrado" name="closed" domain="[('state', '=', 'closed')]"/>
+                <group expand="0" string="Agrupar por">
+                    <filter string="Año" name="group_fiscalyear" context="{'group_by': 'fiscalyear'}"/>
+                    <filter string="Compañía" name="group_company" context="{'group_by': 'company_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_fund_budget" model="ir.actions.act_window">
+        <field name="name">Presupuestos</field>
+        <field name="res_model">fund.budget</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_fund_budget_search"/>
+    </record>
+
+    <record id="action_fund_budget_adjustment" model="ir.actions.act_window">
+        <field name="name">Ajustes presupuestarios</field>
+        <field name="res_model">fund.budget.adjustment</field>
+        <field name="view_mode">list,form</field>
+        <field name="context">{}</field>
+    </record>
+</odoo>

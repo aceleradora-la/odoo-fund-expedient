@@ -111,4 +111,25 @@
               action="action_fund_uf_rate"
               sequence="45"
               groups="fund_expedient.group_fund_expedient_manager"/>
+
+    <!-- Presupuesto -->
+    <menuitem id="menu_fund_budget_root"
+              name="Presupuesto"
+              parent="menu_fund_expedient_root"
+              sequence="20"/>
+    <menuitem id="menu_fund_budget_list"
+              name="Presupuestos"
+              parent="menu_fund_budget_root"
+              action="action_fund_budget"
+              sequence="10"/>
+    <menuitem id="menu_fund_budget_adjustment"
+              name="Ajustes"
+              parent="menu_fund_budget_root"
+              action="action_fund_budget_adjustment"
+              sequence="20"/>
+    <menuitem id="menu_fund_budget_position_report"
+              name="Análisis presupuestario"
+              parent="menu_fund_budget_root"
+              action="action_fund_budget_position_report"
+              sequence="30"/>
 </odoo>

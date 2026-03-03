@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_account_move_form_budget_position" model="ir.ui.view">
+        <field name="name">account.move.form.budget.position</field>
+        <field name="model">account.move</field>
+        <field name="inherit_id" ref="account.view_move_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='invoice_line_ids']/list/field[@name='account_id']" position="after">
+                <field name="budget_position_id"
+                       optional="show"
+                       invisible="move_type not in ('in_invoice', 'in_refund', 'entry')"/>
+            </xpath>
+            <xpath expr="//field[@name='line_ids']/list/field[@name='account_id']" position="after">
+                <field name="budget_position_id"
+                       optional="show"
+                       invisible="move_type not in ('in_invoice', 'in_refund', 'entry')"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

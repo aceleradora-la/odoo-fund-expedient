@@ -20,3 +20,13 @@ access_fund_expedient_type_manager,fund.expedient.type.manager,model_fund_expedi
 access_fund_expedient_user,fund.expedient.user,model_fund_expedient,group_fund_expedient_user,1,1,1,0
 access_fund_expedient_manager,fund.expedient.manager,model_fund_expedient,group_fund_expedient_manager,1,1,1,1
 access_fund_expedient_line_wizard,fund.expedient.line.wizard,model_fund_expedient_line_wizard,group_fund_expedient_user,1,1,1,1
+access_fund_budget_user,fund.budget.user,model_fund_budget,group_fund_expedient_user,1,0,0,0
+access_fund_budget_manager,fund.budget.manager,model_fund_budget,group_fund_expedient_manager,1,1,1,1
+access_fund_budget_line_user,fund.budget.line.user,model_fund_budget_line,group_fund_expedient_user,1,0,0,0
+access_fund_budget_line_manager,fund.budget.line.manager,model_fund_budget_line,group_fund_expedient_manager,1,1,1,1
+access_fund_budget_adjustment_user,fund.budget.adjustment.user,model_fund_budget_adjustment,group_fund_expedient_user,1,0,0,0
+access_fund_budget_adjustment_manager,fund.budget.adjustment.manager,model_fund_budget_adjustment,group_fund_expedient_manager,1,1,1,1
+access_fund_budget_adjustment_line_user,fund.budget.adjustment.line.user,model_fund_budget_adjustment_line,group_fund_expedient_user,1,0,0,0
+access_fund_budget_adjustment_line_manager,fund.budget.adjustment.line.manager,model_fund_budget_adjustment_line,group_fund_expedient_manager,1,1,1,1
+access_fund_budget_position_report_user,fund.budget.position.report.user,model_fund_budget_position_report,group_fund_expedient_user,1,0,0,0
+access_fund_budget_position_report_manager,fund.budget.position.report.manager,model_fund_budget_position_report,group_fund_expedient_manager,1,0,0,0
