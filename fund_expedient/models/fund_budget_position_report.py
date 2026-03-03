@@ -129,10 +129,14 @@ class FundBudgetPositionReport(models.Model):
                         ON aml.company_id = b.company_id
                        AND aml.budget_position_id IS NOT NULL
                        AND aml.date BETWEEN b.date_from AND b.date_to
-                       AND aml.display_type IS NULL
+                       AND (aml.display_type IS NULL OR aml.display_type = '')
                     JOIN account_move am
                         ON am.id = aml.move_id
                        AND am.state = 'posted'
+                    JOIN account_account aa ON aa.id = aml.account_id
+                    JOIN account_account_type aat
+                        ON aat.id = aa.user_type_id
+                       AND aat.type IN ('expense', 'expense_depreciation')
                     GROUP BY b.id, aml.budget_position_id
                 )
                 SELECT

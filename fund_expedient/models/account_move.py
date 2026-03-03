@@ -31,6 +31,16 @@ class AccountMove(models.Model):
 
     def write(self, vals):
         res = super().write(vals)
+        if "expedient_ids" in vals:
+            for move in self:
+                if move.move_type in ("in_invoice", "in_refund") and move.expedient_ids:
+                    positions = move.expedient_ids.mapped("budget_position_id").filtered(lambda p: p)
+                    if len(positions) == 1:
+                        lines_to_update = move.invoice_line_ids.filtered(
+                            lambda l: not l.display_type and not l.budget_position_id
+                        )
+                        if lines_to_update:
+                            lines_to_update.write({"budget_position_id": positions[0].id})
         if any(
             f in vals
             for f in ("expedient_ids", "state", "amount_total", "currency_id", "invoice_line_ids")

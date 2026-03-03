@@ -47,6 +47,13 @@ class BudgetPosition(models.Model):
     )
     sequence = fields.Integer(default=10)
 
+    def name_get(self):
+        result = []
+        for rec in self:
+            name = f"{rec.code} - {rec.name}" if rec.code else rec.name
+            result.append((rec.id, name))
+        return result
+
     @api.constrains("child_ids", "type", "parent_id")
     def _check_type(self):
         for rec in self:
