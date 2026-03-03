@@ -133,10 +133,9 @@ class FundBudgetPositionReport(models.Model):
                     JOIN account_move am
                         ON am.id = aml.move_id
                        AND am.state = 'posted'
-                    JOIN account_account aa ON aa.id = aml.account_id
-                    JOIN account_account_type aat
-                        ON aat.id = aa.user_type_id
-                       AND aat.type IN ('expense', 'expense_depreciation')
+                    JOIN account_account aa
+                        ON aa.id = aml.account_id
+                       AND aa.account_type IN ('expense', 'expense_depreciation')
                     GROUP BY b.id, aml.budget_position_id
                 )
                 SELECT
