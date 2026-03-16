@@ -45,6 +45,21 @@ class FundExpedient(models.Model):
         store=True,
         readonly=True,
     )
+    show_encuadre = fields.Boolean(
+        string="Mostrar encuadre",
+        compute="_compute_show_flags",
+        store=True,
+    )
+    show_ur_totals = fields.Boolean(
+        string="Mostrar totales UR",
+        compute="_compute_show_flags",
+        store=True,
+    )
+    show_uf_totals = fields.Boolean(
+        string="Mostrar totales UF",
+        compute="_compute_show_flags",
+        store=True,
+    )
     budget_position_id = fields.Many2one(
         "fund.budget.position",
         string="Partida presupuestaria asignada",
@@ -253,6 +268,13 @@ class FundExpedient(models.Model):
                 rec.state = rec.stage_id.state_type or "draft"
             else:
                 rec.state = "draft"
+
+    @api.depends("state", "type_id", "type_id.unit_mode")
+    def _compute_show_flags(self):
+        for rec in self:
+            rec.show_encuadre = rec.state == "purchases"
+            rec.show_ur_totals = rec.type_unit_mode != "uf"
+            rec.show_uf_totals = rec.type_unit_mode == "uf"
 
     def _read_group_stage_ids(self, stages, domain):
         """Etapas en kanban / statusbar: usar siempre todas, ordenadas por secuencia."""
