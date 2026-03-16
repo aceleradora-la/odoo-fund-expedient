@@ -276,6 +276,13 @@ class FundExpedient(models.Model):
             rec.show_ur_totals = rec.type_unit_mode != "uf"
             rec.show_uf_totals = rec.type_unit_mode == "uf"
 
+    @api.onchange("type_id")
+    def _onchange_type_id_clear_estimated(self):
+        """Al cambiar el tipo, poner a cero el total estimado para que se recalculen
+        los totales en la unidad que corresponda al nuevo tipo."""
+        if self.type_id:
+            self.amount_estimated = 0.0
+
     def _read_group_stage_ids(self, stages, domain):
         """Etapas en kanban / statusbar: usar siempre todas, ordenadas por secuencia."""
         return stages.search(domain or [], order="sequence")

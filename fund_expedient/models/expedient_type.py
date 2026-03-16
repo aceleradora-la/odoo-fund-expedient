@@ -93,6 +93,7 @@ class ExpedientType(models.Model):
         ],
         string="Unidad de aprobación",
         default="ur",
+        required=True,
         help="Unidad utilizada para los umbrales de aprobación y análisis (UR o UF).",
     )
     company_id = fields.Many2one(

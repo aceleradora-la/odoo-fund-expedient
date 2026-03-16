@@ -124,17 +124,17 @@
                             <field name="amount_committed" readonly="1"/>
                             <field name="amount_real" readonly="1"/>
                         </group>
-                        <group string="Unidades Retributivas (UR)">
+                        <group string="Unidades Retributivas (UR)" invisible="not show_ur_totals">
                             <field name="show_ur_totals" invisible="1"/>
-                            <field name="amount_estimated_uf" readonly="1" invisible="not show_ur_totals"/>
-                            <field name="amount_committed_uf" readonly="1" invisible="not show_ur_totals"/>
-                            <field name="amount_real_uf" readonly="1" invisible="not show_ur_totals"/>
+                            <field name="amount_estimated_uf" readonly="1"/>
+                            <field name="amount_committed_uf" readonly="1"/>
+                            <field name="amount_real_uf" readonly="1"/>
                         </group>
-                        <group string="Unidad Funcional (UF)">
+                        <group string="Unidad Funcional (UF)" invisible="not show_uf_totals">
                             <field name="show_uf_totals" invisible="1"/>
-                            <field name="amount_estimated_ufunc" readonly="1" invisible="not show_uf_totals"/>
-                            <field name="amount_committed_ufunc" readonly="1" invisible="not show_uf_totals"/>
-                            <field name="amount_real_ufunc" readonly="1" invisible="not show_uf_totals"/>
+                            <field name="amount_estimated_ufunc" readonly="1"/>
+                            <field name="amount_committed_ufunc" readonly="1"/>
+                            <field name="amount_real_ufunc" readonly="1"/>
                         </group>
                     </group>
                     <notebook>
