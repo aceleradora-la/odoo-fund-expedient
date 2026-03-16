@@ -59,10 +59,10 @@
                     <field name="state" invisible="1"/>
                     <button name="action_previous_stage" type="object" string="Etapa anterior"
                             class="btn-secondary"
-                            modifiers="{\"invisible\": [[\"state\", \"=\", \"cancel\"]]}"/>
+                            modifiers='{"invisible": [["state", "=", "cancel"]]}'/>
                     <button name="action_next_stage" type="object" string="Siguiente etapa"
                             class="btn-primary"
-                            modifiers="{\"invisible\": [[\"state\", \"=\", \"cancel\"]]}"/>
+                            modifiers='{"invisible": [["state", "=", "cancel"]]}'/>
                     <button name="action_cancel" type="object" string="Cancelar"
                             class="btn-danger" invisible="state == 'cancel'"
                             confirm="¿Está seguro de que desea cancelar este expediente?"/>
@@ -106,7 +106,7 @@
                             <field name="type_id"/>
                             <field name="type_unit_mode" invisible="1"/>
                             <field name="encuadre_id"
-                                   modifiers="{\"invisible\": [[\"stage_id.state_type\", \"!=\", \"purchases\"]]}"/>
+                                   modifiers='{"invisible": [["stage_id.state_type", "!=", "purchases"]]}'/>
                             <field name="estimated_need_date"/>
                             <field name="requestor_id"/>
                             <field name="recommended_supplier_id"/>
@@ -125,13 +125,13 @@
                             <field name="amount_real" readonly="1"/>
                         </group>
                         <group string="Unidades Retributivas (UR)"
-                               modifiers="{\"invisible\": [[\"type_unit_mode\", \"=\", \"uf\"]]}">
+                               modifiers='{"invisible": [["type_unit_mode", "=", "uf"]]}'>
                             <field name="amount_estimated_uf" readonly="1"/>
                             <field name="amount_committed_uf" readonly="1"/>
                             <field name="amount_real_uf" readonly="1"/>
                         </group>
                         <group string="Unidad Funcional (UF)"
-                               modifiers="{\"invisible\": [[\"type_unit_mode\", \"!=\", \"uf\"]]}">
+                               modifiers='{"invisible": [["type_unit_mode", "!=", "uf"]]}'>
                             <field name="amount_estimated_ufunc" readonly="1"/>
                             <field name="amount_committed_ufunc" readonly="1"/>
                             <field name="amount_real_ufunc" readonly="1"/>
