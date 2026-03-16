@@ -17,7 +17,7 @@ class FundExpedient(models.Model):
     def action_next_stage(self):
         """No permitir pasar a la siguiente etapa hasta que la validación esté finalizada."""
         for rec in self:
-            if rec.need_validation and rec.validation_status != "validated":
+            if rec.validation_status not in ("validated", "no"):
                 raise UserError(
                     _(
                         "No puede pasar a la siguiente etapa hasta que la validación "
@@ -33,5 +33,5 @@ class FundExpedient(models.Model):
             if current_index == -1 or current_index + 1 >= len(stages):
                 continue
             target = stages[current_index + 1]
-            rec.stage_id = target
+            rec.with_context(skip_validation_check=True).write({"stage_id": target.id})
         return True
