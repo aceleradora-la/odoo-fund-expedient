@@ -104,6 +104,7 @@
                             <field name="number" readonly="1"/>
                             <field name="request_date"/>
                             <field name="type_id"/>
+                            <field name="type_unit_mode" invisible="1"/>
                             <field name="encuadre_id"
                                    modifiers="{'invisible': [['stage_id.state_type', '!=', 'purchases']]}"/>
                             <field name="estimated_need_date"/>
