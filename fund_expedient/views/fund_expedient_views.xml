@@ -124,17 +124,21 @@
                             <field name="amount_committed" readonly="1"/>
                             <field name="amount_real" readonly="1"/>
                         </group>
-                        <group string="Unidades Retributivas (UR)"
-                               modifiers='{"invisible": [["type_id.unit_mode", "!=", "ur"]] }'>
-                            <field name="amount_estimated_uf" readonly="1"/>
-                            <field name="amount_committed_uf" readonly="1"/>
-                            <field name="amount_real_uf" readonly="1"/>
+                        <group string="Unidades Retributivas (UR)">
+                            <field name="amount_estimated_uf" readonly="1"
+                                   modifiers='{"invisible": [["type_id.unit_mode", "!=", "ur"]]}'/>
+                            <field name="amount_committed_uf" readonly="1"
+                                   modifiers='{"invisible": [["type_id.unit_mode", "!=", "ur"]]}'/>
+                            <field name="amount_real_uf" readonly="1"
+                                   modifiers='{"invisible": [["type_id.unit_mode", "!=", "ur"]]}'/>
                         </group>
-                        <group string="Unidad Funcional (UF)"
-                               modifiers='{"invisible": [["type_id.unit_mode", "!=", "uf"]] }'>
-                            <field name="amount_estimated_ufunc" readonly="1"/>
-                            <field name="amount_committed_ufunc" readonly="1"/>
-                            <field name="amount_real_ufunc" readonly="1"/>
+                        <group string="Unidad Funcional (UF)">
+                            <field name="amount_estimated_ufunc" readonly="1"
+                                   modifiers='{"invisible": [["type_id.unit_mode", "!=", "uf"]]}'/>
+                            <field name="amount_committed_ufunc" readonly="1"
+                                   modifiers='{"invisible": [["type_id.unit_mode", "!=", "uf"]]}'/>
+                            <field name="amount_real_ufunc" readonly="1"
+                                   modifiers='{"invisible": [["type_id.unit_mode", "!=", "uf"]]}'/>
                         </group>
                     </group>
                     <notebook>
