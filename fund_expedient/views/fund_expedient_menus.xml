@@ -55,6 +55,11 @@
               parent="menu_fund_expedient_root"
               action="action_fund_expedient"
               sequence="10"/>
+    <menuitem id="menu_fund_expedient_dashboard"
+              name="Tablero de expedientes"
+              parent="menu_fund_expedient_root"
+              action="action_fund_expedient_dashboard"
+              sequence="15"/>
 
     <menuitem id="menu_expedient_stage"
               name="Etapas de expediente"

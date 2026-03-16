@@ -232,6 +232,7 @@
                 <filter string="Por aprobar" name="to_approve" domain="[('state', '=', 'to_approve')]"/>
                 <filter string="Aprobados" name="approved" domain="[('state', '=', 'approved')]"/>
                 <filter string="Cancelados" name="cancelled" domain="[('state', '=', 'cancel')]"/>
+                <filter string="Activos (no cancelados)" name="not_cancelled" domain="[('state', '!=', 'cancel')]"/>
                 <group expand="0" string="Agrupar por">
                     <filter string="Etapa" name="group_stage" context="{'group_by': 'stage_id'}"/>
                     <filter string="Solicitante" name="group_requestor" context="{'group_by': 'requestor_id'}"/>
@@ -253,6 +254,68 @@
             <p>
                 Los expedientes permiten gestionar solicitudes con etapas, partida presupuestaria,
                 relación con solicitudes de cotización y proyectos.
+            </p>
+        </field>
+    </record>
+
+    <!-- Reportes / Tablero de expedientes -->
+    <record id="view_fund_expedient_pivot" model="ir.ui.view">
+        <field name="name">fund.expedient.pivot</field>
+        <field name="model">fund.expedient</field>
+        <field name="type">pivot</field>
+        <field name="arch" type="xml">
+            <pivot string="Expedientes - Análisis">
+                <field name="stage_id" type="row"/>
+                <field name="type_id" type="row"/>
+                <field name="budget_position_id" type="row"/>
+                <field name="request_date" interval="month" type="col"/>
+                <field name="report_count" type="measure"/>
+                <field name="amount_estimated" type="measure"/>
+                <field name="amount_committed" type="measure"/>
+                <field name="amount_real" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="view_fund_expedient_graph" model="ir.ui.view">
+        <field name="name">fund.expedient.graph</field>
+        <field name="model">fund.expedient</field>
+        <field name="type">graph</field>
+        <field name="arch" type="xml">
+            <graph string="Montos por etapa (Real vs Estimado)" type="bar">
+                <field name="stage_id"/>
+                <field name="amount_estimated" type="measure"/>
+                <field name="amount_committed" type="measure"/>
+                <field name="amount_real" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="view_fund_expedient_graph_count" model="ir.ui.view">
+        <field name="name">fund.expedient.graph.count</field>
+        <field name="model">fund.expedient</field>
+        <field name="type">graph</field>
+        <field name="arch" type="xml">
+            <graph string="Cantidad de expedientes por etapa" type="bar">
+                <field name="stage_id"/>
+                <field name="report_count" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="action_fund_expedient_dashboard" model="ir.actions.act_window">
+        <field name="name">Tablero de expedientes</field>
+        <field name="res_model">fund.expedient</field>
+        <field name="view_mode">pivot,graph,list</field>
+        <field name="search_view_id" ref="view_fund_expedient_search"/>
+        <field name="context">{'search_default_not_cancelled': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Tablero de expedientes
+            </p>
+            <p>
+                Use la vista <b>Pivote</b> para cantidad de expedientes, por etapa, tipo o partida, y sumatorias de estimado, comprometido y real.
+                Use la vista <b>Gráfico</b> para expedientes por etapa o montos. Real vs presupuesto: compare Total Real con Total Estimado en el pivote.
             </p>
         </field>
     </record>

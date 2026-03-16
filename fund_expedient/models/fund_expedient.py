@@ -257,6 +257,17 @@ class FundExpedient(models.Model):
         store=True,
         digits=(16, 4),
     )
+    report_count = fields.Integer(
+        string="Cantidad",
+        compute="_compute_report_count",
+        store=True,
+        help="Siempre 1; para usar como medida de conteo en reportes y tableros.",
+    )
+
+    @api.depends("id")
+    def _compute_report_count(self):
+        for rec in self:
+            rec.report_count = 1
 
     @api.model
     def _default_stage_id(self):
@@ -554,21 +565,15 @@ class FundExpedient(models.Model):
 
     def action_view_purchase_orders(self):
         self.ensure_one()
-        if self.can_create_purchase:
-            return {
-                "type": "ir.actions.act_window",
-                "name": "Solicitudes de cotización",
-                "res_model": "purchase.order",
-                "view_mode": "list,form",
-                "domain": [("id", "in", self.purchase_order_ids.ids)],
-                "context": {"default_expedient_ids": [(4, self.id)]},
-            }
-        action = self.env["ir.actions.act_window"]._for_xml_id(
-            "fund_expedient.action_purchase_order_from_expedient_no_create"
-        )
-        action["domain"] = [("id", "in", self.purchase_order_ids.ids)]
-        action["context"] = {"default_expedient_ids": [(4, self.id)]}
-        return action
+        return {
+            "type": "ir.actions.act_window",
+            "name": "Solicitudes de cotización",
+            "res_model": "purchase.order",
+            "view_mode": "list,form",
+            "domain": [("id", "in", self.purchase_order_ids.ids)],
+            "context": {"default_expedient_ids": [(4, self.id)]},
+            "create": self.can_create_purchase,
+        }
 
     def action_view_projects(self):
         self.ensure_one()
