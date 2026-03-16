@@ -26,10 +26,14 @@
                             <field name="sequence"/>
                         </group>
                         <group>
+                            <field name="unit_mode"/>
                             <field name="company_id" groups="base.group_multi_company"/>
                         </group>
                     </group>
                     <notebook>
+                        <page string="Encuadres" name="encuadres">
+                            <field name="encuadre_ids" widget="many2many_tags" nolabel="1"/>
+                        </page>
                         <page string="Asignaciones por etapa" name="stage_assign">
                             <field name="stage_assign_ids" nolabel="1">
                                 <list create="1" delete="1" edit="1">
