@@ -264,7 +264,7 @@ class FundExpedient(models.Model):
         help="Siempre 1; para usar como medida de conteo en reportes y tableros.",
     )
 
-    @api.depends("id")
+    @api.depends("create_date")
     def _compute_report_count(self):
         for rec in self:
             rec.report_count = 1
