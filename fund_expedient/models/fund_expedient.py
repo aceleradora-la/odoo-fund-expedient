@@ -561,6 +561,7 @@ class FundExpedient(models.Model):
             "view_mode": "list,form",
             "domain": [("id", "in", self.purchase_order_ids.ids)],
             "context": {"default_expedient_ids": [(4, self.id)]},
+            "create": self.can_create_purchase,
         }
 
     def action_view_projects(self):
