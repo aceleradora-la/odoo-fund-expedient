@@ -15,5 +15,7 @@
         "fund_expedient",
         "base_tier_validation",
     ],
-    "data": [],
+    "data": [
+        "views/fund_expedient_views.xml",
+    ],
 }
