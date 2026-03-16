@@ -10,7 +10,7 @@
                 <field name="validation_status" invisible="1"/>
             </xpath>
             <xpath expr="//button[@name='action_next_stage']" position="attributes">
-                <attribute name="modifiers">{"invisible": ["|", ["state", "=", "cancel"], ["validation_status", "not in", ["validated", "no"]]]}</attribute>
+                <attribute name="modifiers">{"invisible": ["|", ["state", "=", "cancel"], ["validation_status", "in", ["pending", "waiting", "rejected"]]]}</attribute>
             </xpath>
         </field>
     </record>

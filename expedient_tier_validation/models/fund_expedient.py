@@ -35,3 +35,15 @@ class FundExpedient(models.Model):
             target = stages[current_index + 1]
             rec.with_context(skip_validation_check=True).write({"stage_id": target.id})
         return True
+
+    def action_previous_stage(self):
+        """Permitir volver de etapa usando skip_validation_check para no bloquear por tier validation."""
+        for rec, stages in self._get_allowed_stages():
+            if not rec.stage_id or not stages:
+                continue
+            current_index = stages.ids.index(rec.stage_id.id) if rec.stage_id.id in stages.ids else -1
+            if current_index <= 0:
+                continue
+            target = stages[current_index - 1]
+            rec.with_context(skip_validation_check=True).write({"stage_id": target.id})
+        return True

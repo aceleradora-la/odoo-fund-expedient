@@ -285,7 +285,7 @@ class FundExpedient(models.Model):
 
     def _read_group_stage_ids(self, stages, domain):
         """Etapas en kanban / statusbar: usar siempre todas, ordenadas por secuencia."""
-        return stages.search(domain or [], order="sequence")
+        return stages.search(domain or [], order="sequence, id")
 
     @api.depends("purchase_order_ids")
     def _compute_purchase_order_count(self):
