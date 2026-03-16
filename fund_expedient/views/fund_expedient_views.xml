@@ -106,7 +106,7 @@
                             <field name="type_id"/>
                             <field name="type_unit_mode" invisible="1"/>
                             <field name="encuadre_id"
-                                   modifiers='{"invisible": [["stage_id.state_type", "!=", "purchases"]]}'/>
+                                   modifiers='{"invisible": [["state", "!=", "purchases"]]}'/>
                             <field name="estimated_need_date"/>
                             <field name="requestor_id"/>
                             <field name="recommended_supplier_id"/>
@@ -125,13 +125,13 @@
                             <field name="amount_real" readonly="1"/>
                         </group>
                         <group string="Unidades Retributivas (UR)"
-                               modifiers='{"invisible": [["type_unit_mode", "=", "uf"]]}'>
+                               modifiers='{"invisible": [["type_id.unit_mode", "!=", "ur"]] }'>
                             <field name="amount_estimated_uf" readonly="1"/>
                             <field name="amount_committed_uf" readonly="1"/>
                             <field name="amount_real_uf" readonly="1"/>
                         </group>
                         <group string="Unidad Funcional (UF)"
-                               modifiers='{"invisible": [["type_unit_mode", "!=", "uf"]]}'>
+                               modifiers='{"invisible": [["type_id.unit_mode", "!=", "uf"]] }'>
                             <field name="amount_estimated_ufunc" readonly="1"/>
                             <field name="amount_committed_ufunc" readonly="1"/>
                             <field name="amount_real_ufunc" readonly="1"/>

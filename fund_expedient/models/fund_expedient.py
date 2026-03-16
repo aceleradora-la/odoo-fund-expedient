@@ -55,7 +55,7 @@ class FundExpedient(models.Model):
         "fund.expedient.encuadre",
         string="Encuadre",
         tracking=True,
-        domain="[('id', 'in', type_id.encuadre_ids)]",
+        domain="[('id', 'in', type_id and type_id.encuadre_ids.ids or [])]",
     )
     type_id = fields.Many2one(
         "fund.expedient.type",
@@ -255,14 +255,7 @@ class FundExpedient(models.Model):
                 rec.state = "draft"
 
     def _read_group_stage_ids(self, stages, domain):
-        """Controlar las etapas visibles en el statusbar según el tipo."""
-        active_id = self.env.context.get("active_id")
-        if active_id:
-            expedient = self.browse(active_id)
-            if expedient and expedient.type_id and expedient.type_id.stage_assign_ids:
-                allowed = expedient.type_id.stage_assign_ids.mapped("stage_id")
-                return allowed.sorted(key=lambda s: (s.sequence, s.id))
-        # Por defecto, todas las etapas ordenadas por secuencia
+        """Etapas en kanban / statusbar: usar siempre todas, ordenadas por secuencia."""
         return stages.search(domain or [], order="sequence")
 
     @api.depends("purchase_order_ids")
