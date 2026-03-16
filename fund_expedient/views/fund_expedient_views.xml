@@ -130,7 +130,7 @@
                             <field name="amount_real_uf" readonly="1"/>
                         </group>
                         <group string="Unidad Funcional (UF)"
-                               modifiers="{'invisible': [['type_unit_mode', '=', 'ur']]}">
+                               modifiers="{'invisible': [['type_unit_mode', '!=', 'uf']]}">
                             <field name="amount_estimated_ufunc" readonly="1"/>
                             <field name="amount_committed_ufunc" readonly="1"/>
                             <field name="amount_real_ufunc" readonly="1"/>
