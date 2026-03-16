@@ -39,6 +39,12 @@ class FundExpedient(models.Model):
         string="Solicitante",
         tracking=True,
     )
+    type_unit_mode = fields.Selection(
+        related="type_id.unit_mode",
+        string="Unidad de aprobación (tipo)",
+        store=True,
+        readonly=True,
+    )
     budget_position_id = fields.Many2one(
         "fund.budget.position",
         string="Partida presupuestaria asignada",
@@ -49,6 +55,7 @@ class FundExpedient(models.Model):
         "fund.expedient.encuadre",
         string="Encuadre",
         tracking=True,
+        domain="[('id', 'in', type_id.encuadre_ids)]",
     )
     type_id = fields.Many2one(
         "fund.expedient.type",
@@ -211,6 +218,24 @@ class FundExpedient(models.Model):
         store=True,
         digits=(16, 4),
     )
+    amount_estimated_ufunc = fields.Float(
+        string="Total Estimado (UF)",
+        compute="_compute_amounts",
+        store=True,
+        digits=(16, 4),
+    )
+    amount_committed_ufunc = fields.Float(
+        string="Total Comprometido (UF)",
+        compute="_compute_amounts",
+        store=True,
+        digits=(16, 4),
+    )
+    amount_real_ufunc = fields.Float(
+        string="Total Real (UF)",
+        compute="_compute_amounts",
+        store=True,
+        digits=(16, 4),
+    )
 
     @api.model
     def _default_stage_id(self):
@@ -247,6 +272,46 @@ class FundExpedient(models.Model):
         for rec in self:
             rec.project_count = len(rec.project_ids)
 
+    def _get_allowed_stages(self):
+        """Etapas permitidas para el expediente según su tipo."""
+        Stage = self.env["fund.expedient.stage"]
+        for rec in self:
+            if rec.type_id and rec.type_id.stage_assign_ids:
+                allowed = rec.type_id.stage_assign_ids.mapped("stage_id")
+                yield rec, allowed.sorted(key=lambda s: (s.sequence, s.id))
+            else:
+                all_stages = Stage.search(
+                    [("company_id", "in", [False, rec.company_id.id])], order="sequence, id"
+                )
+                yield rec, all_stages
+
+    def action_next_stage(self):
+        for rec, stages in self._get_allowed_stages():
+            if not rec.stage_id or not stages:
+                continue
+            current_index = stages.ids.index(rec.stage_id.id) if rec.stage_id.id in stages.ids else -1
+            if current_index == -1 or current_index + 1 >= len(stages):
+                continue
+            target = stages[current_index + 1]
+            # Integración simple con tier_validation: si existe y aún no está aprobado,
+            # primero se envía a aprobar y no se cambia de etapa.
+            if hasattr(rec, "request_validation") and rec.state != "approved":
+                rec.request_validation()
+            else:
+                rec.stage_id = target
+        return True
+
+    def action_previous_stage(self):
+        for rec, stages in self._get_allowed_stages():
+            if not rec.stage_id or not stages:
+                continue
+            current_index = stages.ids.index(rec.stage_id.id) if rec.stage_id.id in stages.ids else -1
+            if current_index <= 0:
+                continue
+            target = stages[current_index - 1]
+            rec.stage_id = target
+        return True
+
     def _compute_payment_ids(self):
         for rec in self:
             # 1. Pagos con vinculación directa
@@ -276,8 +341,8 @@ class FundExpedient(models.Model):
             if not rec.amount_estimated or not rec.request_date:
                 rec.amount_estimated_uf = 0.0
                 continue
-            rate = UfRate.get_rate(rec.company_id, rec.request_date)
-            rec.amount_estimated_uf = rate and (rec.amount_estimated / rate) or 0.0
+            rate_ur = UfRate.get_rate(rec.company_id, rec.request_date, unit_type="ur")
+            rec.amount_estimated_uf = rate_ur and (rec.amount_estimated / rate_ur) or 0.0
 
     @api.depends(
         "purchase_order_ids",
@@ -322,21 +387,26 @@ class FundExpedient(models.Model):
                 )
             rec.amount_committed = amount_committed
 
-            # Total Comprometido en UR
-            committed_uf = 0.0
+            # Totales comprometidos en UR y UF
+            committed_ur = 0.0
+            committed_ufunc = 0.0
             for po in pos_committed:
                 po_amount_to_invoice = 0.0
                 for line in po.order_line.filtered(lambda l: not l.display_type and l.product_qty):
                     po_amount_to_invoice += (
                         line.price_total * (line.qty_to_invoice / line.product_qty)
                     )
-                rate = UfRate.get_rate(rec.company_id, po.date_order.date())
-                if rate:
-                    amt_cc = po.currency_id._convert(
-                        po_amount_to_invoice, company_currency, rec.company_id, po.date_order.date()
-                    )
-                    committed_uf += amt_cc / rate
-            rec.amount_committed_uf = committed_uf
+                amt_cc = po.currency_id._convert(
+                    po_amount_to_invoice, company_currency, rec.company_id, po.date_order.date()
+                )
+                rate_ur = UfRate.get_rate(rec.company_id, po.date_order.date(), unit_type="ur")
+                if rate_ur:
+                    committed_ur += amt_cc / rate_ur
+                rate_uf = UfRate.get_rate(rec.company_id, po.date_order.date(), unit_type="uf")
+                if rate_uf:
+                    committed_ufunc += amt_cc / rate_uf
+            rec.amount_committed_uf = committed_ur
+            rec.amount_committed_ufunc = committed_ufunc
 
             # Total Real: facturas posteadas (desde OC o directas)
             invoices_po = rec.purchase_order_ids.mapped("invoice_ids").filtered(
@@ -347,7 +417,8 @@ class FundExpedient(models.Model):
             )
             all_invoices = invoices_po | invoices_direct
             amount_real = 0.0
-            amount_real_uf = 0.0
+            amount_real_ur = 0.0
+            amount_real_ufunc = 0.0
             for inv in all_invoices:
                 inv_date = inv.invoice_date or inv.date
                 # amount_total_signed: negativo para facturas, positivo para devoluciones
@@ -356,11 +427,15 @@ class FundExpedient(models.Model):
                     signed, company_currency, rec.company_id, inv_date
                 )
                 amount_real += amt_cc
-                rate = UfRate.get_rate(rec.company_id, inv_date)
-                if rate:
-                    amount_real_uf += amt_cc / rate
+                rate_ur = UfRate.get_rate(rec.company_id, inv_date, unit_type="ur")
+                if rate_ur:
+                    amount_real_ur += amt_cc / rate_ur
+                rate_uf = UfRate.get_rate(rec.company_id, inv_date, unit_type="uf")
+                if rate_uf:
+                    amount_real_ufunc += amt_cc / rate_uf
             rec.amount_real = amount_real
-            rec.amount_real_uf = amount_real_uf
+            rec.amount_real_uf = amount_real_ur
+            rec.amount_real_ufunc = amount_real_ufunc
 
     @api.model
     def create(self, vals):

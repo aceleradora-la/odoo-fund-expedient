@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <record id="view_fund_uf_rate_list" model="ir.ui.view">
-        <field name="name">fund.uf.rate.list</field>
+            <field name="name">fund.uf.rate.list</field>
         <field name="model">fund.uf.rate</field>
         <field name="arch" type="xml">
             <list string="Cotización UR" create="1" delete="1" edit="1">
                 <field name="name"/>
+                <field name="unit_type"/>
                 <field name="rate"/>
                 <field name="company_id" groups="base.group_multi_company"/>
             </list>

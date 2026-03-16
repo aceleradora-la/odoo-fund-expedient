@@ -78,6 +78,23 @@ class ExpedientType(models.Model):
         "type_id",
         string="Asignaciones por etapa",
     )
+    encuadre_ids = fields.Many2many(
+        "fund.expedient.encuadre",
+        "fund_expedient_type_encuadre_rel",
+        "type_id",
+        "encuadre_id",
+        string="Encuadres permitidos",
+        help="Lista de encuadres que pueden seleccionarse para este tipo de expediente.",
+    )
+    unit_mode = fields.Selection(
+        [
+            ("ur", "Unidad Retributiva (UR)"),
+            ("uf", "Unidad Funcional (UF)"),
+        ],
+        string="Unidad de aprobación",
+        default="ur",
+        help="Unidad utilizada para los umbrales de aprobación y análisis (UR o UF).",
+    )
     company_id = fields.Many2one(
         "res.company",
         string="Compañía",

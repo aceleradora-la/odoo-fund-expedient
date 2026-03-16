@@ -15,10 +15,19 @@ class FundUfRate(models.Model):
         index=True,
     )
     rate = fields.Float(
-        string="Valor UR (en moneda compañía)",
+        string="Valor unidad (en moneda compañía)",
         digits=(16, 4),
         required=True,
-        help="Valor de 1 UR expresado en la moneda de la compañía.",
+        help="Valor de 1 unidad (UR o UF) expresada en la moneda de la compañía.",
+    )
+    unit_type = fields.Selection(
+        [
+            ("ur", "Unidad Retributiva (UR)"),
+            ("uf", "Unidad Funcional (UF)"),
+        ],
+        string="Tipo de unidad",
+        required=True,
+        default="ur",
     )
     company_id = fields.Many2one(
         "res.company",
@@ -30,15 +39,15 @@ class FundUfRate(models.Model):
 
     _sql_constraints = [
         (
-            "company_date_unique",
-            "UNIQUE(company_id, name)",
-            "Ya existe una cotización UR para esta compañía y fecha.",
+            "company_date_unit_unique",
+            "UNIQUE(company_id, name, unit_type)",
+            "Ya existe una cotización para esta compañía, fecha y tipo de unidad.",
         ),
     ]
 
     @api.model
-    def get_rate(self, company, date):
-        """Obtener la cotización UR vigente para una compañía y fecha.
+    def get_rate(self, company, date, unit_type="ur"):
+        """Obtener la cotización vigente (UR o UF) para una compañía y fecha.
         Busca la cotización con fecha <= date, la más reciente.
         """
         if not company or not date:
@@ -47,6 +56,7 @@ class FundUfRate(models.Model):
             [
                 ("company_id", "=", company.id if hasattr(company, "id") else company),
                 ("name", "<=", date),
+                ("unit_type", "=", unit_type),
             ],
             order="name desc",
             limit=1,
