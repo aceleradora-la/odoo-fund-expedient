@@ -554,15 +554,21 @@ class FundExpedient(models.Model):
 
     def action_view_purchase_orders(self):
         self.ensure_one()
-        return {
-            "type": "ir.actions.act_window",
-            "name": "Solicitudes de cotización",
-            "res_model": "purchase.order",
-            "view_mode": "list,form",
-            "domain": [("id", "in", self.purchase_order_ids.ids)],
-            "context": {"default_expedient_ids": [(4, self.id)]},
-            "create": self.can_create_purchase,
-        }
+        if self.can_create_purchase:
+            return {
+                "type": "ir.actions.act_window",
+                "name": "Solicitudes de cotización",
+                "res_model": "purchase.order",
+                "view_mode": "list,form",
+                "domain": [("id", "in", self.purchase_order_ids.ids)],
+                "context": {"default_expedient_ids": [(4, self.id)]},
+            }
+        action = self.env["ir.actions.act_window"]._for_xml_id(
+            "fund_expedient.action_purchase_order_from_expedient_no_create"
+        )
+        action["domain"] = [("id", "in", self.purchase_order_ids.ids)]
+        action["context"] = {"default_expedient_ids": [(4, self.id)]}
+        return action
 
     def action_view_projects(self):
         self.ensure_one()
