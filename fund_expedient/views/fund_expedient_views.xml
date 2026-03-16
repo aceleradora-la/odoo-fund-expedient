@@ -304,18 +304,21 @@
     </record>
 
     <record id="action_fund_expedient_dashboard" model="ir.actions.act_window">
-        <field name="name">Tablero de expedientes</field>
+        <field name="name">Reportes - Expedientes</field>
         <field name="res_model">fund.expedient</field>
         <field name="view_mode">pivot,graph,list</field>
         <field name="search_view_id" ref="view_fund_expedient_search"/>
         <field name="context">{'search_default_not_cancelled': 1}</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">
-                Tablero de expedientes
+                Reportes - Expedientes
             </p>
             <p>
                 Use la vista <b>Pivote</b> para cantidad de expedientes, por etapa, tipo o partida, y sumatorias de estimado, comprometido y real.
                 Use la vista <b>Gráfico</b> para expedientes por etapa o montos. Real vs presupuesto: compare Total Real con Total Estimado en el pivote.
+            </p>
+            <p>
+                Para llevarlo al <b>Tableros</b> de Odoo (como Ventas, Finanzas): en Pivote o Gráfico, use <b>Insertar en hoja de cálculo</b> y elija el tablero o sección donde añadirlo.
             </p>
         </field>
     </record>
