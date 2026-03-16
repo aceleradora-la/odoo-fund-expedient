@@ -24,6 +24,12 @@ class FundExpedient(models.Model):
                         "esté finalizada. Solicite la validación y espere su aprobación."
                     )
                 )
+            if not rec.can_edit_in_stage:
+                raise UserError(
+                    _(
+                        "Solo los usuarios asignados a la etapa actual pueden pasar a la siguiente."
+                    )
+                )
         # Hacer el cambio de etapa (el fund_expedient base con tier llama request_validation
         # y no avanza; aquí ya validamos, así que ejecutamos la transición de etapa).
         for rec, stages in self._get_allowed_stages():
@@ -38,6 +44,13 @@ class FundExpedient(models.Model):
 
     def action_previous_stage(self):
         """Permitir volver de etapa usando skip_validation_check para no bloquear por tier validation."""
+        for rec in self:
+            if not rec.can_edit_in_stage:
+                raise UserError(
+                    _(
+                        "Solo los usuarios asignados a la etapa actual pueden volver a la etapa anterior."
+                    )
+                )
         for rec, stages in self._get_allowed_stages():
             if not rec.stage_id or not stages:
                 continue

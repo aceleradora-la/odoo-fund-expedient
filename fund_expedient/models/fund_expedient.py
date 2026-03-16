@@ -3,6 +3,7 @@
 
 from odoo import api, fields, models
 from odoo.exceptions import UserError
+from odoo import _
 
 
 class FundExpedient(models.Model):
@@ -146,6 +147,11 @@ class FundExpedient(models.Model):
         compute="_compute_can_create_purchase",
         string="Puede crear solicitudes",
     )
+    can_edit_in_stage = fields.Boolean(
+        string="Puede editar en etapa",
+        compute="_compute_can_edit_in_stage",
+        help="True si el usuario actual puede modificar el expediente en la etapa actual (asignación tipo/etapa).",
+    )
     project_ids = fields.Many2many(
         "project.project",
         "fund_expedient_project_rel",
@@ -284,8 +290,8 @@ class FundExpedient(models.Model):
             self.amount_estimated = 0.0
 
     def _read_group_stage_ids(self, stages, domain):
-        """Etapas en kanban / statusbar: usar siempre todas, ordenadas por secuencia."""
-        return stages.search(domain or [], order="sequence, id")
+        """Etapas en kanban / statusbar: ordenadas por secuencia (corrige orden con filtros como Mis expedientes)."""
+        return stages.sorted(key=lambda s: (s.sequence, s.id))
 
     @api.depends("purchase_order_ids")
     def _compute_purchase_order_count(self):
@@ -303,7 +309,7 @@ class FundExpedient(models.Model):
             rec.project_count = len(rec.project_ids)
 
     def _get_allowed_stages(self):
-        """Etapas permitidas para el expediente según su tipo."""
+        """Etapas permitidas para el expediente según su tipo (asignaciones por etapa del tipo)."""
         Stage = self.env["fund.expedient.stage"]
         for rec in self:
             if rec.type_id and rec.type_id.stage_assign_ids:
@@ -316,6 +322,13 @@ class FundExpedient(models.Model):
                 yield rec, all_stages
 
     def action_next_stage(self):
+        for rec in self:
+            if not rec.can_edit_in_stage:
+                raise UserError(
+                    _(
+                        "Solo los usuarios asignados a la etapa actual pueden pasar a la siguiente."
+                    )
+                )
         for rec, stages in self._get_allowed_stages():
             if not rec.stage_id or not stages:
                 continue
@@ -332,6 +345,13 @@ class FundExpedient(models.Model):
         return True
 
     def action_previous_stage(self):
+        for rec in self:
+            if not rec.can_edit_in_stage:
+                raise UserError(
+                    _(
+                        "Solo los usuarios asignados a la etapa actual pueden volver a la etapa anterior."
+                    )
+                )
         for rec, stages in self._get_allowed_stages():
             if not rec.stage_id or not stages:
                 continue
@@ -477,6 +497,39 @@ class FundExpedient(models.Model):
             rec.amount_real_uf = amount_real_ur
             rec.amount_real_ufunc = amount_real_ufunc
 
+    def write(self, vals):
+        if not self.env.context.get("skip_validation_check"):
+            for rec in self:
+                if not rec.can_edit_in_stage:
+                    raise UserError(
+                        _(
+                            "Solo los usuarios asignados a la etapa actual pueden modificar este expediente."
+                        )
+                    )
+        stage_changed = "stage_id" in vals
+        result = super().write(vals)
+        if stage_changed and vals.get("stage_id"):
+            self._notify_stage_assignees()
+        return result
+
+    def _notify_stage_assignees(self):
+        """Suscribir y notificar a los usuarios asignados a la etapa actual."""
+        for rec in self:
+            users = rec._get_assignable_user_ids()
+            if not users:
+                continue
+            partners = users.mapped("partner_id").filtered(lambda p: p)
+            if partners:
+                rec.message_subscribe(partner_ids=partners.ids)
+                rec.message_post(
+                    body=_(
+                        "El expediente está ahora en la etapa <b>%s</b>. "
+                        "Los usuarios asignados a esta etapa han sido notificados.",
+                        rec.stage_id.name,
+                    ),
+                    subtype_xmlid="mail.mt_note",
+                )
+
     @api.model
     def create(self, vals):
         if vals.get("number", "/") == "/":
@@ -560,8 +613,27 @@ class FundExpedient(models.Model):
             },
         }
 
+    @api.depends("type_id", "stage_id")
+    @api.depends_context("uid")
+    def _compute_can_edit_in_stage(self):
+        """Solo pueden editar/cambiar etapa los usuarios asignados a la etapa (grupos, puestos, usuarios)."""
+        for rec in self:
+            users = rec._get_assignable_user_ids()
+            # Si hay asignación y no hay usuarios configurados, nadie puede (o permitir todos: aquí restringimos)
+            if rec.type_id and rec.stage_id and not users:
+                assign = self.env["fund.expedient.type.stage.assign"].search(
+                    [
+                        ("type_id", "=", rec.type_id.id),
+                        ("stage_id", "=", rec.stage_id.id),
+                    ],
+                    limit=1,
+                )
+                rec.can_edit_in_stage = not assign
+            else:
+                rec.can_edit_in_stage = self.env.user in users
+
     def _get_assignable_user_ids(self):
-        """Usuarios asignables según tipo y etapa (grupos + puestos del organigrama)."""
+        """Usuarios que pueden operar en esta etapa (grupos + puestos + usuarios concretos)."""
         self.ensure_one()
         if not self.type_id or not self.stage_id:
             return self.env["res.users"]
@@ -574,7 +646,7 @@ class FundExpedient(models.Model):
         )
         if not assign:
             return self.env["res.users"]
-        user_ids = assign.group_ids.users
+        user_ids = assign.group_ids.users | assign.user_ids
         if assign.job_ids:
             employees = self.env["hr.employee"].search(
                 [("job_id", "in", assign.job_ids.ids)]

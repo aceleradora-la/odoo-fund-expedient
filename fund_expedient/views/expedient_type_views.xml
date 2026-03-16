@@ -40,6 +40,7 @@
                                     <field name="stage_id" options="{'no_create': True}"/>
                                     <field name="group_ids" widget="many2many_tags"/>
                                     <field name="job_ids" widget="many2many_tags"/>
+                                    <field name="user_ids" widget="many2many_tags"/>
                                 </list>
                             </field>
                         </page>

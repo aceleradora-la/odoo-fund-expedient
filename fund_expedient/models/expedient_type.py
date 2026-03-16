@@ -38,6 +38,14 @@ class ExpedientTypeStageAssign(models.Model):
         string="Puestos del organigrama",
         help="Empleados con estos puestos pueden ser asignados o son responsables en esta etapa.",
     )
+    user_ids = fields.Many2many(
+        "res.users",
+        "fund_expedient_type_stage_assign_user_rel",
+        "assign_id",
+        "user_id",
+        string="Usuarios",
+        help="Usuarios concretos asignados a esta etapa (además de grupos y puestos).",
+    )
     company_id = fields.Many2one(
         related="type_id.company_id",
         store=True,
