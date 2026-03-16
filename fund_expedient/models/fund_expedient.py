@@ -235,7 +235,7 @@ class FundExpedient(models.Model):
     )
     amount_estimated_ufunc = fields.Float(
         string="Total Estimado (UF)",
-        compute="_compute_amounts",
+        compute="_compute_amount_estimated_ufunc",
         store=True,
         digits=(16, 4),
     )
@@ -373,6 +373,16 @@ class FundExpedient(models.Model):
                 continue
             rate_ur = UfRate.get_rate(rec.company_id, rec.request_date, unit_type="ur")
             rec.amount_estimated_uf = rate_ur and (rec.amount_estimated / rate_ur) or 0.0
+
+    @api.depends("amount_estimated", "request_date", "company_id")
+    def _compute_amount_estimated_ufunc(self):
+        UfRate = self.env["fund.uf.rate"]
+        for rec in self:
+            if not rec.amount_estimated or not rec.request_date:
+                rec.amount_estimated_ufunc = 0.0
+                continue
+            rate_uf = UfRate.get_rate(rec.company_id, rec.request_date, unit_type="uf")
+            rec.amount_estimated_ufunc = rate_uf and (rec.amount_estimated / rate_uf) or 0.0
 
     @api.depends(
         "purchase_order_ids",
