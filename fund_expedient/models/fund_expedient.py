@@ -440,40 +440,51 @@ class FundExpedient(models.Model):
         for rec in self:
             company_currency = rec.company_id.currency_id
 
-            # Total Comprometido: monto pendiente de facturar en OC confirmadas
+            # Total Comprometido: OC confirmadas menos facturado (posteado).
+            # Nota: con "facturación al recibir", qty_to_invoice puede ser 0 hasta recibir, pero el
+            # compromiso debería reflejar el total ordenado desde la confirmación.
             pos_committed = rec.purchase_order_ids.filtered(
                 lambda po: po.state in ("purchase", "done")
                 and po.invoice_status != "invoiced"
             )
             amount_committed = 0.0
             for po in pos_committed:
-                # Monto pendiente = suma por línea de (qty_to_invoice / product_qty * price_total)
-                po_amount_to_invoice = 0.0
-                for line in po.order_line.filtered(lambda l: not l.display_type and l.product_qty):
-                    po_amount_to_invoice += (
-                        line.price_total * (line.qty_to_invoice / line.product_qty)
-                    )
-                amount_committed += po.currency_id._convert(
-                    po_amount_to_invoice, company_currency, rec.company_id, po.date_order.date()
+                po_date = po.date_order.date()
+                ordered_cc = po.currency_id._convert(
+                    po.amount_total, company_currency, rec.company_id, po_date
                 )
+                invoiced_cc = 0.0
+                for inv in po.invoice_ids.filtered(lambda m: m.state == "posted"):
+                    inv_date = inv.invoice_date or inv.date
+                    signed = -inv.amount_total_signed
+                    invoiced_cc += inv.currency_id._convert(
+                        signed, company_currency, rec.company_id, inv_date
+                    )
+                pending_cc = max(0.0, ordered_cc - invoiced_cc)
+                amount_committed += pending_cc
             rec.amount_committed = amount_committed
 
             # Totales comprometidos en UR y UF
             committed_ur = 0.0
             committed_ufunc = 0.0
             for po in pos_committed:
-                po_amount_to_invoice = 0.0
-                for line in po.order_line.filtered(lambda l: not l.display_type and l.product_qty):
-                    po_amount_to_invoice += (
-                        line.price_total * (line.qty_to_invoice / line.product_qty)
-                    )
-                amt_cc = po.currency_id._convert(
-                    po_amount_to_invoice, company_currency, rec.company_id, po.date_order.date()
+                po_date = po.date_order.date()
+                ordered_cc = po.currency_id._convert(
+                    po.amount_total, company_currency, rec.company_id, po_date
                 )
-                rate_ur = UfRate.get_rate(rec.company_id, po.date_order.date(), unit_type="ur")
+                invoiced_cc = 0.0
+                for inv in po.invoice_ids.filtered(lambda m: m.state == "posted"):
+                    inv_date = inv.invoice_date or inv.date
+                    signed = -inv.amount_total_signed
+                    invoiced_cc += inv.currency_id._convert(
+                        signed, company_currency, rec.company_id, inv_date
+                    )
+                amt_cc = max(0.0, ordered_cc - invoiced_cc)
+
+                rate_ur = UfRate.get_rate(rec.company_id, po_date, unit_type="ur")
                 if rate_ur:
                     committed_ur += amt_cc / rate_ur
-                rate_uf = UfRate.get_rate(rec.company_id, po.date_order.date(), unit_type="uf")
+                rate_uf = UfRate.get_rate(rec.company_id, po_date, unit_type="uf")
                 if rate_uf:
                     committed_ufunc += amt_cc / rate_uf
             rec.amount_committed_uf = committed_ur
