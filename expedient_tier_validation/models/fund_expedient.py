@@ -14,16 +14,23 @@ class FundExpedient(models.Model):
     _cancel_state = "cancel"
     _tier_validation_manual_config = False
 
-    def _clear_tier_reviews(self):
-        """Limpiar validaciones para que el siguiente stage tenga su propia validación."""
-        for rec in self:
-            if rec.review_ids:
-                rec.review_ids.sudo().unlink()
+    def _current_stage_reviews(self):
+        """Reviews asociadas a la etapa actual (para validación por etapa)."""
+        self.ensure_one()
+        return self.review_ids.filtered(lambda r: r.stage_id.id == self.stage_id.id)
+
+    def _prepare_tier_review_vals(self, definition, sequence):
+        """Inyectar etapa actual en la review para auditoría por etapa."""
+        vals = super()._prepare_tier_review_vals(definition, sequence)
+        vals["stage_id"] = self.stage_id.id
+        return vals
 
     def action_next_stage(self):
         """No permitir pasar a la siguiente etapa hasta que la validación esté finalizada."""
         for rec in self:
-            if rec.validation_status not in ("validated", "no"):
+            # Validación por etapa: solo bloquea si hay reviews pendientes en esta etapa
+            stage_reviews = rec._current_stage_reviews()
+            if stage_reviews and any(r.status in ("waiting", "pending") for r in stage_reviews):
                 raise UserError(
                     _(
                         "No puede pasar a la siguiente etapa hasta que la validación "
@@ -46,8 +53,6 @@ class FundExpedient(models.Model):
                 continue
             target = stages[current_index + 1]
             rec.with_context(skip_validation_check=True).write({"stage_id": target.id})
-            # Validación por etapa: al cambiar de etapa, limpiar revisiones para no bloquear edición.
-            rec._clear_tier_reviews()
         return True
 
     def action_previous_stage(self):
@@ -67,5 +72,4 @@ class FundExpedient(models.Model):
                 continue
             target = stages[current_index - 1]
             rec.with_context(skip_validation_check=True).write({"stage_id": target.id})
-            rec._clear_tier_reviews()
         return True
