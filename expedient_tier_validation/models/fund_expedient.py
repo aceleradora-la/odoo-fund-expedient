@@ -14,6 +14,12 @@ class FundExpedient(models.Model):
     _cancel_state = "cancel"
     _tier_validation_manual_config = False
 
+    def _clear_tier_reviews(self):
+        """Limpiar validaciones para que el siguiente stage tenga su propia validación."""
+        for rec in self:
+            if rec.review_ids:
+                rec.review_ids.sudo().unlink()
+
     def action_next_stage(self):
         """No permitir pasar a la siguiente etapa hasta que la validación esté finalizada."""
         for rec in self:
@@ -40,6 +46,8 @@ class FundExpedient(models.Model):
                 continue
             target = stages[current_index + 1]
             rec.with_context(skip_validation_check=True).write({"stage_id": target.id})
+            # Validación por etapa: al cambiar de etapa, limpiar revisiones para no bloquear edición.
+            rec._clear_tier_reviews()
         return True
 
     def action_previous_stage(self):
@@ -59,4 +67,5 @@ class FundExpedient(models.Model):
                 continue
             target = stages[current_index - 1]
             rec.with_context(skip_validation_check=True).write({"stage_id": target.id})
+            rec._clear_tier_reviews()
         return True

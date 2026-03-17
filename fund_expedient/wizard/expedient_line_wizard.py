@@ -81,19 +81,26 @@ class ExpedientLineWizard(models.TransientModel):
 
     def _prepare_po_line(self, line):
         """Prepara valores para purchase.order.line."""
+        PurchaseOrderLine = self.env["purchase.order.line"]
         if line.product_id:
             product = line.product_id
             name = line.name or product.display_name
         else:
             product = self._get_service_product()
             name = line.name or product.display_name
-        return {
+        vals = {
             "product_id": product.id,
             "name": name,
             "product_qty": line.product_qty,
-            "product_uom_id": line.product_uom_id.id,
             "price_unit": 0.0,
         }
+        # Odoo 18 puede usar product_uom o product_uom_id según build/módulos.
+        # Si no existe el campo, no lo seteamos y dejamos que Purchase complete defaults.
+        if "product_uom_id" in PurchaseOrderLine._fields:
+            vals["product_uom_id"] = line.product_uom_id.id
+        elif "product_uom" in PurchaseOrderLine._fields:
+            vals["product_uom"] = line.product_uom_id.id
+        return vals
 
     def action_confirm(self):
         self.ensure_one()
