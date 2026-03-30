@@ -4,7 +4,8 @@
          - Mostrar "Reiniciar la validación" solo si aplica a la etapa actual -->
     <template id="tier_validation_buttons_stage" inherit_id="base_tier_validation.tier_validation_buttons">
         <xpath expr="//button[@name='restart_validation']" position="attributes">
-            <attribute name="modifiers">{"invisible": [["can_restart_validation_stage", "=", false]]}</attribute>
+            <!-- En Odoo 18 este botón usa el atributo invisible (no modifiers) -->
+            <attribute name="invisible">not can_restart_validation_stage or hide_reviews</attribute>
         </xpath>
     </template>
 </odoo>
