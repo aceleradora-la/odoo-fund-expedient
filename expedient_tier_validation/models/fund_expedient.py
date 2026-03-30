@@ -79,6 +79,15 @@ class FundExpedient(models.Model):
         vals["stage_id"] = self.stage_id.id
         return vals
 
+    def request_validation(self):
+        """Solicitar validación y recargar la vista.
+
+        En Odoo 18 el template QWeb de tier validation se inyecta en `get_view` y
+        algunos cambios (botones/labels) no se reflejan hasta recargar.
+        """
+        super().request_validation()
+        return {"type": "ir.actions.client", "tag": "reload"}
+
     def restart_validation(self):
         """Reiniciar solo la validación de la etapa actual (mantiene historial de otras etapas)."""
         for rec in self:
