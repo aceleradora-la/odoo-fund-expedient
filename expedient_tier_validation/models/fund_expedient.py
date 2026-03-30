@@ -38,7 +38,8 @@ class FundExpedient(models.Model):
             stage_reviews = rec.review_ids.filtered(lambda r: r.stage_id.id == rec.stage_id.id)
             rec.can_restart_validation_stage = bool(
                 stage_reviews
-                and any(r.status in ("waiting", "pending", "rejected") for r in stage_reviews)
+                # Permitir reiniciar también si ya está aprobada (auditoría queda en reviews anteriores por etapa)
+                and any(r.status in ("waiting", "pending", "rejected", "approved") for r in stage_reviews)
             )
 
     @api.depends("review_ids.status", "review_ids.stage_id", "stage_id")
