@@ -1,9 +1,13 @@
 # Copyright 2025
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 
+import logging
+
 from odoo import api, fields, models
 from odoo.exceptions import UserError
 from odoo import _
+
+_logger = logging.getLogger(__name__)
 
 
 class FundExpedient(models.Model):
@@ -542,15 +546,24 @@ class FundExpedient(models.Model):
                 continue
             partners = users.mapped("partner_id").filtered(lambda p: p)
             if partners:
-                rec.message_subscribe(partner_ids=partners.ids)
-                rec.message_post(
-                    body=_(
-                        "El expediente está ahora en la etapa <b>%s</b>. "
-                        "Los usuarios asignados a esta etapa han sido notificados.",
-                        rec.stage_id.name,
-                    ),
-                    subtype_xmlid="mail.mt_note",
-                )
+                try:
+                    rec.message_subscribe(partner_ids=partners.ids)
+                    rec.message_post(
+                        body=_(
+                            "El expediente está ahora en la etapa <b>%s</b>. "
+                            "Los usuarios asignados a esta etapa han sido notificados.",
+                            rec.stage_id.name,
+                        ),
+                        subtype_xmlid="mail.mt_note",
+                    )
+                except Exception as e:
+                    # No bloquear el avance/cambio de etapa por falta de configuración de email.
+                    _logger.warning(
+                        "No se pudo notificar asignados de etapa para %s (%s): %s",
+                        rec.number,
+                        rec.id,
+                        e,
+                    )
 
     @api.model
     def create(self, vals):

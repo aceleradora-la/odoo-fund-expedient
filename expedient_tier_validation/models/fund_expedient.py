@@ -19,6 +19,12 @@ class FundExpedient(models.Model):
         self.ensure_one()
         return self.review_ids.filtered(lambda r: r.stage_id.id == self.stage_id.id)
 
+    def _is_current_stage_validated(self):
+        """True si la etapa actual ya está aprobada (todas las reviews de la etapa en approved)."""
+        self.ensure_one()
+        stage_reviews = self._current_stage_reviews()
+        return bool(stage_reviews) and all(r.status == "approved" for r in stage_reviews)
+
     def _prepare_tier_review_vals(self, definition, sequence):
         """Inyectar etapa actual en la review para auditoría por etapa."""
         vals = super()._prepare_tier_review_vals(definition, sequence)
@@ -28,19 +34,22 @@ class FundExpedient(models.Model):
     def action_next_stage(self):
         """No permitir pasar a la siguiente etapa hasta que la validación esté finalizada."""
         for rec in self:
-            # Validación por etapa: solo bloquea si hay reviews pendientes en esta etapa
-            stage_reviews = rec._current_stage_reviews()
-            if stage_reviews and any(r.status in ("waiting", "pending") for r in stage_reviews):
-                raise UserError(
-                    _(
-                        "No puede pasar a la siguiente etapa hasta que la validación "
-                        "esté finalizada. Solicite la validación y espere su aprobación."
-                    )
-                )
             if not rec.can_edit_in_stage:
                 raise UserError(
                     _(
                         "Solo los usuarios asignados a la etapa actual pueden pasar a la siguiente."
+                    )
+                )
+            # Validación por etapa: si corresponde validación en esta etapa, no avanzar hasta aprobar.
+            if rec.need_validation and not rec._is_current_stage_validated():
+                stage_reviews = rec._current_stage_reviews()
+                if not stage_reviews:
+                    # Crea reviews para esta etapa (quedan etiquetadas con stage_id vía override)
+                    rec.request_validation()
+                raise UserError(
+                    _(
+                        "No puede pasar a la siguiente etapa hasta que la validación "
+                        "esté finalizada. Solicite la validación y espere su aprobación."
                     )
                 )
         # Hacer el cambio de etapa (el fund_expedient base con tier llama request_validation
