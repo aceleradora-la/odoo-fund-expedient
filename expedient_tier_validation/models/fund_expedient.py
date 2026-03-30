@@ -1,9 +1,8 @@
 # Copyright 2025
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 
-from odoo import _
+from odoo import api, fields, models, _
 from odoo.exceptions import UserError
-from odoo import models
 
 
 class FundExpedient(models.Model):
@@ -13,6 +12,19 @@ class FundExpedient(models.Model):
     _state_to = ["approved"]
     _cancel_state = "cancel"
     _tier_validation_manual_config = False
+    can_restart_validation_stage = fields.Boolean(
+        string="Puede reiniciar validación (etapa)",
+        compute="_compute_can_restart_validation_stage",
+    )
+
+    @api.depends("review_ids.status", "review_ids.stage_id", "stage_id")
+    def _compute_can_restart_validation_stage(self):
+        for rec in self:
+            stage_reviews = rec.review_ids.filtered(lambda r: r.stage_id.id == rec.stage_id.id)
+            rec.can_restart_validation_stage = bool(
+                stage_reviews
+                and any(r.status in ("waiting", "pending", "rejected") for r in stage_reviews)
+            )
 
     def _current_stage_reviews(self):
         """Reviews asociadas a la etapa actual (para validación por etapa)."""
@@ -30,6 +42,14 @@ class FundExpedient(models.Model):
         vals = super()._prepare_tier_review_vals(definition, sequence)
         vals["stage_id"] = self.stage_id.id
         return vals
+
+    def restart_validation(self):
+        """Reiniciar solo la validación de la etapa actual (mantiene historial de otras etapas)."""
+        for rec in self:
+            rec._current_stage_reviews().sudo().unlink()
+        # Recalcular status en el abstracto (counter / can_review)
+        self.review_ids._compute_can_review()
+        return True
 
     def action_next_stage(self):
         """No permitir pasar a la siguiente etapa hasta que la validación esté finalizada."""

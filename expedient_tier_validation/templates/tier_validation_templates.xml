@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Ajuste de botones de tier validation para expedientes:
+         - Mostrar "Reiniciar la validación" solo si aplica a la etapa actual -->
+    <template id="tier_validation_buttons_stage" inherit_id="base_tier_validation.tier_validation_buttons">
+        <xpath expr="//button[@name='restart_validation']" position="attributes">
+            <attribute name="modifiers">{"invisible": [["can_restart_validation_stage", "=", false]]}</attribute>
+        </xpath>
+    </template>
+</odoo>
+

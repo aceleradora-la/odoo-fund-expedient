@@ -17,5 +17,6 @@
     ],
     "data": [
         "views/fund_expedient_views.xml",
+        "templates/tier_validation_templates.xml",
     ],
 }

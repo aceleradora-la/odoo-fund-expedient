@@ -8,6 +8,7 @@
             <xpath expr="//header" position="inside">
                 <field name="need_validation" invisible="1"/>
                 <field name="validation_status" invisible="1"/>
+                <field name="can_restart_validation_stage" invisible="1"/>
             </xpath>
             <xpath expr="//button[@name='action_next_stage']" position="attributes">
                 <attribute name="modifiers">{"invisible": ["|", ["state", "=", "cancel"], ["validation_status", "in", ["pending", "waiting", "rejected"]]]}</attribute>
