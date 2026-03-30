@@ -12,6 +12,21 @@ class FundExpedient(models.Model):
     _state_to = ["approved"]
     _cancel_state = "cancel"
     _tier_validation_manual_config = False
+    stage_validation_status = fields.Selection(
+        selection=[
+            ("no", "Without validation"),
+            ("waiting", "Waiting"),
+            ("pending", "Pending"),
+            ("rejected", "Rejected"),
+            ("validated", "Validated"),
+        ],
+        compute="_compute_stage_validation",
+        store=False,
+    )
+    has_stage_reviews = fields.Boolean(
+        compute="_compute_stage_validation",
+        store=False,
+    )
     can_restart_validation_stage = fields.Boolean(
         string="Puede reiniciar validación (etapa)",
         compute="_compute_can_restart_validation_stage",
@@ -25,6 +40,26 @@ class FundExpedient(models.Model):
                 stage_reviews
                 and any(r.status in ("waiting", "pending", "rejected") for r in stage_reviews)
             )
+
+    @api.depends("review_ids.status", "review_ids.stage_id", "stage_id")
+    def _compute_stage_validation(self):
+        for rec in self:
+            stage_reviews = rec.review_ids.filtered(lambda r: r.stage_id.id == rec.stage_id.id)
+            rec.has_stage_reviews = bool(stage_reviews)
+            if not stage_reviews:
+                rec.stage_validation_status = "no"
+                continue
+            statuses = set(stage_reviews.mapped("status"))
+            if "rejected" in statuses:
+                rec.stage_validation_status = "rejected"
+            elif statuses == {"approved"}:
+                rec.stage_validation_status = "validated"
+            elif "pending" in statuses:
+                rec.stage_validation_status = "pending"
+            elif "waiting" in statuses:
+                rec.stage_validation_status = "waiting"
+            else:
+                rec.stage_validation_status = "no"
 
     def _current_stage_reviews(self):
         """Reviews asociadas a la etapa actual (para validación por etapa)."""

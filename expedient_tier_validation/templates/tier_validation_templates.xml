@@ -7,6 +7,22 @@
             <!-- En Odoo 18 este botón usa el atributo invisible (no modifiers) -->
             <attribute name="invisible">not can_restart_validation_stage or hide_reviews</attribute>
         </xpath>
+        <xpath expr="//button[@name='request_validation']" position="attributes">
+            <!-- Solicitar validación por etapa -->
+            <attribute name="t-attf-invisible">not need_validation or stage_validation_status == 'rejected' or hide_reviews</attribute>
+        </xpath>
+    </template>
+
+    <template id="tier_validation_label_stage" inherit_id="base_tier_validation.tier_validation_label">
+        <xpath expr="//div[@role='alert' and contains(@class,'alert-warning')]" position="attributes">
+            <attribute name="t-attf-invisible">stage_validation_status == 'validated' or hide_reviews or stage_validation_status == 'rejected' or not has_stage_reviews</attribute>
+        </xpath>
+        <xpath expr="//div[@role='alert' and contains(@class,'alert-success')]" position="attributes">
+            <attribute name="t-attf-invisible">stage_validation_status != 'validated' or hide_reviews or not has_stage_reviews</attribute>
+        </xpath>
+        <xpath expr="//div[@role='alert' and contains(@class,'alert-danger')]" position="attributes">
+            <attribute name="t-attf-invisible">stage_validation_status != 'rejected' or hide_reviews or not has_stage_reviews</attribute>
+        </xpath>
     </template>
 </odoo>
 
