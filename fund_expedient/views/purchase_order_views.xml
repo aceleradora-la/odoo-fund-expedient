@@ -1,5 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+    <!-- Vista lista sin creación: usada al abrir desde expediente no en Compras -->
+    <record id="view_purchase_order_list_expedient_no_create" model="ir.ui.view">
+        <field name="name">purchase.order.list.expedient.no.create</field>
+        <field name="model">purchase.order</field>
+        <field name="type">list</field>
+        <field name="arch" type="xml">
+            <list string="Solicitudes de cotización" create="0" delete="0" edit="0">
+                <field name="name"/>
+                <field name="partner_id"/>
+                <field name="date_order"/>
+                <field name="state"/>
+                <field name="amount_total"/>
+            </list>
+        </field>
+    </record>
+
     <record id="view_purchase_order_form_expedient" model="ir.ui.view">
         <field name="name">purchase.order.form.expedient</field>
         <field name="model">purchase.order</field>
