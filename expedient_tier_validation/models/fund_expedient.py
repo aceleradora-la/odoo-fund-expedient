@@ -27,12 +27,6 @@ class FundExpedient(models.Model):
         compute="_compute_stage_validation",
         store=False,
     )
-    stage_review_ids = fields.Many2many(
-        "tier.review",
-        compute="_compute_stage_review_ids",
-        store=False,
-        string="Revisiones de la etapa",
-    )
     can_restart_validation_stage = fields.Boolean(
         string="Puede reiniciar validación (etapa)",
         compute="_compute_can_restart_validation_stage",
@@ -67,13 +61,6 @@ class FundExpedient(models.Model):
                 rec.stage_validation_status = "waiting"
             else:
                 rec.stage_validation_status = "no"
-
-    @api.depends("review_ids", "review_ids.stage_id", "stage_id")
-    def _compute_stage_review_ids(self):
-        for rec in self:
-            rec.stage_review_ids = rec.review_ids.filtered(
-                lambda r: r.stage_id.id == rec.stage_id.id
-            )
 
     def _current_stage_reviews(self):
         """Reviews asociadas a la etapa actual (para validación por etapa)."""

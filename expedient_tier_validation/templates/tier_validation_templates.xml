@@ -25,13 +25,5 @@
         </xpath>
     </template>
 
-    <template id="tier_validation_reviews_stage" inherit_id="base_tier_validation.tier_validation_reviews">
-        <xpath expr="//field[@name='review_ids']" position="attributes">
-            <!-- Mostrar desplegable solo cuando hay revisiones de la etapa actual -->
-            <attribute name="invisible">not has_stage_reviews</attribute>
-            <!-- Filtrar por etapa actual para mantener lógica por etapa -->
-            <attribute name="domain">[('stage_id', '=', stage_id)]</attribute>
-        </xpath>
-    </template>
 </odoo>
 
