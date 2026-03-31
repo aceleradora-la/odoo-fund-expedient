@@ -55,7 +55,7 @@
         <field name="arch" type="xml">
             <form string="Expediente">
                 <header>
-                    <field name="stage_id" widget="statusbar" options="{'clickable': '1'}"/>
+                    <field name="stage_id" widget="statusbar"/>
                     <field name="state" invisible="1"/>
                     <field name="can_edit_in_stage" invisible="1"/>
                     <field name="allowed_stage_ids" invisible="1"/>

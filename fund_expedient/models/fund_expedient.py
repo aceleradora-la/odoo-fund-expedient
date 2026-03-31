@@ -338,8 +338,13 @@ class FundExpedient(models.Model):
 
     def _read_group_stage_ids(self, stages, domain):
         """Etapas en kanban / statusbar: ordenadas por secuencia (corrige orden con filtros como Mis expedientes)."""
-        if len(self) == 1:
-            return self.allowed_stage_ids.sorted(key=lambda s: (s.sequence, s.id))
+        rec = self[:1]
+        if not rec:
+            active_id = self.env.context.get("active_id")
+            if active_id:
+                rec = self.browse(active_id)
+        if rec:
+            return rec.allowed_stage_ids.sorted(key=lambda s: (s.sequence, s.id))
         return stages.sorted(key=lambda s: (s.sequence, s.id))
 
     @api.depends("purchase_order_ids")
