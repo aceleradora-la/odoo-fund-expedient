@@ -177,6 +177,12 @@ class FundExpedient(models.Model):
         string="Líneas",
         copy=True,
     )
+    document_ids = fields.One2many(
+        "fund.expedient.document",
+        "expedient_id",
+        string="Documentos por etapa",
+        copy=False,
+    )
     # Relaciones con Purchase y Project (many2many: un expediente puede tener muchas)
     purchase_order_ids = fields.Many2many(
         "purchase.order",
