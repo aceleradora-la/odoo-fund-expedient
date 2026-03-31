@@ -29,6 +29,12 @@ class FundExpedient(models.Model):
         compute="_compute_stage_validation",
         store=False,
     )
+    stage_review_ids = fields.Many2many(
+        "tier.review",
+        compute="_compute_stage_review_ids",
+        store=False,
+        string="Revisiones de la etapa",
+    )
     can_restart_validation_stage = fields.Boolean(
         string="Puede reiniciar validación (etapa)",
         compute="_compute_can_restart_validation_stage",
@@ -63,6 +69,13 @@ class FundExpedient(models.Model):
                 rec.stage_validation_status = "waiting"
             else:
                 rec.stage_validation_status = "no"
+
+    @api.depends("review_ids", "review_ids.stage_id", "stage_id")
+    def _compute_stage_review_ids(self):
+        for rec in self:
+            rec.stage_review_ids = rec.review_ids.filtered(
+                lambda r: r.stage_id.id == rec.stage_id.id
+            )
 
     def _current_stage_reviews(self):
         """Reviews asociadas a la etapa actual (para validación por etapa)."""
@@ -114,9 +127,16 @@ class FundExpedient(models.Model):
                         "Solo los usuarios asignados a la etapa actual pueden pasar a la siguiente."
                     )
                 )
+            stage_reviews = rec._current_stage_reviews()
+            if any(r.status in ("waiting", "pending", "rejected") for r in stage_reviews):
+                raise UserError(
+                    _(
+                        "No puede pasar a la siguiente etapa hasta que la validación "
+                        "de la etapa actual esté finalizada."
+                    )
+                )
             # Validación por etapa: si corresponde validación en esta etapa, no avanzar hasta aprobar.
             if rec.need_validation and not rec._is_current_stage_validated():
-                stage_reviews = rec._current_stage_reviews()
                 if not stage_reviews:
                     # Crea reviews para esta etapa (quedan etiquetadas con stage_id vía override)
                     rec.request_validation()
@@ -145,6 +165,14 @@ class FundExpedient(models.Model):
                 raise UserError(
                     _(
                         "Solo los usuarios asignados a la etapa actual pueden volver a la etapa anterior."
+                    )
+                )
+            stage_reviews = rec._current_stage_reviews()
+            if any(r.status in ("waiting", "pending", "rejected") for r in stage_reviews):
+                raise UserError(
+                    _(
+                        "No puede volver de etapa hasta que la validación de la etapa "
+                        "actual esté finalizada."
                     )
                 )
         for rec, stages in self._get_allowed_stages():

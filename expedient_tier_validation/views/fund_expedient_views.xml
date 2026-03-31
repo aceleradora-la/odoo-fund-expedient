@@ -11,13 +11,14 @@
                 <field name="can_restart_validation_stage" invisible="1"/>
                 <field name="stage_validation_status" invisible="1"/>
                 <field name="has_stage_reviews" invisible="1"/>
+                <field name="stage_review_ids" invisible="1"/>
             </xpath>
             <xpath expr="//button[@name='action_next_stage']" position="attributes">
                 <attribute name="modifiers">{"invisible": ["|", ["state", "=", "cancel"], ["validation_status", "in", ["pending", "waiting", "rejected"]]]}</attribute>
             </xpath>
             <xpath expr="//sheet/group[1]" position="before">
-                <group string="Revisiones" invisible="not review_ids">
-                    <field name="review_ids" widget="tier_validation" nolabel="1"/>
+                <group string="Revisiones" invisible="not has_stage_reviews">
+                    <field name="stage_review_ids" widget="tier_validation" nolabel="1"/>
                 </group>
             </xpath>
             <xpath expr="//notebook" position="inside">
