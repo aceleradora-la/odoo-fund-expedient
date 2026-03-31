@@ -56,6 +56,12 @@ class ExpedientTypeStageAssign(models.Model):
         string="Template de documentos",
         help="Lista de documentos requeridos para esta etapa. Un documento por línea.",
     )
+    hide_type_id = fields.Boolean(string="Ocultar Tipo")
+    hide_encuadre_id = fields.Boolean(string="Ocultar Encuadre")
+    hide_estimated_need_date = fields.Boolean(string="Ocultar Fecha estimada")
+    hide_recommended_supplier_id = fields.Boolean(string="Ocultar Proveedor recomendado")
+    hide_budget_position_id = fields.Boolean(string="Ocultar Partida presupuestaria")
+    hide_amount_estimated = fields.Boolean(string="Ocultar Total estimado")
     company_id = fields.Many2one(
         related="type_id.company_id",
         store=True,

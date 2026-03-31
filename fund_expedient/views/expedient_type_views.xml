@@ -60,6 +60,14 @@
                                     <group>
                                         <field name="document_template" placeholder="Solicitud de compras&#10;Cuadro comparativo&#10;Aprobación jefatura"/>
                                     </group>
+                                    <group string="Campos ocultables en expediente">
+                                        <field name="hide_type_id"/>
+                                        <field name="hide_encuadre_id"/>
+                                        <field name="hide_estimated_need_date"/>
+                                        <field name="hide_recommended_supplier_id"/>
+                                        <field name="hide_budget_position_id"/>
+                                        <field name="hide_amount_estimated"/>
+                                    </group>
                                 </form>
                             </field>
                         </page>

@@ -59,6 +59,12 @@
                     <field name="state" invisible="1"/>
                     <field name="can_edit_in_stage" invisible="1"/>
                     <field name="allowed_stage_ids" invisible="1"/>
+                    <field name="hide_type_id_stage" invisible="1"/>
+                    <field name="hide_encuadre_id_stage" invisible="1"/>
+                    <field name="hide_estimated_need_date_stage" invisible="1"/>
+                    <field name="hide_recommended_supplier_id_stage" invisible="1"/>
+                    <field name="hide_budget_position_id_stage" invisible="1"/>
+                    <field name="hide_amount_estimated_stage" invisible="1"/>
                     <button name="action_previous_stage" type="object" string="Etapa anterior"
                             class="btn-secondary"
                             modifiers='{"invisible": ["|", ["state", "=", "cancel"], ["can_edit_in_stage", "=", false]]}'/>
@@ -105,16 +111,16 @@
                         <group string="Identificación">
                             <field name="number" readonly="1"/>
                             <field name="request_date"/>
-                            <field name="type_id"/>
+                            <field name="type_id" invisible="hide_type_id_stage"/>
                             <field name="type_unit_mode" invisible="1"/>
                             <field name="show_encuadre" invisible="1"/>
-                            <field name="encuadre_id" invisible="not show_encuadre"/>
-                            <field name="estimated_need_date"/>
+                            <field name="encuadre_id" invisible="not show_encuadre or hide_encuadre_id_stage"/>
+                            <field name="estimated_need_date" invisible="hide_estimated_need_date_stage"/>
                             <field name="requestor_id"/>
-                            <field name="recommended_supplier_id"/>
+                            <field name="recommended_supplier_id" invisible="hide_recommended_supplier_id_stage"/>
                         </group>
                         <group string="Clasificación">
-                            <field name="budget_position_id"/>
+                            <field name="budget_position_id" invisible="hide_budget_position_id_stage"/>
                             <field name="project_ids" widget="many2many_tags"/>
                             <field name="company_id" groups="base.group_multi_company"/>
                         </group>
@@ -122,7 +128,7 @@
                     <group string="Totales" name="totals">
                         <group string="Moneda (compañía)">
                             <field name="currency_id" invisible="1"/>
-                            <field name="amount_estimated"/>
+                            <field name="amount_estimated" invisible="hide_amount_estimated_stage"/>
                             <field name="amount_committed" readonly="1"/>
                             <field name="amount_real" readonly="1"/>
                         </group>
@@ -172,7 +178,7 @@
                                 </list>
                             </field>
                         </page>
-                        <page string="Expedientes relacionados" name="children" invisible="state == 'draft'">
+                        <page string="Expedientes relacionados" name="children">
                             <field name="parent_id"/>
                             <field name="child_ids" nolabel="1" readonly="1">
                                 <list create="1" delete="1" edit="1">
@@ -183,7 +189,7 @@
                                 </list>
                             </field>
                         </page>
-                        <page string="Solicitudes de cotización" name="purchases" invisible="state == 'draft'">
+                        <page string="Solicitudes de cotización" name="purchases">
                             <field name="can_create_purchase" invisible="1"/>
                             <field name="purchase_order_ids" nolabel="1">
                                 <list create="can_create_purchase" delete="0" open="0">
@@ -194,7 +200,7 @@
                                 </list>
                             </field>
                         </page>
-                        <page string="Facturas" name="invoices" invisible="state == 'draft'">
+                        <page string="Facturas" name="invoices">
                             <field name="direct_invoice_ids" nolabel="1"
                                    context="{'default_move_type': 'in_invoice'}">
                                 <list create="1" delete="1" open="1">

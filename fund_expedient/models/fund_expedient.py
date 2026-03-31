@@ -79,6 +79,30 @@ class FundExpedient(models.Model):
         compute="_compute_show_flags",
         store=True,
     )
+    hide_type_id_stage = fields.Boolean(
+        string="Ocultar Tipo por etapa",
+        compute="_compute_stage_field_visibility",
+    )
+    hide_encuadre_id_stage = fields.Boolean(
+        string="Ocultar Encuadre por etapa",
+        compute="_compute_stage_field_visibility",
+    )
+    hide_estimated_need_date_stage = fields.Boolean(
+        string="Ocultar Fecha estimada por etapa",
+        compute="_compute_stage_field_visibility",
+    )
+    hide_recommended_supplier_id_stage = fields.Boolean(
+        string="Ocultar Proveedor recomendado por etapa",
+        compute="_compute_stage_field_visibility",
+    )
+    hide_budget_position_id_stage = fields.Boolean(
+        string="Ocultar Partida presupuestaria por etapa",
+        compute="_compute_stage_field_visibility",
+    )
+    hide_amount_estimated_stage = fields.Boolean(
+        string="Ocultar Total estimado por etapa",
+        compute="_compute_stage_field_visibility",
+    )
     budget_position_id = fields.Many2one(
         "fund.budget.position",
         string="Partida presupuestaria asignada",
@@ -321,6 +345,44 @@ class FundExpedient(models.Model):
             rec.show_encuadre = rec.state == "purchases"
             rec.show_ur_totals = rec.type_unit_mode != "uf"
             rec.show_uf_totals = rec.type_unit_mode == "uf"
+
+    @api.depends(
+        "type_id",
+        "stage_id",
+        "type_id.stage_assign_ids",
+        "type_id.stage_assign_ids.hide_type_id",
+        "type_id.stage_assign_ids.hide_encuadre_id",
+        "type_id.stage_assign_ids.hide_estimated_need_date",
+        "type_id.stage_assign_ids.hide_recommended_supplier_id",
+        "type_id.stage_assign_ids.hide_budget_position_id",
+        "type_id.stage_assign_ids.hide_amount_estimated",
+    )
+    def _compute_stage_field_visibility(self):
+        Assign = self.env["fund.expedient.type.stage.assign"]
+        for rec in self:
+            rec.hide_type_id_stage = False
+            rec.hide_encuadre_id_stage = False
+            rec.hide_estimated_need_date_stage = False
+            rec.hide_recommended_supplier_id_stage = False
+            rec.hide_budget_position_id_stage = False
+            rec.hide_amount_estimated_stage = False
+            if not rec.type_id or not rec.stage_id:
+                continue
+            assign = Assign.search(
+                [
+                    ("type_id", "=", rec.type_id.id),
+                    ("stage_id", "=", rec.stage_id.id),
+                ],
+                limit=1,
+            )
+            if not assign:
+                continue
+            rec.hide_type_id_stage = assign.hide_type_id
+            rec.hide_encuadre_id_stage = assign.hide_encuadre_id
+            rec.hide_estimated_need_date_stage = assign.hide_estimated_need_date
+            rec.hide_recommended_supplier_id_stage = assign.hide_recommended_supplier_id
+            rec.hide_budget_position_id_stage = assign.hide_budget_position_id
+            rec.hide_amount_estimated_stage = assign.hide_amount_estimated
 
     @api.depends("type_id", "type_id.stage_assign_ids", "company_id")
     def _compute_allowed_stage_ids(self):
