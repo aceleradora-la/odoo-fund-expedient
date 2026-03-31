@@ -177,12 +177,6 @@ class FundExpedient(models.Model):
         string="Líneas",
         copy=True,
     )
-    document_ids = fields.One2many(
-        "fund.expedient.document",
-        "expedient_id",
-        string="Documentos por etapa",
-        copy=False,
-    )
     # Relaciones con Purchase y Project (many2many: un expediente puede tener muchas)
     purchase_order_ids = fields.Many2many(
         "purchase.order",
@@ -404,26 +398,6 @@ class FundExpedient(models.Model):
         if self.type_id:
             self.amount_estimated = 0.0
 
-    @api.onchange("type_id", "stage_id")
-    def _onchange_stage_documents(self):
-        for rec in self:
-            assign = rec._get_stage_assign()
-            names = rec._parse_stage_document_template(assign.document_template)
-            commands = [(5, 0, 0)]
-            for index, name in enumerate(names, start=1):
-                commands.append(
-                    (
-                        0,
-                        0,
-                        {
-                            "sequence": index * 10,
-                            "name": name,
-                            "stage_id": rec.stage_id.id,
-                        },
-                    )
-                )
-            rec.document_ids = commands
-
     def _read_group_stage_ids(self, stages, domain):
         """Etapas en kanban / statusbar: ordenadas por secuencia (corrige orden con filtros como Mis expedientes)."""
         rec = self[:1]
@@ -462,49 +436,6 @@ class FundExpedient(models.Model):
                     [("company_id", "in", [False, rec.company_id.id])], order="sequence, id"
                 )
                 yield rec, all_stages
-
-    @api.model
-    def _parse_stage_document_template(self, template_text):
-        if not template_text:
-            return []
-        documents = []
-        for raw_line in template_text.splitlines():
-            clean_name = raw_line.strip().lstrip("-").strip()
-            if clean_name:
-                documents.append(clean_name)
-        return documents
-
-    def _get_stage_assign(self):
-        self.ensure_one()
-        if not self.type_id or not self.stage_id:
-            return self.env["fund.expedient.type.stage.assign"]
-        return self.env["fund.expedient.type.stage.assign"].search(
-            [
-                ("type_id", "=", self.type_id.id),
-                ("stage_id", "=", self.stage_id.id),
-            ],
-            limit=1,
-        )
-
-    def _sync_stage_documents(self):
-        Document = self.env["fund.expedient.document"]
-        for rec in self:
-            assign = rec._get_stage_assign()
-            names = rec._parse_stage_document_template(assign.document_template)
-            rec.document_ids.unlink()
-            if not names:
-                continue
-            vals_list = []
-            for index, name in enumerate(names, start=1):
-                vals_list.append(
-                    {
-                        "expedient_id": rec.id,
-                        "sequence": index * 10,
-                        "name": name,
-                        "stage_id": rec.stage_id.id,
-                    }
-                )
-            Document.create(vals_list)
 
     def action_next_stage(self):
         for rec in self:
@@ -703,10 +634,7 @@ class FundExpedient(models.Model):
                         )
                     )
         stage_changed = "stage_id" in vals
-        assignment_changed = stage_changed or "type_id" in vals
         result = super().write(vals)
-        if assignment_changed:
-            self._sync_stage_documents()
         if stage_changed and vals.get("stage_id"):
             self._notify_stage_assignees()
         return result
@@ -744,9 +672,7 @@ class FundExpedient(models.Model):
             if vals.get("number", "/") == "/":
                 seq = self.env["ir.sequence"].next_by_code("fund.expedient") or "/"
                 vals["number"] = seq
-        records = super().create(vals_list)
-        records._sync_stage_documents()
-        return records
+        return super().create(vals_list)
 
     def unlink(self):
         raise UserError(

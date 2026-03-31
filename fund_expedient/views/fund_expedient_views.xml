@@ -149,17 +149,6 @@
                         <page string="Descripción/Memo" name="description">
                             <field name="description" placeholder="Descripción o memo de la solicitud..." nolabel="1" readonly="state != 'draft'"/>
                         </page>
-                        <page string="Documentos por etapa" name="stage_documents">
-                            <field name="document_ids" nolabel="1">
-                                <list create="0" delete="0" edit="1">
-                                    <field name="sequence" widget="handle"/>
-                                    <field name="name" readonly="1"/>
-                                    <field name="delivered"/>
-                                    <field name="notes"/>
-                                    <field name="stage_id" optional="hide"/>
-                                </list>
-                            </field>
-                        </page>
                         <page string="Líneas" name="lines">
                             <field name="can_create_purchase" invisible="1"/>
                             <button name="action_wizard_create_purchase" type="object"

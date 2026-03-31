@@ -52,10 +52,6 @@ class ExpedientTypeStageAssign(models.Model):
         string="Usuarios",
         help="Usuarios concretos asignados a esta etapa (además de grupos y puestos).",
     )
-    document_template = fields.Text(
-        string="Template de documentos",
-        help="Lista de documentos requeridos para esta etapa. Un documento por línea.",
-    )
     hide_type_id = fields.Boolean(string="Ocultar Tipo")
     hide_encuadre_id = fields.Boolean(string="Ocultar Encuadre")
     hide_estimated_need_date = fields.Boolean(string="Ocultar Fecha estimada")
