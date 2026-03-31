@@ -52,6 +52,10 @@ class ExpedientTypeStageAssign(models.Model):
         string="Usuarios",
         help="Usuarios concretos asignados a esta etapa (además de grupos y puestos).",
     )
+    document_template = fields.Text(
+        string="Template de documentos",
+        help="Lista de documentos requeridos para esta etapa. Un documento por línea.",
+    )
     company_id = fields.Many2one(
         related="type_id.company_id",
         store=True,

@@ -42,6 +42,7 @@
                                     <field name="group_ids" widget="many2many_tags" readonly="use_requestor"/>
                                     <field name="job_ids" widget="many2many_tags" readonly="use_requestor"/>
                                     <field name="user_ids" widget="many2many_tags" readonly="use_requestor"/>
+                                    <field name="document_template"/>
                                 </list>
                                 <form string="Asignaciones por etapa">
                                     <group>
@@ -55,6 +56,9 @@
                                         <field name="group_ids" widget="many2many_tags" readonly="use_requestor"/>
                                         <field name="job_ids" widget="many2many_tags" readonly="use_requestor"/>
                                         <field name="user_ids" widget="many2many_tags" readonly="use_requestor"/>
+                                    </group>
+                                    <group>
+                                        <field name="document_template" placeholder="Solicitud de compras&#10;Cuadro comparativo&#10;Aprobación jefatura"/>
                                     </group>
                                 </form>
                             </field>

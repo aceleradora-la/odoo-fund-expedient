@@ -141,7 +141,18 @@
                     </group>
                     <notebook>
                         <page string="Descripción/Memo" name="description">
-                            <field name="description" placeholder="Descripción o memo de la solicitud..." nolabel="1"/>
+                            <field name="description" placeholder="Descripción o memo de la solicitud..." nolabel="1" readonly="state != 'draft'"/>
+                        </page>
+                        <page string="Documentos por etapa" name="stage_documents">
+                            <field name="document_ids" nolabel="1">
+                                <list create="0" delete="0" edit="1">
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="name" readonly="1"/>
+                                    <field name="delivered"/>
+                                    <field name="notes"/>
+                                    <field name="stage_id" optional="hide"/>
+                                </list>
+                            </field>
                         </page>
                         <page string="Líneas" name="lines">
                             <field name="can_create_purchase" invisible="1"/>
@@ -161,7 +172,7 @@
                                 </list>
                             </field>
                         </page>
-                        <page string="Expedientes relacionados" name="children">
+                        <page string="Expedientes relacionados" name="children" invisible="state == 'draft'">
                             <field name="parent_id"/>
                             <field name="child_ids" nolabel="1" readonly="1">
                                 <list create="1" delete="1" edit="1">
@@ -172,7 +183,7 @@
                                 </list>
                             </field>
                         </page>
-                        <page string="Solicitudes de cotización" name="purchases">
+                        <page string="Solicitudes de cotización" name="purchases" invisible="state == 'draft'">
                             <field name="can_create_purchase" invisible="1"/>
                             <field name="purchase_order_ids" nolabel="1">
                                 <list create="can_create_purchase" delete="0" open="0">
@@ -183,7 +194,7 @@
                                 </list>
                             </field>
                         </page>
-                        <page string="Facturas" name="invoices">
+                        <page string="Facturas" name="invoices" invisible="state == 'draft'">
                             <field name="direct_invoice_ids" nolabel="1"
                                    context="{'default_move_type': 'in_invoice'}">
                                 <list create="1" delete="1" open="1">
