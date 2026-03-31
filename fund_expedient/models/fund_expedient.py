@@ -93,8 +93,13 @@ class FundExpedient(models.Model):
         tracking=True,
         copy=False,
         ondelete="restrict",
-        domain="[('company_id', 'in', [False, company_id])]",
+        domain="[('id', 'in', allowed_stage_ids)]",
         default=lambda self: self._default_stage_id(),
+    )
+    allowed_stage_ids = fields.Many2many(
+        "fund.expedient.stage",
+        compute="_compute_allowed_stage_ids",
+        string="Etapas permitidas",
     )
     state = fields.Selection(
         selection=[
@@ -297,6 +302,19 @@ class FundExpedient(models.Model):
             rec.show_ur_totals = rec.type_unit_mode != "uf"
             rec.show_uf_totals = rec.type_unit_mode == "uf"
 
+    @api.depends("type_id", "type_id.stage_assign_ids", "company_id")
+    def _compute_allowed_stage_ids(self):
+        Stage = self.env["fund.expedient.stage"]
+        for rec in self:
+            if rec.type_id and rec.type_id.stage_assign_ids:
+                rec.allowed_stage_ids = rec.type_id.stage_assign_ids.mapped("stage_id").sorted(
+                    key=lambda s: (s.sequence, s.id)
+                )
+            else:
+                rec.allowed_stage_ids = Stage.search(
+                    [("company_id", "in", [False, rec.company_id.id])], order="sequence, id"
+                )
+
     @api.onchange("type_id")
     def _onchange_type_id_clear_estimated(self):
         """Al cambiar el tipo, poner a cero el total estimado para que se recalculen
@@ -306,6 +324,8 @@ class FundExpedient(models.Model):
 
     def _read_group_stage_ids(self, stages, domain):
         """Etapas en kanban / statusbar: ordenadas por secuencia (corrige orden con filtros como Mis expedientes)."""
+        if len(self) == 1:
+            return self.allowed_stage_ids.sorted(key=lambda s: (s.sequence, s.id))
         return stages.sorted(key=lambda s: (s.sequence, s.id))
 
     @api.depends("purchase_order_ids")
@@ -664,19 +684,26 @@ class FundExpedient(models.Model):
     def _compute_can_edit_in_stage(self):
         """Solo pueden editar/cambiar etapa los usuarios asignados a la etapa (grupos, puestos, usuarios)."""
         for rec in self:
+            if not rec.type_id or not rec.stage_id:
+                rec.can_edit_in_stage = True
+                continue
+            assign = self.env["fund.expedient.type.stage.assign"].search(
+                [
+                    ("type_id", "=", rec.type_id.id),
+                    ("stage_id", "=", rec.stage_id.id),
+                ],
+                limit=1,
+            )
+            # Sin asignación para esa etapa => sin restricción
+            if not assign:
+                rec.can_edit_in_stage = True
+                continue
             users = rec._get_assignable_user_ids()
-            # Si hay asignación y no hay usuarios configurados, nadie puede (o permitir todos: aquí restringimos)
-            if rec.type_id and rec.stage_id and not users:
-                assign = self.env["fund.expedient.type.stage.assign"].search(
-                    [
-                        ("type_id", "=", rec.type_id.id),
-                        ("stage_id", "=", rec.stage_id.id),
-                    ],
-                    limit=1,
-                )
-                rec.can_edit_in_stage = not assign
-            else:
-                rec.can_edit_in_stage = self.env.user in users
+            # Asignación vacía (sin grupos/puestos/usuarios) => sin restricción
+            if not users:
+                rec.can_edit_in_stage = True
+                continue
+            rec.can_edit_in_stage = self.env.user in users
 
     def _get_assignable_user_ids(self):
         """Usuarios que pueden operar en esta etapa (grupos + puestos + usuarios concretos)."""

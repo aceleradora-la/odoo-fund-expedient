@@ -58,6 +58,7 @@
                     <field name="stage_id" widget="statusbar" options="{'clickable': '1'}"/>
                     <field name="state" invisible="1"/>
                     <field name="can_edit_in_stage" invisible="1"/>
+                    <field name="allowed_stage_ids" invisible="1"/>
                     <button name="action_previous_stage" type="object" string="Etapa anterior"
                             class="btn-secondary"
                             modifiers='{"invisible": ["|", ["state", "=", "cancel"], ["can_edit_in_stage", "=", false]]}'/>
