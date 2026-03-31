@@ -24,6 +24,18 @@ class FundExpedient(models.Model):
         readonly=True,
         index=True,
     )
+    @api.model
+    def _default_requestor_id(self):
+        employee = self.env["hr.employee"].search(
+            [
+                ("user_id", "=", self.env.uid),
+                ("company_id", "in", [False, self.env.company.id]),
+            ],
+            order="company_id desc, id",
+            limit=1,
+        )
+        return employee.id if employee else False
+
     request_date = fields.Date(
         string="Fecha de solicitud",
         default=fields.Date.context_today,
@@ -42,6 +54,8 @@ class FundExpedient(models.Model):
     requestor_id = fields.Many2one(
         "hr.employee",
         string="Solicitante",
+        required=True,
+        default=lambda self: self._default_requestor_id(),
         tracking=True,
     )
     type_unit_mode = fields.Selection(
