@@ -18,7 +18,17 @@
             </xpath>
             <xpath expr="//sheet/group[1]" position="before">
                 <group string="Revisiones" invisible="not has_stage_reviews">
-                    <field name="stage_review_ids" widget="tier_validation" nolabel="1"/>
+                    <field name="stage_review_ids" nolabel="1">
+                        <list create="0" delete="0">
+                            <field name="name"/>
+                            <field name="sequence"/>
+                            <field name="status"/>
+                            <field name="todo_by"/>
+                            <field name="done_by"/>
+                            <field name="reviewed_date"/>
+                            <field name="comment"/>
+                        </list>
+                    </field>
                 </group>
             </xpath>
             <xpath expr="//notebook" position="inside">
