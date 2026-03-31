@@ -2,6 +2,7 @@
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 
 from odoo import api, fields, models
+from odoo.exceptions import ValidationError
 
 
 class ExpedientTypeStageAssign(models.Model):
@@ -21,6 +22,11 @@ class ExpedientTypeStageAssign(models.Model):
         string="Etapa",
         required=True,
         ondelete="cascade",
+    )
+    use_requestor = fields.Boolean(
+        string="Solicitante",
+        help="Si está activo, la etapa se asigna al Solicitante del expediente (requestor_id). "
+        "En ese caso no se usan grupos, puestos ni usuarios.",
     )
     group_ids = fields.Many2many(
         "res.groups",
@@ -72,6 +78,38 @@ class ExpedientTypeStageAssign(models.Model):
                 rec.display_name = f"{rec.type_id.name} / {rec.stage_id.name}"
             else:
                 rec.display_name = ""
+
+    @api.onchange("use_requestor")
+    def _onchange_use_requestor(self):
+        if self.use_requestor:
+            self.group_ids = [(5, 0, 0)]
+            self.job_ids = [(5, 0, 0)]
+            self.user_ids = [(5, 0, 0)]
+
+    @api.constrains("use_requestor", "group_ids", "job_ids", "user_ids")
+    def _check_requestor_exclusive(self):
+        for rec in self:
+            if rec.use_requestor and (rec.group_ids or rec.job_ids or rec.user_ids):
+                raise ValidationError(
+                    "Si marca 'Solicitante', no puede configurar grupos, puestos o usuarios en esa etapa."
+                )
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        for vals in vals_list:
+            if vals.get("use_requestor"):
+                vals["group_ids"] = [(5, 0, 0)]
+                vals["job_ids"] = [(5, 0, 0)]
+                vals["user_ids"] = [(5, 0, 0)]
+        return super().create(vals_list)
+
+    def write(self, vals):
+        if vals.get("use_requestor"):
+            vals = dict(vals)
+            vals["group_ids"] = [(5, 0, 0)]
+            vals["job_ids"] = [(5, 0, 0)]
+            vals["user_ids"] = [(5, 0, 0)]
+        return super().write(vals)
 
 
 class ExpedientType(models.Model):

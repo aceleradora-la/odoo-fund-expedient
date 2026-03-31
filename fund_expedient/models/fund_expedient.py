@@ -699,6 +699,10 @@ class FundExpedient(models.Model):
                 rec.can_edit_in_stage = True
                 continue
             users = rec._get_assignable_user_ids()
+            # Si está configurado "Solicitante", sin usuario vinculado en requestor_id => bloquea.
+            if assign.use_requestor and not users:
+                rec.can_edit_in_stage = False
+                continue
             # Asignación vacía (sin grupos/puestos/usuarios) => sin restricción
             if not users:
                 rec.can_edit_in_stage = True
@@ -719,6 +723,9 @@ class FundExpedient(models.Model):
         )
         if not assign:
             return self.env["res.users"]
+        if assign.use_requestor:
+            req_user = self.requestor_id.user_id
+            return req_user if req_user else self.env["res.users"]
         user_ids = assign.group_ids.users | assign.user_ids
         if assign.job_ids:
             employees = self.env["hr.employee"].search(
