@@ -1,6 +1,8 @@
 # Copyright 2025
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 
+from lxml import etree
+
 from odoo import api, fields, models, _
 from odoo.exceptions import UserError
 
@@ -78,6 +80,13 @@ class FundExpedient(models.Model):
         vals = super()._prepare_tier_review_vals(definition, sequence)
         vals["stage_id"] = self.stage_id.id
         return vals
+
+    def _add_tier_validation_reviews(self, node, params):
+        """Evitar que base_tier_validation inserte revisiones al final del formulario.
+
+        Las mostramos manualmente arriba en la vista heredada.
+        """
+        return etree.fromstring("<group/>")
 
     def request_validation(self):
         """Solicitar validación y recargar la vista.
