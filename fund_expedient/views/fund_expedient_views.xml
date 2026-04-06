@@ -25,7 +25,12 @@
         <field name="name">fund.expedient.kanban</field>
         <field name="model">fund.expedient</field>
         <field name="arch" type="xml">
-            <kanban default_group_by="stage_id" class="o_kanban_small_column" create="1">
+            <kanban default_group_by="stage_id"
+                    class="o_kanban_small_column"
+                    create="1"
+                    group_create="false"
+                    group_edit="false"
+                    group_delete="false">
                 <field name="number"/>
                 <field name="request_date"/>
                 <field name="requestor_id"/>
@@ -247,7 +252,9 @@
                 <field name="encuadre_id"/>
                 <field name="type_id"/>
                 <field name="project_ids"/>
-                <filter string="Mis expedientes" name="my_expedients" domain="[('create_uid', '=', uid)]"/>
+                <filter string="Míos o asignados" name="my_or_assigned"
+                        domain="['|', ('requestor_id.user_id', '=', uid), ('assignable_user_ids', 'in', uid)]"/>
+                <filter string="Creados por mí" name="my_created" domain="[('create_uid', '=', uid)]"/>
                 <separator/>
                 <filter string="Por aprobar" name="to_approve" domain="[('state', '=', 'to_approve')]"/>
                 <filter string="Aprobados" name="approved" domain="[('state', '=', 'approved')]"/>
@@ -266,7 +273,7 @@
         <field name="res_model">fund.expedient</field>
         <field name="view_mode">kanban,list,form</field>
         <field name="search_view_id" ref="view_fund_expedient_search"/>
-        <field name="context">{'search_default_my_expedients': 1}</field>
+        <field name="context">{'search_default_my_or_assigned': 1}</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">
                 Crear un expediente

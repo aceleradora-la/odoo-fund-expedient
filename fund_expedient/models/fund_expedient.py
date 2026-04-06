@@ -205,6 +205,14 @@ class FundExpedient(models.Model):
         compute="_compute_can_edit_in_stage",
         help="True si el usuario actual puede modificar el expediente en la etapa actual (asignación tipo/etapa).",
     )
+    assignable_user_ids = fields.Many2many(
+        "res.users",
+        compute="_compute_assignable_user_ids",
+        store=True,
+        string="Usuarios asignables (etapa)",
+        help="Usuarios que pueden operar en la etapa actual según la configuración del tipo/etapa. "
+        "Se almacena para poder filtrar expedientes 'asignados a mí' desde la búsqueda.",
+    )
     project_ids = fields.Many2many(
         "project.project",
         "fund_expedient_project_rel",
@@ -916,3 +924,31 @@ class FundExpedient(models.Model):
             )
             user_ids |= employees.mapped("user_id").filtered(lambda u: u)
         return user_ids
+
+    @api.depends(
+        "type_id",
+        "stage_id",
+        "requestor_id",
+        "requestor_id.user_id",
+        "type_id.stage_assign_ids",
+        "type_id.stage_assign_ids.stage_id",
+        "type_id.stage_assign_ids.use_requestor",
+        "type_id.stage_assign_ids.group_ids",
+        "type_id.stage_assign_ids.user_ids",
+        "type_id.stage_assign_ids.job_ids",
+    )
+    def _compute_assignable_user_ids(self):
+        for rec in self:
+            # Sin tipo/etapa o sin asignación => sin restricción efectiva: dejamos vacío para no "asignar" masivamente.
+            if not rec.type_id or not rec.stage_id:
+                rec.assignable_user_ids = [(6, 0, [])]
+                continue
+            assign = self.env["fund.expedient.type.stage.assign"].search(
+                [("type_id", "=", rec.type_id.id), ("stage_id", "=", rec.stage_id.id)],
+                limit=1,
+            )
+            if not assign:
+                rec.assignable_user_ids = [(6, 0, [])]
+                continue
+            users = rec._get_assignable_user_ids()
+            rec.assignable_user_ids = [(6, 0, users.ids)]
