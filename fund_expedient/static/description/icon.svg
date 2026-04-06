@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="16" y1="8" x2="112" y2="120" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#6D5EF7"/>
+      <stop offset="1" stop-color="#20C997"/>
+    </linearGradient>
+    <linearGradient id="paper" x1="44" y1="34" x2="92" y2="98" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF" stop-opacity="0.98"/>
+      <stop offset="1" stop-color="#F1F5F9" stop-opacity="0.98"/>
+    </linearGradient>
+    <filter id="shadow" x="0" y="0" width="128" height="128" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#0B1220" flood-opacity="0.22"/>
+    </filter>
+  </defs>
+
+  <!-- Rounded background -->
+  <rect x="10" y="10" width="108" height="108" rx="26" fill="url(#bg)"/>
+
+  <!-- Expediente (folder + paper) -->
+  <g filter="url(#shadow)">
+    <!-- Folder body -->
+    <path d="M33 48.5C33 43.2533 37.2533 39 42.5 39H56.8C59.1 39 61.3 40.0 62.8 41.8L65.0 44.4C66.5 46.2 68.7 47.2 71.0 47.2H85.5C90.7467 47.2 95 51.4533 95 56.7V85.5C95 90.7467 90.7467 95 85.5 95H42.5C37.2533 95 33 90.7467 33 85.5V48.5Z" fill="#0B1220" fill-opacity="0.18"/>
+    <path d="M31 50.5C31 45.2533 35.2533 41 40.5 41H55.4C57.7 41 59.9 42.0 61.4 43.8L63.5 46.2C65.0 48.0 67.2 49.0 69.5 49.0H87.5C92.7467 49.0 97 53.2533 97 58.5V86.5C97 91.7467 92.7467 96 87.5 96H40.5C35.2533 96 31 91.7467 31 86.5V50.5Z" fill="#FFE08A"/>
+
+    <!-- Paper -->
+    <path d="M46 35C46 31.6863 48.6863 29 52 29H79.5C82.8137 29 85.5 31.6863 85.5 35V89C85.5 92.3137 82.8137 95 79.5 95H52C48.6863 95 46 92.3137 46 89V35Z" fill="url(#paper)"/>
+    <path d="M54 44H77.5" stroke="#64748B" stroke-width="4" stroke-linecap="round" opacity="0.9"/>
+    <path d="M54 56H74" stroke="#64748B" stroke-width="4" stroke-linecap="round" opacity="0.75"/>
+    <path d="M54 68H77.5" stroke="#64748B" stroke-width="4" stroke-linecap="round" opacity="0.6"/>
+  </g>
+</svg>
+

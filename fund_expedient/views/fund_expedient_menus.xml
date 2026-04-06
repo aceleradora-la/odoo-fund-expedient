@@ -2,6 +2,7 @@
 <odoo>
     <menuitem id="menu_fund_expedient_root"
               name="Expedientes"
+              web_icon="fund_expedient,static/description/icon.svg"
               sequence="50"/>
 
     <menuitem id="menu_fund_expedient_config"
