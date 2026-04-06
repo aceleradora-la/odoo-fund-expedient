@@ -324,12 +324,40 @@ class FundExpedient(models.Model):
 
     @api.model
     def _default_stage_id(self):
-        stage = self.env["fund.expedient.stage"].search(
-            [("state_type", "=", "draft")],
-            order="sequence",
+        return self._get_default_draft_stage().id
+
+    def _get_default_draft_stage(self, company=None):
+        """Etapa borrador por defecto (fallback global).
+
+        Nota: no todos los tipos incluyen una etapa de estado 'draft'. Esta etapa
+        solo se usa como fallback cuando el expediente no tiene tipo o el tipo
+        no define asignaciones por etapa.
+        """
+        company = company or self.env.company
+        return self.env["fund.expedient.stage"].search(
+            [
+                ("state_type", "=", "draft"),
+                ("company_id", "in", [False, company.id]),
+            ],
+            order="sequence, id",
             limit=1,
         )
-        return stage.id if stage else False
+
+    def _get_initial_stage_for_type(self, expedient_type, company=None):
+        """Devuelve la etapa inicial válida para un tipo.
+
+        Regla: si el tipo define `stage_assign_ids`, la etapa inicial es la primera
+        (por sequence) dentro de esas asignaciones. Si no define, se usa borrador.
+        """
+        company = company or self.env.company
+        if expedient_type and expedient_type.stage_assign_ids:
+            stages = (
+                expedient_type.stage_assign_ids.mapped("stage_id")
+                .filtered(lambda s: s.company_id in (False, company))
+                .sorted(key=lambda s: (s.sequence, s.id))
+            )
+            return stages[:1]
+        return self._get_default_draft_stage(company=company)
 
     @api.depends("stage_id", "stage_id.state_type")
     def _compute_state(self):
@@ -403,6 +431,12 @@ class FundExpedient(models.Model):
         los totales en la unidad que corresponda al nuevo tipo."""
         if self.type_id:
             self.amount_estimated = 0.0
+
+        # Evitar quedar en una etapa incompatible con el tipo seleccionado.
+        if self.type_id:
+            allowed = self.type_id.stage_assign_ids.mapped("stage_id")
+            if allowed and (not self.stage_id or self.stage_id not in allowed):
+                self.stage_id = allowed.sorted(key=lambda s: (s.sequence, s.id))[:1].id
 
     def _read_group_stage_ids(self, stages, domain):
         """Etapas en kanban / statusbar: ordenadas por secuencia (corrige orden con filtros como Mis expedientes)."""
@@ -631,19 +665,62 @@ class FundExpedient(models.Model):
             rec.amount_real_ufunc = amount_real_ufunc
 
     def write(self, vals):
-        if not self.env.context.get("skip_validation_check"):
-            for rec in self:
-                if not rec.can_edit_in_stage:
-                    raise UserError(
-                        _(
-                            "Solo los usuarios asignados a la etapa actual pueden modificar este expediente."
+        """Escritura con 2 reglas:
+
+        - Seguridad: solo usuarios asignados a la etapa actual pueden editar (salvo contexto).
+        - Consistencia: tipo y etapa deben ser compatibles; si no, ajustar a la primera etapa permitida.
+        """
+        needs_stage_guard = "type_id" in vals or "stage_id" in vals or "company_id" in vals
+
+        # Camino rápido: sin cambios de tipo/etapa, conservar comportamiento actual.
+        if not needs_stage_guard:
+            if not self.env.context.get("skip_validation_check"):
+                for rec in self:
+                    if not rec.can_edit_in_stage:
+                        raise UserError(
+                            _(
+                                "Solo los usuarios asignados a la etapa actual pueden modificar este expediente."
+                            )
                         )
+            return super().write(vals)
+
+        Type = self.env["fund.expedient.type"]
+        skip_check = bool(self.env.context.get("skip_validation_check"))
+        for rec in self:
+            if not skip_check and not rec.can_edit_in_stage:
+                raise UserError(
+                    _(
+                        "Solo los usuarios asignados a la etapa actual pueden modificar este expediente."
                     )
-        stage_changed = "stage_id" in vals
-        result = super().write(vals)
-        if stage_changed and vals.get("stage_id"):
-            self._notify_stage_assignees()
-        return result
+                )
+
+            new_vals = dict(vals)
+            company = (
+                self.env["res.company"].browse(new_vals["company_id"])
+                if new_vals.get("company_id")
+                else rec.company_id
+            )
+            type_id = new_vals.get("type_id") or rec.type_id.id
+            expedient_type = Type.browse(type_id) if type_id else False
+
+            if expedient_type and expedient_type.stage_assign_ids:
+                allowed = expedient_type.stage_assign_ids.mapped("stage_id")
+                target_stage_id = new_vals.get("stage_id") or rec.stage_id.id
+                if not target_stage_id or target_stage_id not in allowed.ids:
+                    new_vals["stage_id"] = (
+                        self._get_initial_stage_for_type(expedient_type, company=company).id
+                        or False
+                    )
+
+            stage_will_change = (
+                "stage_id" in new_vals
+                and new_vals.get("stage_id")
+                and new_vals.get("stage_id") != rec.stage_id.id
+            )
+            super(FundExpedient, rec).write(new_vals)
+            if stage_will_change:
+                rec._notify_stage_assignees()
+        return True
 
     def _notify_stage_assignees(self):
         """Suscribir y notificar a los usuarios asignados a la etapa actual."""
@@ -674,10 +751,28 @@ class FundExpedient(models.Model):
 
     @api.model_create_multi
     def create(self, vals_list):
+        Type = self.env["fund.expedient.type"]
         for vals in vals_list:
             if vals.get("number", "/") == "/":
                 seq = self.env["ir.sequence"].next_by_code("fund.expedient") or "/"
                 vals["number"] = seq
+            # Si viene type_id y no viene stage_id (o es incompatible), setear una etapa válida.
+            if vals.get("type_id"):
+                company = (
+                    self.env["res.company"].browse(vals["company_id"])
+                    if vals.get("company_id")
+                    else self.env.company
+                )
+                expedient_type = Type.browse(vals["type_id"])
+                allowed = expedient_type.stage_assign_ids.mapped("stage_id")
+                if not vals.get("stage_id"):
+                    vals["stage_id"] = self._get_initial_stage_for_type(
+                        expedient_type, company=company
+                    ).id or False
+                elif allowed and vals["stage_id"] not in allowed.ids:
+                    vals["stage_id"] = self._get_initial_stage_for_type(
+                        expedient_type, company=company
+                    ).id or vals["stage_id"]
         return super().create(vals_list)
 
     def unlink(self):
