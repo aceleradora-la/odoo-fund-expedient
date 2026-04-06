@@ -119,24 +119,20 @@ class FundBudgetPositionReport(models.Model):
                        AND e.request_date BETWEEN b.date_from AND b.date_to
                     GROUP BY b.id, e.budget_position_id
                 ),
+                -- Real alineado con "Total Real" del expediente (facturas vinculadas), no con
+                -- líneas contables: esas suelen quedar en 0 si la cuenta no es expense o si la
+                -- partida no se propagó a cada línea. Misma ventana temporal que comprometido.
                 real_leaf AS (
                     SELECT
                         b.id AS budget_id,
-                        aml.budget_position_id,
-                        SUM(aml.debit - aml.credit) AS amount_real
+                        e.budget_position_id,
+                        SUM(e.amount_real) AS amount_real
                     FROM fund_budget b
-                    JOIN account_move_line aml
-                        ON aml.company_id = b.company_id
-                       AND aml.budget_position_id IS NOT NULL
-                       AND aml.date BETWEEN b.date_from AND b.date_to
-                       AND (aml.display_type IS NULL OR aml.display_type = '')
-                    JOIN account_move am
-                        ON am.id = aml.move_id
-                       AND am.state = 'posted'
-                    JOIN account_account aa
-                        ON aa.id = aml.account_id
-                       AND aa.account_type IN ('expense', 'expense_depreciation')
-                    GROUP BY b.id, aml.budget_position_id
+                    JOIN fund_expedient e
+                        ON e.company_id = b.company_id
+                       AND e.budget_position_id IS NOT NULL
+                       AND e.request_date BETWEEN b.date_from AND b.date_to
+                    GROUP BY b.id, e.budget_position_id
                 )
                 SELECT
                     ((b.id::bigint << 32) + p.id::bigint) AS id,
