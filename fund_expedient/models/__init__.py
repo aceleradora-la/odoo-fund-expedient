@@ -18,5 +18,4 @@ from . import project_project
 from . import account_move
 from . import account_move_line
 from . import account_payment
-from . import fund_budget_position_report
 from . import fund_budget_analytic_report
