@@ -1,5 +1,48 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+    <record id="view_fund_budget_line_form" model="ir.ui.view">
+        <field name="name">fund.budget.line.form</field>
+        <field name="model">fund.budget.line</field>
+        <field name="arch" type="xml">
+            <form string="Línea de presupuesto">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="budget_id" readonly="1"/>
+                            <field name="company_id" readonly="1" groups="base.group_multi_company"/>
+                            <field name="currency_id" readonly="1"/>
+                            <field name="analytic_account_id"/>
+                            <field name="budget_position_id" invisible="1"/>
+                        </group>
+                        <group string="Totales">
+                            <field name="amount_year" readonly="1"/>
+                            <field name="adjustment_amount" readonly="1"/>
+                            <field name="amount_total" readonly="1"/>
+                            <field name="committed_amount" readonly="1"/>
+                            <field name="real_amount" readonly="1"/>
+                            <field name="balance_amount" readonly="1"/>
+                        </group>
+                    </group>
+
+                    <group string="Detalle mensual (año)" col="4">
+                        <field name="m01"/>
+                        <field name="m02"/>
+                        <field name="m03"/>
+                        <field name="m04"/>
+                        <field name="m05"/>
+                        <field name="m06"/>
+                        <field name="m07"/>
+                        <field name="m08"/>
+                        <field name="m09"/>
+                        <field name="m10"/>
+                        <field name="m11"/>
+                        <field name="m12"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
     <record id="view_fund_budget_line_list" model="ir.ui.view">
         <field name="name">fund.budget.line.list</field>
         <field name="model">fund.budget.line</field>
