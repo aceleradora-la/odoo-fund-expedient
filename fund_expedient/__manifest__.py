@@ -40,6 +40,5 @@
         "views/fund_budget_views.xml",
         "views/fund_budget_position_report_views.xml",
         "views/fund_expedient_menus.xml",
-        "wizard/legacy_budget_position_migration_wizard_views.xml",
     ],
 }

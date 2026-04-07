@@ -28,12 +28,6 @@ class FundBudgetLine(models.Model):
         string="Moneda",
         readonly=True,
     )
-    # Legacy (para migración/histórico). No se usa más en UI.
-    budget_position_id = fields.Many2one(
-        "fund.budget.position",
-        string="Partida presupuestaria (legacy)",
-        domain="[('budget_assignment_allowed', '=', True), ('company_id', '=', company_id)]",
-    )
     analytic_account_id = fields.Many2one(
         "account.analytic.account",
         string="Cuenta analítica",
