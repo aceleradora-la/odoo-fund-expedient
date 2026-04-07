@@ -6,6 +6,7 @@
         <field name="type">list</field>
         <field name="arch" type="xml">
             <list string="Líneas de presupuesto" create="1" delete="1" edit="1">
+                <field name="currency_id" column_invisible="1"/>
                 <field name="analytic_account_id"/>
                 <field name="m01" sum="Ene"/>
                 <field name="m02" sum="Feb"/>
@@ -130,6 +131,7 @@
                         <page string="Partidas">
                             <field name="line_ids" nolabel="1" readonly="state != 'draft'">
                                 <list create="1" delete="1" edit="1">
+                                    <field name="currency_id" column_invisible="1"/>
                                     <field name="analytic_account_id"/>
                                     <field name="m01" sum="Ene"/>
                                     <field name="m02" sum="Feb"/>
