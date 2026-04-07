@@ -1,39 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <record id="view_fund_budget_position_report_search" model="ir.ui.view">
-        <field name="name">fund.budget.position.report.search</field>
-        <field name="model">fund.budget.position.report</field>
+    <record id="view_fund_budget_analytic_report_search" model="ir.ui.view">
+        <field name="name">fund.budget.analytic.report.search</field>
+        <field name="model">fund.budget.analytic.report</field>
         <field name="arch" type="xml">
             <search string="Análisis presupuestario">
                 <field name="fiscalyear"/>
-                <field name="code"/>
-                <field name="name"/>
-                <field name="budget_position_id"/>
+                <field name="analytic_account_id"/>
                 <field name="budget_id"/>
-                <field name="category_id"/>
+                <field name="month"/>
                 <filter string="Con saldo" name="with_balance" domain="[('amount_balance', '!=', 0)]"/>
                 <filter string="Con presupuesto" name="with_budget" domain="[('amount_budget', '&gt;', 0)]"/>
+                <filter string="Total año" name="year_total" domain="[('month', '=', 0)]"/>
                 <group expand="0" string="Agrupar por">
                     <filter string="Presupuesto" name="group_budget" context="{'group_by': 'budget_id'}"/>
                     <filter string="Año" name="group_fiscalyear" context="{'group_by': 'fiscalyear'}"/>
-                    <filter string="Partida" name="group_position" context="{'group_by': 'budget_position_id'}"/>
-                    <filter string="Categoría" name="group_category" context="{'group_by': 'category_id'}"/>
+                    <filter string="Cuenta analítica" name="group_analytic" context="{'group_by': 'analytic_account_id'}"/>
+                    <filter string="Mes" name="group_month" context="{'group_by': 'month'}"/>
                 </group>
             </search>
         </field>
     </record>
 
-    <record id="view_fund_budget_position_report_list" model="ir.ui.view">
-        <field name="name">fund.budget.position.report.list</field>
-        <field name="model">fund.budget.position.report</field>
+    <record id="view_fund_budget_analytic_report_list" model="ir.ui.view">
+        <field name="name">fund.budget.analytic.report.list</field>
+        <field name="model">fund.budget.analytic.report</field>
         <field name="type">list</field>
         <field name="arch" type="xml">
-            <list string="Ejecución por partida" create="0" delete="0" edit="0">
+            <list string="Ejecución por cuenta analítica" create="0" delete="0" edit="0">
                 <field name="fiscalyear"/>
-                <field name="code"/>
-                <field name="name"/>
-                <field name="budget_position_id"/>
-                <field name="category_id"/>
+                <field name="month"/>
+                <field name="analytic_account_id"/>
                 <field name="amount_budget" sum="Total Presupuesto"/>
                 <field name="amount_committed" sum="Total Comprometido"/>
                 <field name="amount_real" sum="Total Real"/>
@@ -42,9 +39,9 @@
         </field>
     </record>
 
-    <record id="view_fund_budget_position_report_pivot" model="ir.ui.view">
-        <field name="name">fund.budget.position.report.pivot</field>
-        <field name="model">fund.budget.position.report</field>
+    <record id="view_fund_budget_analytic_report_pivot" model="ir.ui.view">
+        <field name="name">fund.budget.analytic.report.pivot</field>
+        <field name="model">fund.budget.analytic.report</field>
         <field name="type">pivot</field>
         <field name="arch" type="xml">
             <pivot string="Análisis presupuestario">
@@ -53,20 +50,20 @@
                 <field name="amount_committed" type="measure"/>
                 <field name="amount_real" type="measure"/>
                 <field name="budget_id" type="row"/>
-                <field name="budget_position_id" type="row"/>
-                <field name="category_id" type="row"/>
+                <field name="analytic_account_id" type="row"/>
                 <field name="fiscalyear" type="col"/>
+                <field name="month" type="col"/>
             </pivot>
         </field>
     </record>
 
-    <record id="view_fund_budget_position_report_graph" model="ir.ui.view">
-        <field name="name">fund.budget.position.report.graph</field>
-        <field name="model">fund.budget.position.report</field>
+    <record id="view_fund_budget_analytic_report_graph" model="ir.ui.view">
+        <field name="name">fund.budget.analytic.report.graph</field>
+        <field name="model">fund.budget.analytic.report</field>
         <field name="type">graph</field>
         <field name="arch" type="xml">
             <graph string="Ejecución presupuestaria" type="bar">
-                <field name="budget_position_id"/>
+                <field name="analytic_account_id"/>
                 <field name="amount_budget" type="measure"/>
                 <field name="amount_committed" type="measure"/>
                 <field name="amount_real" type="measure"/>
@@ -77,12 +74,12 @@
 
     <record id="action_fund_budget_position_report" model="ir.actions.act_window">
         <field name="name">Análisis presupuestario</field>
-        <field name="res_model">fund.budget.position.report</field>
+        <field name="res_model">fund.budget.analytic.report</field>
         <field name="view_mode">list,pivot,graph</field>
-        <field name="search_view_id" ref="view_fund_budget_position_report_search"/>
+        <field name="search_view_id" ref="view_fund_budget_analytic_report_search"/>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">
-                Cree presupuestos y cargue partidas para ver aquí la ejecución (presupuesto, comprometido, real y saldo).
+                Cree presupuestos y cargue cuentas analíticas para ver aquí la ejecución (presupuesto, comprometido, real y saldo).
             </p>
         </field>
     </record>

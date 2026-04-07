@@ -28,6 +28,12 @@ class AccountMove(models.Model):
                     lambda l: not l.display_type and not l.budget_position_id
                 ):
                     line.budget_position_id = position
+            analytics = move.expedient_ids.mapped("analytic_account_id").filtered(lambda a: a)
+            if len(analytics) == 1:
+                analytic = analytics[0]
+                for line in move.invoice_line_ids.filtered(lambda l: not l.display_type):
+                    if not line.analytic_distribution:
+                        line.analytic_distribution = {str(analytic.id): 100.0}
 
     def write(self, vals):
         res = super().write(vals)
@@ -41,6 +47,14 @@ class AccountMove(models.Model):
                         )
                         if lines_to_update:
                             lines_to_update.write({"budget_position_id": positions[0].id})
+                    analytics = move.expedient_ids.mapped("analytic_account_id").filtered(lambda a: a)
+                    if len(analytics) == 1:
+                        analytic = analytics[0]
+                        lines_to_update = move.invoice_line_ids.filtered(
+                            lambda l: not l.display_type and not l.analytic_distribution
+                        )
+                        if lines_to_update:
+                            lines_to_update.write({"analytic_distribution": {str(analytic.id): 100.0}})
         if any(
             f in vals
             for f in ("expedient_ids", "state", "amount_total", "currency_id", "invoice_line_ids")

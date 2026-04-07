@@ -26,6 +26,12 @@ class ExpedientConfig(models.Model):
         help="Producto de tipo servicio usado cuando una línea del expediente "
         "solo tiene descripción (sin producto). Se crea una OC con este producto.",
     )
+    analytic_plan_id = fields.Many2one(
+        "account.analytic.plan",
+        string="Plan analítico (Expedientes/Presupuesto)",
+        help="Plan analítico estándar de Odoo que se usará para seleccionar cuentas analíticas "
+        "en el expediente y para los presupuestos/análisis presupuestario de este módulo.",
+    )
 
     _sql_constraints = [
         (
@@ -40,3 +46,9 @@ class ExpedientConfig(models.Model):
         """Obtener el producto servicio para la compañía."""
         config = self.search([("company_id", "=", company.id)], limit=1)
         return config.expedient_service_product_id
+
+    @api.model
+    def get_analytic_plan(self, company):
+        """Obtener el plan analítico configurado para la compañía."""
+        config = self.search([("company_id", "=", company.id)], limit=1)
+        return config.analytic_plan_id

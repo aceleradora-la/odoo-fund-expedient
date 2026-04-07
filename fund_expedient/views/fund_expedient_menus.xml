@@ -29,18 +29,8 @@
         <field name="view_mode">list,form</field>
     </record>
 
-    <record id="action_fund_budget_position" model="ir.actions.act_window">
-        <field name="name">Partidas presupuestarias</field>
-        <field name="res_model">fund.budget.position</field>
-        <field name="view_mode">list,form</field>
-        <field name="context">{'default_type': 'normal'}</field>
-    </record>
-
-    <record id="action_fund_budget_position_category" model="ir.actions.act_window">
-        <field name="name">Categorías de partida</field>
-        <field name="res_model">fund.budget.position.category</field>
-        <field name="view_mode">list,form</field>
-    </record>
+    <!-- Configuración legacy (partidas/categorías) removida de la UI:
+         el módulo migra a cuentas analíticas estándar de Odoo. -->
 
     <record id="action_fund_expedient_sequence" model="ir.actions.act_window">
         <field name="name">Secuencia de expedientes</field>
@@ -86,20 +76,6 @@
               parent="menu_fund_expedient_config"
               action="action_fund_expedient_type"
               sequence="25"
-              groups="fund_expedient.group_fund_expedient_manager"/>
-
-    <menuitem id="menu_budget_position"
-              name="Partidas presupuestarias"
-              parent="menu_fund_expedient_config"
-              action="action_fund_budget_position"
-              sequence="30"
-              groups="fund_expedient.group_fund_expedient_manager"/>
-
-    <menuitem id="menu_budget_position_category"
-              name="Categorías de partida"
-              parent="menu_fund_expedient_config"
-              action="action_fund_budget_position_category"
-              sequence="40"
               groups="fund_expedient.group_fund_expedient_manager"/>
 
     <menuitem id="menu_expedient_sequence"

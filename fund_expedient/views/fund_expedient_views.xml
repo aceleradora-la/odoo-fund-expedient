@@ -125,7 +125,9 @@
                             <field name="recommended_supplier_id" invisible="hide_recommended_supplier_id_stage"/>
                         </group>
                         <group string="Clasificación">
-                            <field name="budget_position_id" invisible="hide_budget_position_id_stage"/>
+                            <field name="analytic_plan_id" invisible="1"/>
+                            <field name="analytic_account_id" invisible="hide_analytic_account_id_stage"/>
+                            <field name="budget_position_id" invisible="1"/>
                             <field name="project_ids" widget="many2many_tags"/>
                             <field name="company_id" groups="base.group_multi_company"/>
                         </group>

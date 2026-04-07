@@ -19,6 +19,10 @@ class AccountMoveLine(models.Model):
                 inferred = self._infer_budget_position_from_vals(vals)
                 if inferred:
                     vals["budget_position_id"] = inferred.id
+            if not vals.get("analytic_distribution"):
+                inferred = self._infer_analytic_account_from_vals(vals)
+                if inferred:
+                    vals["analytic_distribution"] = {str(inferred.id): 100.0}
         return super().create(vals_list)
 
     def write(self, vals):
@@ -29,6 +33,12 @@ class AccountMoveLine(models.Model):
                 inferred = line._infer_budget_position_from_move(line.move_id)
                 if inferred:
                     vals = dict(vals, budget_position_id=inferred.id)
+                    break
+        if "analytic_distribution" not in vals:
+            for line in self.filtered(lambda l: not l.display_type and not l.analytic_distribution):
+                inferred = line._infer_analytic_account_from_move(line.move_id)
+                if inferred:
+                    vals = dict(vals, analytic_distribution={str(inferred.id): 100.0})
                     break
         return super().write(vals)
 
@@ -44,6 +54,14 @@ class AccountMoveLine(models.Model):
         move = self.env["account.move"].browse(vals.get("move_id")) if vals.get("move_id") else self.env["account.move"]
         return self._infer_budget_position_from_move(move)
 
+    def _infer_analytic_account_from_vals(self, vals):
+        move = (
+            self.env["account.move"].browse(vals.get("move_id"))
+            if vals.get("move_id")
+            else self.env["account.move"]
+        )
+        return self._infer_analytic_account_from_move(move)
+
     def _infer_budget_position_from_move(self, move):
         if not move:
             return False
@@ -55,4 +73,17 @@ class AccountMoveLine(models.Model):
             positions = po_expedients.mapped("budget_position_id").filtered(lambda p: p)
         if len(positions) == 1:
             return positions[0]
+        return False
+
+    def _infer_analytic_account_from_move(self, move):
+        if not move:
+            return False
+        if move.move_type not in ("in_invoice", "in_refund"):
+            return False
+        analytics = move.expedient_ids.mapped("analytic_account_id").filtered(lambda a: a)
+        if not analytics:
+            po_expedients = move.invoice_line_ids.purchase_line_id.order_id.mapped("expedient_ids")
+            analytics = po_expedients.mapped("analytic_account_id").filtered(lambda a: a)
+        if len(analytics) == 1:
+            return analytics[0]
         return False

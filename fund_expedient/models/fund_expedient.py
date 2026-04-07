@@ -99,6 +99,10 @@ class FundExpedient(models.Model):
         string="Ocultar Partida presupuestaria por etapa",
         compute="_compute_stage_field_visibility",
     )
+    hide_analytic_account_id_stage = fields.Boolean(
+        string="Ocultar Cuenta analítica por etapa",
+        compute="_compute_stage_field_visibility",
+    )
     hide_amount_estimated_stage = fields.Boolean(
         string="Ocultar Total estimado por etapa",
         compute="_compute_stage_field_visibility",
@@ -108,6 +112,19 @@ class FundExpedient(models.Model):
         string="Partida presupuestaria asignada",
         tracking=True,
         domain="[('budget_assignment_allowed', '=', True)]",
+    )
+    analytic_account_id = fields.Many2one(
+        "account.analytic.account",
+        string="Cuenta analítica",
+        tracking=True,
+        domain="[('plan_id', '=', analytic_plan_id), ('company_id', 'in', [False, company_id])]",
+        help="Cuenta analítica (del plan configurado para la compañía) usada para imputación y reportes.",
+    )
+    analytic_plan_id = fields.Many2one(
+        "account.analytic.plan",
+        compute="_compute_analytic_plan_id",
+        store=False,
+        string="Plan analítico (config)",
     )
     encuadre_id = fields.Many2one(
         "fund.expedient.encuadre",
@@ -401,6 +418,7 @@ class FundExpedient(models.Model):
             rec.hide_estimated_need_date_stage = False
             rec.hide_recommended_supplier_id_stage = False
             rec.hide_budget_position_id_stage = False
+            rec.hide_analytic_account_id_stage = False
             rec.hide_amount_estimated_stage = False
             if not rec.type_id or not rec.stage_id:
                 continue
@@ -418,7 +436,16 @@ class FundExpedient(models.Model):
             rec.hide_estimated_need_date_stage = assign.hide_estimated_need_date
             rec.hide_recommended_supplier_id_stage = assign.hide_recommended_supplier_id
             rec.hide_budget_position_id_stage = assign.hide_budget_position_id
+            # Reutilizamos el mismo flag de ocultación para la nueva cuenta analítica.
+            rec.hide_analytic_account_id_stage = assign.hide_budget_position_id
             rec.hide_amount_estimated_stage = assign.hide_amount_estimated
+
+    @api.depends("company_id")
+    def _compute_analytic_plan_id(self):
+        Config = self.env["fund.expedient.config"]
+        for rec in self:
+            plan = Config.get_analytic_plan(rec.company_id)
+            rec.analytic_plan_id = plan.id if plan else False
 
     @api.depends("type_id", "type_id.stage_assign_ids", "company_id")
     def _compute_allowed_stage_ids(self):

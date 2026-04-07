@@ -6,8 +6,20 @@
         <field name="type">list</field>
         <field name="arch" type="xml">
             <list string="Líneas de presupuesto" create="1" delete="1" edit="1">
-                <field name="budget_position_id"/>
-                <field name="initial_amount"/>
+                <field name="analytic_account_id"/>
+                <field name="m01" sum="Ene"/>
+                <field name="m02" sum="Feb"/>
+                <field name="m03" sum="Mar"/>
+                <field name="m04" sum="Abr"/>
+                <field name="m05" sum="May"/>
+                <field name="m06" sum="Jun"/>
+                <field name="m07" sum="Jul"/>
+                <field name="m08" sum="Ago"/>
+                <field name="m09" sum="Sep"/>
+                <field name="m10" sum="Oct"/>
+                <field name="m11" sum="Nov"/>
+                <field name="m12" sum="Dic"/>
+                <field name="amount_year" readonly="1" sum="Total año"/>
                 <field name="adjustment_amount" readonly="1"/>
                 <field name="amount_total" readonly="1"/>
                 <field name="committed_amount" readonly="1"/>
@@ -23,7 +35,7 @@
         <field name="type">list</field>
         <field name="arch" type="xml">
             <list string="Líneas de ajuste" create="1" delete="1" edit="1">
-                <field name="budget_position_id"/>
+                <field name="analytic_account_id"/>
                 <field name="amount"/>
                 <field name="note"/>
             </list>
@@ -58,7 +70,7 @@
                     </group>
                     <field name="line_ids" nolabel="1" readonly="state != 'draft'">
                         <list create="1" delete="1" edit="1">
-                            <field name="budget_position_id"/>
+                            <field name="analytic_account_id"/>
                             <field name="amount"/>
                             <field name="note"/>
                         </list>
@@ -118,8 +130,20 @@
                         <page string="Partidas">
                             <field name="line_ids" nolabel="1" readonly="state != 'draft'">
                                 <list create="1" delete="1" edit="1">
-                                    <field name="budget_position_id"/>
-                                    <field name="initial_amount"/>
+                                    <field name="analytic_account_id"/>
+                                    <field name="m01" sum="Ene"/>
+                                    <field name="m02" sum="Feb"/>
+                                    <field name="m03" sum="Mar"/>
+                                    <field name="m04" sum="Abr"/>
+                                    <field name="m05" sum="May"/>
+                                    <field name="m06" sum="Jun"/>
+                                    <field name="m07" sum="Jul"/>
+                                    <field name="m08" sum="Ago"/>
+                                    <field name="m09" sum="Sep"/>
+                                    <field name="m10" sum="Oct"/>
+                                    <field name="m11" sum="Nov"/>
+                                    <field name="m12" sum="Dic"/>
+                                    <field name="amount_year" readonly="1" sum="Total año"/>
                                     <field name="adjustment_amount" readonly="1"/>
                                     <field name="amount_total" readonly="1"/>
                                     <field name="committed_amount" readonly="1"/>
