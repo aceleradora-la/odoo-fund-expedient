@@ -143,12 +143,12 @@ class ExpedientTypeStageAssign(models.Model):
                       AND nsp.nspname = current_schema()
                       AND rel.relname = 'fund_expedient_type_stage_assign'
                       AND (
-                        SELECT array_agg(att.attname ORDER BY att.attname)
+                        SELECT array_agg(att.attname::text ORDER BY att.attname)::text[]
                         FROM unnest(con.conkey) AS k(attnum)
                         JOIN pg_attribute att
                           ON att.attrelid = rel.oid
                          AND att.attnum = k.attnum
-                      ) = ARRAY['stage_id']
+                      ) = ARRAY['stage_id']::text[]
                 ) LOOP
                     EXECUTE format('ALTER TABLE %I DROP CONSTRAINT IF EXISTS %I', 'fund_expedient_type_stage_assign', r.conname);
                 END LOOP;
