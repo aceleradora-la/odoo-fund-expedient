@@ -17,12 +17,6 @@
                 <field name="stage_validation_status" invisible="1"/>
                 <field name="has_stage_reviews" invisible="1"/>
             </xpath>
-            <xpath expr="//header/button[@name='action_cancel']" position="after">
-                <button name="validate_tier" type="object" string="Validar"
-                        class="btn-success" invisible="hide_reviews or not can_review"/>
-                <button name="reject_tier" type="object" string="Rechazar"
-                        class="btn-danger" invisible="hide_reviews or not can_review"/>
-            </xpath>
             <xpath expr="//button[@name='action_next_stage']" position="attributes">
                 <attribute name="modifiers">{"invisible": ["|", ["state", "=", "cancel"], ["validation_status", "in", ["pending", "waiting", "rejected"]]]}</attribute>
             </xpath>
