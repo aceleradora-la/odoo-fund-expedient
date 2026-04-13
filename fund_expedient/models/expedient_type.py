@@ -2,6 +2,7 @@
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 
 from odoo import api, fields, models
+from odoo.tools.sql import table_exists
 from odoo.exceptions import ValidationError
 
 
@@ -116,6 +117,44 @@ class ExpedientTypeStageAssign(models.Model):
             vals["job_ids"] = [(5, 0, 0)]
             vals["user_ids"] = [(5, 0, 0)]
         return super().write(vals)
+
+    def init(self):
+        """Eliminar constraints legacy que impidan reutilizar etapas entre tipos.
+
+        En versiones anteriores pudo existir un UNIQUE(stage_id) en la tabla, lo que
+        bloquea usar la misma etapa en tipos distintos. Este modelo ya define el
+        constraint correcto: UNIQUE(type_id, stage_id).
+        """
+        # En upgrades, este init puede correrse antes de que la tabla exista.
+        if not table_exists(self.env.cr, "fund_expedient_type_stage_assign"):
+            return
+        self.env.cr.execute(
+            """
+            DO $$
+            DECLARE
+                r record;
+            BEGIN
+                FOR r IN (
+                    SELECT con.conname
+                    FROM pg_constraint con
+                    JOIN pg_class rel ON rel.oid = con.conrelid
+                    JOIN pg_namespace nsp ON nsp.oid = rel.relnamespace
+                    WHERE con.contype = 'u'
+                      AND nsp.nspname = current_schema()
+                      AND rel.relname = 'fund_expedient_type_stage_assign'
+                      AND (
+                        SELECT array_agg(att.attname ORDER BY att.attname)
+                        FROM unnest(con.conkey) AS k(attnum)
+                        JOIN pg_attribute att
+                          ON att.attrelid = rel.oid
+                         AND att.attnum = k.attnum
+                      ) = ARRAY['stage_id']
+                ) LOOP
+                    EXECUTE format('ALTER TABLE %I DROP CONSTRAINT IF EXISTS %I', 'fund_expedient_type_stage_assign', r.conname);
+                END LOOP;
+            END $$;
+            """
+        )
 
 
 class ExpedientType(models.Model):
