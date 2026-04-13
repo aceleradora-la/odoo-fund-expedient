@@ -13,6 +13,14 @@
         </xpath>
     </template>
 
+    <!-- El fragmento QWeb debe declarar can_review junto a los botones; si no, OWL deja undefined y oculta Validar -->
+    <template id="tier_validation_label_fields" inherit_id="base_tier_validation.tier_validation_label">
+        <xpath expr="//button[@name='validate_tier']" position="before">
+            <field name="can_review" invisible="1"/>
+            <field name="hide_reviews" invisible="1"/>
+        </xpath>
+    </template>
+
     <template id="tier_validation_label_stage" inherit_id="base_tier_validation.tier_validation_label">
         <xpath expr="//div[@role='alert' and contains(@class,'alert-warning')]" position="attributes">
             <attribute name="t-attf-invisible">stage_validation_status == 'validated' or hide_reviews or stage_validation_status == 'rejected' or not has_stage_reviews</attribute>
