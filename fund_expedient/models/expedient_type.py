@@ -9,7 +9,7 @@ from odoo.exceptions import ValidationError
 class ExpedientTypeStageAssign(models.Model):
     _name = "fund.expedient.type.stage.assign"
     _description = "Asignación por Tipo y Etapa"
-    _order = "type_id, stage_id"
+    _order = "type_id, sequence, id"
     _rec_name = "display_name"
 
     type_id = fields.Many2one(
@@ -23,6 +23,10 @@ class ExpedientTypeStageAssign(models.Model):
         string="Etapa",
         required=True,
         ondelete="cascade",
+    )
+    sequence = fields.Integer(
+        default=10,
+        help="Orden de la etapa dentro del tipo de expediente.",
     )
     use_requestor = fields.Boolean(
         string="Solicitante",

@@ -37,6 +37,7 @@
                         <page string="Asignaciones por etapa" name="stage_assign">
                             <field name="stage_assign_ids" nolabel="1">
                                 <list create="1" delete="1" edit="1">
+                                    <field name="sequence" widget="handle"/>
                                     <field name="stage_id" options="{'no_create': True}"/>
                                     <field name="use_requestor"/>
                                     <field name="group_ids" widget="many2many_tags" readonly="use_requestor"/>
@@ -47,6 +48,7 @@
                                     <group>
                                         <group>
                                             <field name="type_id" readonly="1"/>
+                                            <field name="sequence"/>
                                             <field name="stage_id" options="{'no_create': True}"/>
                                             <field name="use_requestor"/>
                                         </group>
