@@ -128,7 +128,7 @@ class FundExpedient(models.Model):
         all_reviews = self._current_stage_reviews().filtered(
             lambda r: r.status in ("waiting", "pending")
         )
-        my_reviews = all_reviews.filtered(lambda r: user in r.reviewer_ids)
+        my_reviews = all_reviews.filtered(lambda r: user.id in r.reviewer_ids.ids)
         sequences = my_reviews.filtered(lambda r: not r.approve_sequence).mapped("sequence")
         approve_sequences = my_reviews.filtered("approve_sequence").mapped("sequence")
         if approve_sequences:
@@ -298,7 +298,7 @@ class FundExpedient(models.Model):
     @api.depends("review_ids.status", "review_ids.stage_id", "stage_id")
     def _compute_can_restart_validation_stage(self):
         for rec in self:
-            stage_reviews = rec.review_ids.filtered(lambda r: r.stage_id.id == rec.stage_id.id)
+            stage_reviews = rec.review_ids.filtered(lambda r: r.stage_id == rec.stage_id)
             rec.can_restart_validation_stage = bool(
                 stage_reviews
                 and any(
@@ -314,7 +314,7 @@ class FundExpedient(models.Model):
     )
     def _compute_stage_validation(self):
         for rec in self:
-            stage_reviews = rec.review_ids.filtered(lambda r: r.stage_id.id == rec.stage_id.id)
+            stage_reviews = rec.review_ids.filtered(lambda r: r.stage_id == rec.stage_id)
             rec.has_stage_reviews = bool(stage_reviews)
             if not stage_reviews:
                 rec.stage_validation_status = "no"
@@ -336,7 +336,8 @@ class FundExpedient(models.Model):
         self.ensure_one()
         if not self.stage_id:
             return self.env["tier.review"]
-        return self.review_ids.filtered(lambda r: r.stage_id.id == self.stage_id.id)
+        # Comparar recordsets; si falta stage_id en líneas viejas, no coinciden con etapa actual
+        return self.review_ids.filtered(lambda r: r.stage_id == self.stage_id)
 
     def _prepare_tier_review_vals(self, definition, sequence):
         """Inyectar etapa actual en la review para auditoría por etapa."""
