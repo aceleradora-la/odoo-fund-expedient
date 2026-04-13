@@ -14,3 +14,21 @@ class TierReview(models.Model):
         help="Etapa del expediente al momento de solicitar/crear la revisión.",
     )
 
+    def _can_review_value(self):
+        """Agrupar secuencia de aprobación solo entre reviews de la misma etapa del expediente."""
+        self.ensure_one()
+        if self.model != "fund.expedient":
+            return super()._can_review_value()
+        if self.status not in ("pending", "waiting"):
+            return False
+        if not self.approve_sequence:
+            return True
+        resource = self.env["fund.expedient"].browse(self.res_id)
+        reviews = resource.review_ids.filtered(
+            lambda r: r.status == "pending" and r.stage_id == resource.stage_id
+        )
+        if not reviews:
+            return True
+        sequence = min(reviews.mapped("sequence"))
+        return self.sequence == sequence
+

@@ -138,6 +138,19 @@ class FundExpedient(models.Model):
                 sequences.append(my_sequence)
         return sequences
 
+    @api.depends_context("uid")
+    @api.depends(
+        "stage_id",
+        "review_ids",
+        "review_ids.status",
+        "review_ids.stage_id",
+        "review_ids.reviewer_ids",
+    )
+    def _compute_can_review(self):
+        """Debe recalcularse al cambiar etapa (el mixin base solo mira review_ids.status)."""
+        for rec in self:
+            rec.can_review = bool(rec._get_sequences_to_approve(self.env.user))
+
     def validate_tier(self):
         self.ensure_one()
         sequences = self._get_sequences_to_approve(self.env.user)
