@@ -2,7 +2,7 @@
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 
 from odoo import api, fields, models, _
-from odoo.exceptions import UserError
+from odoo.exceptions import UserError, ValidationError
 
 
 class FundExpedient(models.Model):
@@ -50,6 +50,11 @@ class FundExpedient(models.Model):
         # evaluate_tier devuelve subconjunto de self; vacío si el dominio no aplica.
         return tiers.filtered(lambda t: bool(self.evaluate_tier(t)))
 
+    def _current_stage_open_reviews(self):
+        """Reviews de la etapa actual que bloquean escritura (waiting/pending)."""
+        self.ensure_one()
+        return self._current_stage_reviews().filtered(lambda r: r.status in ("waiting", "pending"))
+
     def _missing_tier_reviews_for_current_stage(self):
         """Definiciones aplicables sin línea de revisión para la etapa actual."""
         self.ensure_one()
@@ -95,6 +100,39 @@ class FundExpedient(models.Model):
                 rec.need_validation = False
                 continue
             rec.need_validation = bool(rec._missing_tier_reviews_for_current_stage())
+
+    def _tier_validation_check_write_allowed(self, vals):
+        """Tier validation por etapa.
+
+        El mixin estándar bloquea escrituras si existen reviews en el registro, incluso si
+        pertenecen a etapas anteriores. Para permitir edición según permisos de etapa y
+        conservar auditoría histórica, sólo aplicamos el bloqueo cuando hay reviews abiertas
+        en la etapa actual.
+        """
+        for rec in self:
+            if rec._context.get("skip_validation_check"):
+                continue
+            open_reviews = rec._current_stage_open_reviews()
+            if not open_reviews:
+                continue
+            if not rec._check_allow_write_under_validation(vals):
+                (
+                    allowed_fields,
+                    not_allowed_fields,
+                ) = rec._get_fields_to_write_validation(
+                    vals, rec._get_under_validation_exceptions
+                )
+                not_allowed_fields_str = "\n- ".join(not_allowed_fields)
+                allowed_fields_str = "\n- ".join(allowed_fields)
+                raise ValidationError(
+                    rec.env._(
+                        "You are not allowed to write those fields under validation.\n"
+                        "- %(not_allowed_fields_str)s\n\n"
+                        "Only those fields can be modified:\n- %(allowed_fields_str)s",
+                        not_allowed_fields_str=not_allowed_fields_str,
+                        allowed_fields_str=allowed_fields_str,
+                    )
+                )
 
     @api.depends(
         "review_ids",
