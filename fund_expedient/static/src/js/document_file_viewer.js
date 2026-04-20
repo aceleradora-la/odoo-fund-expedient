@@ -17,7 +17,7 @@ class FundExpedientDocumentFileViewer extends Component {
         this.mimetype = mimetype;
         this.canDownload = !!canDownload;
 
-        onMounted(async () => {
+        onMounted(() => {
             // Ocultar descarga en el visor cuando no corresponde.
             if (!this.canDownload) {
                 document.body.classList.add("o_fund_expedient_no_download");
@@ -28,16 +28,13 @@ class FundExpedientDocumentFileViewer extends Component {
                 name: this.filename,
                 mimetype: this.mimetype,
             });
-            try {
-                // open() es async: resolve cuando el visor se cierra.
-                await this.fileViewer.open(preview);
-            } finally {
-                document.body.classList.remove("o_fund_expedient_no_download");
-            }
-            // Volver a la pantalla anterior para evitar quedarse en blanco.
-            // restore() vuelve al action previo cuando este componente fue abierto como client action.
-            await this.actionService.restore();
+            this.fileViewer.open(preview);
         });
+    }
+
+    async onClickBack() {
+        document.body.classList.remove("o_fund_expedient_no_download");
+        await this.actionService.restore();
     }
 }
 

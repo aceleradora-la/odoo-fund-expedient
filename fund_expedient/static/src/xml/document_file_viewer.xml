@@ -1,7 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates id="template" xml:space="preserve">
     <t t-name="fund_expedient.DocumentFileViewer" owl="1">
-        <div/>
+        <div class="o_form_view o_action_manager">
+            <div class="o_content d-flex flex-column align-items-center justify-content-center" style="min-height: 50vh;">
+                <div class="text-muted mb-3">
+                    Previsualización abierta. Cierre el visor para continuar.
+                </div>
+                <button type="button" class="btn btn-secondary" t-on-click="onClickBack">
+                    Volver
+                </button>
+            </div>
+        </div>
     </t>
 </templates>
 
