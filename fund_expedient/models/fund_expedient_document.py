@@ -174,6 +174,12 @@ class FundExpedientDocument(models.Model):
 
     def action_download_file(self):
         self.ensure_one()
+        if not self.can_download_file:
+            raise UserError(
+                _(
+                    "Solo puede descargar documentos de la etapa actual cuando está asignado a esa etapa."
+                )
+            )
         # Descarga controlada por etapa: el controlador fuerza inline si no corresponde.
         return {
             "type": "ir.actions.act_url",

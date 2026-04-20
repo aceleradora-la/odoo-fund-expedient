@@ -215,7 +215,7 @@
                                             name="action_download_file"
                                             string="Descargar"
                                             class="btn-primary"
-                                            modifiers='{"invisible": [["can_download_file", "=", false]]}'/>
+                                            invisible="not can_download_file"/>
                                 </list>
                                 <form string="Documento por etapa">
                                     <group>
@@ -244,7 +244,7 @@
                                                     name="action_download_file"
                                                     string="Descargar"
                                                     class="btn-primary"
-                                                    modifiers='{"invisible": ["|", ["file_data", "=", false], ["can_download_file", "=", false]]}'/>
+                                                    invisible="not file_data or not can_download_file"/>
                                             <field name="name" invisible="1"/>
                                         </group>
                                     </group>
