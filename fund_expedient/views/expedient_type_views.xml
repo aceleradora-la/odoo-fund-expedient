@@ -77,6 +77,10 @@
                                     <group string="Disposición (por etapa)">
                                         <field name="require_disposition"/>
                                         <field name="disposition_file_required" invisible="not require_disposition"/>
+                                        <field name="default_disposition_notes"
+                                               widget="html"
+                                               invisible="not require_disposition"
+                                               placeholder="Observaciones predeterminadas para Disposición en esta etapa..."/>
                                     </group>
                                 </form>
                             </field>

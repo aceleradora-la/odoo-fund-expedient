@@ -791,13 +791,19 @@ class FundExpedient(models.Model):
                                 rec.stage_id.name,
                             )
                         )
-                    if assign_cur.disposition_file_required and not any(d.file_data for d in dispositions):
-                        raise UserError(
-                            _(
-                                "Para salir de la etapa '%s' la Disposición debe tener un archivo adjunto.",
-                                rec.stage_id.name,
-                            )
+                    if assign_cur.disposition_file_required:
+                        docs_with_file = rec.document_ids.filtered(
+                            lambda doc: doc.stage_id == rec.stage_id
+                            and doc.disposition_id in dispositions
+                            and bool(doc.file_data)
                         )
+                        if not docs_with_file:
+                            raise UserError(
+                                _(
+                                    "Para salir de la etapa '%s' la Disposición debe tener un archivo adjunto.",
+                                    rec.stage_id.name,
+                                )
+                            )
 
             super(FundExpedient, rec).write(new_vals)
             if stage_will_change:

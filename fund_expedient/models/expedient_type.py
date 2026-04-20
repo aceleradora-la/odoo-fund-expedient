@@ -71,6 +71,10 @@ class ExpedientTypeStageAssign(models.Model):
         string="Archivo obligatorio en disposición",
         help="Si está activo, la disposición requerida debe tener un archivo subido.",
     )
+    default_disposition_notes = fields.Html(
+        string="Observaciones por defecto (Disposición)",
+        help="Texto predeterminado (HTML) que se copiará en Observaciones al crear una Disposición de esta etapa.",
+    )
     company_id = fields.Many2one(
         related="type_id.company_id",
         store=True,

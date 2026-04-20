@@ -32,7 +32,7 @@ class FundExpedientDocument(models.Model):
     )
     name = fields.Char(string="Documento")
     delivered = fields.Boolean(string="Entregado")
-    notes = fields.Text(string="Observaciones")
+    notes = fields.Html(string="Observaciones")
     stage_id = fields.Many2one(
         "fund.expedient.stage",
         string="Etapa origen",
@@ -94,10 +94,19 @@ class FundExpedientDocument(models.Model):
         counters = {exp_id: 0 for exp_id in max_by_exp}
 
         for vals in vals_list:
-            # Etapa fija desde el contexto cuando se crea desde el expediente.
-            default_stage_id = self.env.context.get("default_stage_id")
-            if default_stage_id:
-                vals["stage_id"] = default_stage_id
+            # Resolver etapa origen (prioridad): contexto -> disposición -> expediente.
+            if not vals.get("stage_id"):
+                default_stage_id = self.env.context.get("default_stage_id")
+                if default_stage_id:
+                    vals["stage_id"] = default_stage_id
+            if not vals.get("stage_id") and vals.get("disposition_id"):
+                disp = self.env["fund.expedient.disposition"].browse(vals["disposition_id"])
+                if disp and disp.stage_id:
+                    vals["stage_id"] = disp.stage_id.id
+            if not vals.get("stage_id") and vals.get("expedient_id"):
+                exp = self.env["fund.expedient"].browse(vals["expedient_id"])
+                if exp and exp.stage_id:
+                    vals["stage_id"] = exp.stage_id.id
 
             # Nombre del documento: por defecto igual al nombre del archivo.
             if (not vals.get("name") or not str(vals.get("name")).strip()) and vals.get("file_name"):

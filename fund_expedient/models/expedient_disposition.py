@@ -8,7 +8,7 @@ from odoo.exceptions import ValidationError
 class FundExpedientDisposition(models.Model):
     _name = "fund.expedient.disposition"
     _description = "Disposición del expediente"
-    _order = "sequence, id"
+    _order = "stage_id, sequence_number, id"
 
     expedient_id = fields.Many2one(
         "fund.expedient",
@@ -25,21 +25,24 @@ class FundExpedientDisposition(models.Model):
         index=True,
         default=lambda self: self.env.context.get("default_stage_id"),
     )
-    sequence = fields.Integer(
-        default=10,
-        help="Orden/numeración configurable para la disposición dentro de la etapa.",
+    sequence = fields.Integer(default=10, help="Orden visual en listas.")
+    sequence_number = fields.Integer(
+        string="Nº Disposición",
+        default=1,
+        help="Numeración configurable de la disposición (usada en el identificador).",
+    )
+    number = fields.Char(
+        string="Número",
+        compute="_compute_number",
+        store=True,
+        index=True,
     )
     name = fields.Char(
         string="Disposición",
         compute="_compute_name",
         store=True,
     )
-    notes = fields.Text(string="Observaciones")
-    file_data = fields.Binary(
-        string="Archivo",
-        attachment=True,
-    )
-    file_name = fields.Char(string="Nombre archivo")
+    notes = fields.Html(string="Observaciones")
 
     document_ids = fields.One2many(
         "fund.expedient.document",
@@ -55,38 +58,50 @@ class FundExpedientDisposition(models.Model):
     _sql_constraints = [
         (
             "expedient_stage_sequence_uniq",
-            "unique(expedient_id, stage_id, sequence)",
-            "Ya existe una disposición con esa secuencia para este expediente y etapa.",
+            "unique(expedient_id, stage_id, sequence_number)",
+            "Ya existe una disposición con ese número para este expediente y etapa.",
         )
     ]
 
-    @api.constrains("file_data", "expedient_id", "stage_id")
-    def _check_file_required_by_stage(self):
+    @api.model_create_multi
+    def create(self, vals_list):
         Assign = self.env["fund.expedient.type.stage.assign"]
-        for rec in self:
-            if not rec.expedient_id or not rec.stage_id or not rec.expedient_id.type_id:
-                continue
-            assign = Assign.search(
-                [
-                    ("type_id", "=", rec.expedient_id.type_id.id),
-                    ("stage_id", "=", rec.stage_id.id),
-                ],
-                limit=1,
-            )
-            if assign and assign.disposition_file_required and not rec.file_data:
-                raise ValidationError(
-                    "Esta etapa requiere que la Disposición tenga un archivo adjunto."
-                )
+        for vals in vals_list:
+            exp_id = vals.get("expedient_id") or self.env.context.get("default_expedient_id")
+            stage_id = vals.get("stage_id") or self.env.context.get("default_stage_id")
+            if exp_id and not vals.get("expedient_id"):
+                vals["expedient_id"] = exp_id
+            if stage_id and not vals.get("stage_id"):
+                vals["stage_id"] = stage_id
 
-    @api.depends("expedient_id.number", "stage_id.name", "sequence")
+            # Observaciones por defecto desde config tipo×etapa (si está vacía).
+            if (not vals.get("notes") or not str(vals.get("notes")).strip()) and exp_id and stage_id:
+                exp = self.env["fund.expedient"].browse(exp_id)
+                if exp.type_id:
+                    assign = Assign.search(
+                        [("type_id", "=", exp.type_id.id), ("stage_id", "=", stage_id)],
+                        limit=1,
+                    )
+                    if assign and assign.default_disposition_notes:
+                        vals["notes"] = assign.default_disposition_notes
+
+        return super().create(vals_list)
+
+    @api.depends("expedient_id.number", "stage_id.name", "sequence_number")
+    def _compute_number(self):
+        for rec in self:
+            exp = (rec.expedient_id.number or "").strip()
+            stg = (rec.stage_id.name or "").strip()
+            if exp and stg:
+                rec.number = f"{exp}-{stg}-{rec.sequence_number}"
+            elif exp:
+                rec.number = f"{exp}-{rec.sequence_number}"
+            else:
+                rec.number = str(rec.sequence_number or "")
+
+    @api.depends("number", "stage_id.name")
     def _compute_name(self):
         for rec in self:
-            exp = rec.expedient_id.number or ""
             stg = rec.stage_id.name or ""
-            if exp and stg:
-                rec.name = f"{exp} / {stg} / {rec.sequence}"
-            elif exp:
-                rec.name = f"{exp} / {rec.sequence}"
-            else:
-                rec.name = str(rec.sequence or "")
+            rec.name = f"{rec.number} ({stg})" if stg and rec.number else (rec.number or "")
 
