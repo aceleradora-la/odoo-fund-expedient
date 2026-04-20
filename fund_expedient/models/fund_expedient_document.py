@@ -207,3 +207,15 @@ class FundExpedientDocument(models.Model):
                 "canDownload": bool(self.can_download_file),
             },
         }
+
+    def action_open_document(self):
+        """Abrir el documento (mismo registro que en la solapa del expediente)."""
+        self.ensure_one()
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Documento"),
+            "res_model": "fund.expedient.document",
+            "res_id": self.id,
+            "view_mode": "form",
+            "target": "current",
+        }
