@@ -66,45 +66,18 @@ class FundExpedientDocument(models.Model):
         store=False,
     )
 
-    @api.depends("expedient_id", "expedient_id.type_id", "expedient_id.stage_id", "stage_id")
+    @api.depends("expedient_id", "expedient_id.stage_id", "expedient_id.can_edit_in_stage", "stage_id")
     @api.depends_context("uid")
     def _compute_stage_permissions(self):
-        Assign = self.env["fund.expedient.type.stage.assign"]
         for rec in self:
             rec.can_download_file = False
             rec.can_unlink_file = False
-            if not rec.expedient_id or not rec.stage_id or not rec.expedient_id.type_id:
+            if not rec.expedient_id or not rec.stage_id:
                 continue
-            assign = Assign.search(
-                [
-                    ("type_id", "=", rec.expedient_id.type_id.id),
-                    ("stage_id", "=", rec.stage_id.id),
-                ],
-                limit=1,
-            )
-            # Sin asignación => sin restricción por etapa
-            if not assign:
-                is_current_stage = rec.expedient_id.stage_id == rec.stage_id
-                rec.can_download_file = bool(is_current_stage)
-                rec.can_unlink_file = bool(is_current_stage)
-                continue
-
-            # Usuarios asignables a esa etapa
-            if assign.use_requestor:
-                users = rec.expedient_id.requestor_id.user_id
-            else:
-                users = assign.group_ids.users | assign.user_ids
-                if assign.job_ids:
-                    employees = self.env["hr.employee"].search([("job_id", "in", assign.job_ids.ids)])
-                    users |= employees.mapped("user_id").filtered(lambda u: u)
-            is_assigned = bool(users) and (self.env.user in users)
             is_current_stage = rec.expedient_id.stage_id == rec.stage_id
-
-            # Regla pedida:
-            # - si el documento es de otra etapa => solo preview, sin download/unlink
-            # - si es etapa actual y el usuario está asignado => puede
-            rec.can_download_file = bool(is_assigned and is_current_stage)
-            rec.can_unlink_file = bool(is_assigned and is_current_stage)
+            can_manage = bool(is_current_stage and rec.expedient_id.can_edit_in_stage)
+            rec.can_download_file = can_manage
+            rec.can_unlink_file = can_manage
 
     @api.onchange("file_name")
     def _onchange_file_name_set_name(self):
