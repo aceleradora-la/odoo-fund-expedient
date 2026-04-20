@@ -31,6 +31,15 @@ class FundExpedient(models.Model):
         string="Puede reiniciar validación (etapa)",
         compute="_compute_can_restart_validation_stage",
     )
+    tier_stage_locked = fields.Boolean(
+        string="Bloqueado por validación (etapa)",
+        compute="_compute_tier_stage_locked",
+        store=False,
+        help=(
+            "Indica si la etapa actual está bloqueada por el flujo de aprobaciones. "
+            "Se usa para readonly y restricciones de escritura por etapa."
+        ),
+    )
 
     # --- Validación por etapa (tier definitions aplicables × reviews con stage_id) ---
 
@@ -54,6 +63,26 @@ class FundExpedient(models.Model):
         """Reviews de la etapa actual que bloquean escritura (waiting/pending)."""
         self.ensure_one()
         return self._current_stage_reviews().filtered(lambda r: r.status in ("waiting", "pending"))
+
+    @api.depends("has_stage_reviews", "stage_validation_status")
+    def _compute_tier_stage_locked(self):
+        """Bloqueo por etapa: solo si ya se inició el flujo en la etapa (hay reviews)."""
+        for rec in self:
+            rec.tier_stage_locked = bool(rec.has_stage_reviews) and rec.stage_validation_status in (
+                "waiting",
+                "pending",
+                "rejected",
+                "validated",
+            )
+
+    def _get_tier_validation_readonly_domain(self):
+        """Readonly dinámico de base_tier_validation, pero por etapa.
+
+        Regla acordada:
+        - Al entrar a una etapa (sin reviews de esa etapa): editable.
+        - Una vez solicitado el flujo (waiting/pending) o cerrado (validated/rejected): readonly hasta cambiar de etapa.
+        """
+        return "tier_stage_locked"
 
     def _missing_tier_reviews_for_current_stage(self):
         """Definiciones aplicables sin línea de revisión para la etapa actual."""
@@ -106,14 +135,13 @@ class FundExpedient(models.Model):
 
         El mixin estándar bloquea escrituras si existen reviews en el registro, incluso si
         pertenecen a etapas anteriores. Para permitir edición según permisos de etapa y
-        conservar auditoría histórica, sólo aplicamos el bloqueo cuando hay reviews abiertas
-        en la etapa actual.
+        conservar auditoría histórica, sólo aplicamos el bloqueo cuando el flujo está
+        iniciado/cerrado en la etapa actual.
         """
         for rec in self:
             if rec._context.get("skip_validation_check"):
                 continue
-            open_reviews = rec._current_stage_open_reviews()
-            if not open_reviews:
+            if not rec.tier_stage_locked:
                 continue
             if not rec._check_allow_write_under_validation(vals):
                 (

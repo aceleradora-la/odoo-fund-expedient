@@ -13,6 +13,7 @@
                 <field name="hide_reviews" invisible="1"/>
                 <field name="next_review" invisible="1"/>
                 <field name="has_comment" invisible="1"/>
+                <field name="tier_stage_locked" invisible="1"/>
                 <field name="can_restart_validation_stage" invisible="1"/>
                 <field name="stage_validation_status" invisible="1"/>
                 <field name="has_stage_reviews" invisible="1"/>
