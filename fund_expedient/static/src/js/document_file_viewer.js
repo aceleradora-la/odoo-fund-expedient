@@ -1,6 +1,6 @@
 /** @odoo-module **/
 
-import { Component, onWillUnmount, onMounted } from "@odoo/owl";
+import { Component, onMounted } from "@odoo/owl";
 import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
 import { useFileViewer } from "@web/core/file_viewer/file_viewer_hook";
@@ -9,6 +9,7 @@ class FundExpedientDocumentFileViewer extends Component {
     setup() {
         this.orm = useService("orm");
         this.mailStore = useService("mail.store");
+        this.actionService = useService("action");
         this.fileViewer = useFileViewer();
         const { attachmentId, filename, mimetype, canDownload } = this.props.action.params || {};
         this.attachmentId = attachmentId;
@@ -27,11 +28,15 @@ class FundExpedientDocumentFileViewer extends Component {
                 name: this.filename,
                 mimetype: this.mimetype,
             });
-            this.fileViewer.open(preview);
-        });
-
-        onWillUnmount(() => {
-            document.body.classList.remove("o_fund_expedient_no_download");
+            try {
+                // open() es async: resolve cuando el visor se cierra.
+                await this.fileViewer.open(preview);
+            } finally {
+                document.body.classList.remove("o_fund_expedient_no_download");
+            }
+            // Volver a la pantalla anterior para evitar quedarse en blanco.
+            // restore() vuelve al action previo cuando este componente fue abierto como client action.
+            await this.actionService.restore();
         });
     }
 }
