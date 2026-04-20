@@ -18,6 +18,12 @@
         "project",
         "account",
     ],
+    "assets": {
+        "web.assets_backend": [
+            "fund_expedient/static/src/js/document_file_viewer.js",
+            "fund_expedient/static/src/scss/document_file_viewer.scss",
+        ],
+    },
     "data": [
         "security/fund_expedient_security.xml",
         "security/ir.model.access.csv",

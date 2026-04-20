@@ -210,9 +210,21 @@ class FundExpedientDocument(models.Model):
 
     def action_preview_file(self):
         self.ensure_one()
-        # Inline preview estándar de Odoo: /web/content con download=0
+        attachment = self.env["ir.attachment"].search(
+            [
+                ("res_model", "=", self._name),
+                ("res_id", "=", self.id),
+                ("res_field", "=", "file_data"),
+            ],
+            limit=1,
+        )
         return {
-            "type": "ir.actions.act_url",
-            "url": f"/web/content/fund.expedient.document/{self.id}/file_data?download=0",
-            "target": "new",
+            "type": "ir.actions.client",
+            "tag": "fund_expedient.document_file_viewer",
+            "params": {
+                "attachmentId": attachment.id,
+                "filename": self.file_name or self.name or _("Documento"),
+                "mimetype": attachment.mimetype or "application/octet-stream",
+                "canDownload": bool(self.can_download_file),
+            },
         }
