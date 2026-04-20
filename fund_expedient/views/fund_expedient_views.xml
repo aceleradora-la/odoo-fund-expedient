@@ -205,7 +205,17 @@
                                     <field name="notes"/>
                                     <field name="stage_id" optional="hide" readonly="1"/>
                                     <field name="disposition_id" optional="hide"/>
-                                    <field name="file_data" filename="file_name" widget="binary"/>
+                                    <field name="can_download_file" column_invisible="1"/>
+                                    <field name="can_unlink_file" column_invisible="1"/>
+                                    <button type="object"
+                                            name="action_preview_file"
+                                            string="Previsualizar"
+                                            class="btn-secondary"/>
+                                    <button type="object"
+                                            name="action_download_file"
+                                            string="Descargar"
+                                            class="btn-primary"
+                                            modifiers='{"invisible": [["can_download_file", "=", false]]}'/>
                                 </list>
                                 <form string="Documento por etapa">
                                     <group>
@@ -217,8 +227,24 @@
                                             <field name="delivered"/>
                                         </group>
                                         <group>
-                                            <field name="file_data" filename="file_name" widget="binary"/>
-                                            <field name="file_name" readonly="1"/>
+                                            <field name="can_download_file" invisible="1"/>
+                                            <field name="can_unlink_file" invisible="1"/>
+                                            <!-- Subida: solo en etapa actual y asignado -->
+                                            <field name="file_data" filename="file_name" widget="binary"
+                                                   invisible="not can_download_file or file_data"
+                                                   readonly="not can_download_file"/>
+                                            <!-- Visualización: evitar widget binary (descarga directa) -->
+                                            <field name="file_name" readonly="1" invisible="not file_data"/>
+                                            <button type="object"
+                                                    name="action_preview_file"
+                                                    string="Previsualizar"
+                                                    class="btn-secondary"
+                                                    invisible="not file_data"/>
+                                            <button type="object"
+                                                    name="action_download_file"
+                                                    string="Descargar"
+                                                    class="btn-primary"
+                                                    modifiers='{"invisible": ["|", ["file_data", "=", false], ["can_download_file", "=", false]]}'/>
                                             <field name="name" invisible="1"/>
                                         </group>
                                     </group>

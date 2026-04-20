@@ -1,7 +1,8 @@
 # Copyright 2025
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 
-from odoo import api, fields, models
+from odoo import api, fields, models, _
+from odoo.exceptions import UserError
 
 
 class FundExpedientDocument(models.Model):
@@ -55,6 +56,55 @@ class FundExpedientDocument(models.Model):
         related="expedient_id.company_id",
         store=True,
     )
+
+    can_download_file = fields.Boolean(
+        compute="_compute_stage_permissions",
+        store=False,
+    )
+    can_unlink_file = fields.Boolean(
+        compute="_compute_stage_permissions",
+        store=False,
+    )
+
+    @api.depends("expedient_id", "expedient_id.type_id", "expedient_id.stage_id", "stage_id")
+    @api.depends_context("uid")
+    def _compute_stage_permissions(self):
+        Assign = self.env["fund.expedient.type.stage.assign"]
+        for rec in self:
+            rec.can_download_file = False
+            rec.can_unlink_file = False
+            if not rec.expedient_id or not rec.stage_id or not rec.expedient_id.type_id:
+                continue
+            assign = Assign.search(
+                [
+                    ("type_id", "=", rec.expedient_id.type_id.id),
+                    ("stage_id", "=", rec.stage_id.id),
+                ],
+                limit=1,
+            )
+            # Sin asignación => sin restricción por etapa
+            if not assign:
+                is_current_stage = rec.expedient_id.stage_id == rec.stage_id
+                rec.can_download_file = bool(is_current_stage)
+                rec.can_unlink_file = bool(is_current_stage)
+                continue
+
+            # Usuarios asignables a esa etapa
+            if assign.use_requestor:
+                users = rec.expedient_id.requestor_id.user_id
+            else:
+                users = assign.group_ids.users | assign.user_ids
+                if assign.job_ids:
+                    employees = self.env["hr.employee"].search([("job_id", "in", assign.job_ids.ids)])
+                    users |= employees.mapped("user_id").filtered(lambda u: u)
+            is_assigned = bool(users) and (self.env.user in users)
+            is_current_stage = rec.expedient_id.stage_id == rec.stage_id
+
+            # Regla pedida:
+            # - si el documento es de otra etapa => solo preview, sin download/unlink
+            # - si es etapa actual y el usuario está asignado => puede
+            rec.can_download_file = bool(is_assigned and is_current_stage)
+            rec.can_unlink_file = bool(is_assigned and is_current_stage)
 
     @api.onchange("file_name")
     def _onchange_file_name_set_name(self):
@@ -138,3 +188,31 @@ class FundExpedientDocument(models.Model):
                 vals["number"] = f"{exp_number}-{next_seq:03d}" if exp_number else f"{next_seq:03d}"
 
         return super().create(vals_list)
+
+    def unlink(self):
+        for rec in self:
+            if not rec.can_unlink_file:
+                raise UserError(
+                    _(
+                        "Solo puede eliminar documentos de la etapa actual cuando está asignado a esa etapa."
+                    )
+                )
+        return super().unlink()
+
+    def action_download_file(self):
+        self.ensure_one()
+        # Descarga controlada por etapa: el controlador fuerza inline si no corresponde.
+        return {
+            "type": "ir.actions.act_url",
+            "url": f"/fund_expedient/document/download/{self.id}?download=1",
+            "target": "self",
+        }
+
+    def action_preview_file(self):
+        self.ensure_one()
+        # Inline preview estándar de Odoo: /web/content con download=0
+        return {
+            "type": "ir.actions.act_url",
+            "url": f"/web/content/fund.expedient.document/{self.id}/file_data?download=0",
+            "target": "new",
+        }
