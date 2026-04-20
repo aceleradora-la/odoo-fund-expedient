@@ -21,6 +21,7 @@
     "assets": {
         "web.assets_backend": [
             "fund_expedient/static/src/js/document_file_viewer.js",
+            "fund_expedient/static/src/xml/document_file_viewer.xml",
             "fund_expedient/static/src/scss/document_file_viewer.scss",
         ],
     },

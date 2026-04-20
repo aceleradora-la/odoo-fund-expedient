@@ -36,5 +36,7 @@ class FundExpedientDocumentFileViewer extends Component {
     }
 }
 
+FundExpedientDocumentFileViewer.template = "fund_expedient.DocumentFileViewer";
+
 registry.category("actions").add("fund_expedient.document_file_viewer", FundExpedientDocumentFileViewer);
 
