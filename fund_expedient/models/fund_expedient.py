@@ -208,6 +208,12 @@ class FundExpedient(models.Model):
         string="Documentos por etapa",
         copy=False,
     )
+    disposition_ids = fields.One2many(
+        "fund.expedient.disposition",
+        "expedient_id",
+        string="Disposiciones",
+        copy=False,
+    )
     # Relaciones con Purchase y Project (many2many: un expediente puede tener muchas)
     purchase_order_ids = fields.Many2many(
         "purchase.order",
@@ -732,6 +738,7 @@ class FundExpedient(models.Model):
             return super().write(vals)
 
         Type = self.env["fund.expedient.type"]
+        Assign = self.env["fund.expedient.type.stage.assign"]
         skip_check = bool(self.env.context.get("skip_validation_check"))
         for rec in self:
             if not skip_check and not rec.can_edit_in_stage:
@@ -759,11 +766,39 @@ class FundExpedient(models.Model):
                         or False
                     )
 
+            # Reglas de disposición: al salir de la etapa actual, validar requisitos configurados.
             stage_will_change = (
                 "stage_id" in new_vals
                 and new_vals.get("stage_id")
                 and new_vals.get("stage_id") != rec.stage_id.id
             )
+            if stage_will_change and rec.type_id and rec.stage_id and not self.env.context.get(
+                "skip_disposition_check"
+            ):
+                assign_cur = Assign.search(
+                    [
+                        ("type_id", "=", rec.type_id.id),
+                        ("stage_id", "=", rec.stage_id.id),
+                    ],
+                    limit=1,
+                )
+                if assign_cur and assign_cur.require_disposition:
+                    dispositions = rec.disposition_ids.filtered(lambda d: d.stage_id == rec.stage_id)
+                    if not dispositions:
+                        raise UserError(
+                            _(
+                                "Para salir de la etapa '%s' debe existir al menos una Disposición.",
+                                rec.stage_id.name,
+                            )
+                        )
+                    if assign_cur.disposition_file_required and not any(d.file_data for d in dispositions):
+                        raise UserError(
+                            _(
+                                "Para salir de la etapa '%s' la Disposición debe tener un archivo adjunto.",
+                                rec.stage_id.name,
+                            )
+                        )
+
             super(FundExpedient, rec).write(new_vals)
             if stage_will_change:
                 rec._notify_stage_assignees()

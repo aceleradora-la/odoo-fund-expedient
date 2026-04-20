@@ -74,6 +74,10 @@
                                         <field name="hide_budget_position_id"/>
                                         <field name="hide_amount_estimated"/>
                                     </group>
+                                    <group string="Disposición (por etapa)">
+                                        <field name="require_disposition"/>
+                                        <field name="disposition_file_required" invisible="not require_disposition"/>
+                                    </group>
                                 </form>
                             </field>
                         </page>

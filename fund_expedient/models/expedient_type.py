@@ -63,6 +63,14 @@ class ExpedientTypeStageAssign(models.Model):
     hide_recommended_supplier_id = fields.Boolean(string="Ocultar Proveedor recomendado")
     hide_budget_position_id = fields.Boolean(string="Ocultar Partida presupuestaria")
     hide_amount_estimated = fields.Boolean(string="Ocultar Total estimado")
+    require_disposition = fields.Boolean(
+        string="Requiere disposición",
+        help="Si está activo, para esta etapa debe existir al menos una disposición vinculada al expediente.",
+    )
+    disposition_file_required = fields.Boolean(
+        string="Archivo obligatorio en disposición",
+        help="Si está activo, la disposición requerida debe tener un archivo subido.",
+    )
     company_id = fields.Many2one(
         related="type_id.company_id",
         store=True,

@@ -21,6 +21,8 @@ access_fund_expedient_user,fund.expedient.user,model_fund_expedient,group_fund_e
 access_fund_expedient_manager,fund.expedient.manager,model_fund_expedient,group_fund_expedient_manager,1,1,1,1
 access_fund_expedient_document_user,fund.expedient.document.user,model_fund_expedient_document,group_fund_expedient_user,1,1,1,1
 access_fund_expedient_document_manager,fund.expedient.document.manager,model_fund_expedient_document,group_fund_expedient_manager,1,1,1,1
+access_fund_expedient_disposition_user,fund.expedient.disposition.user,model_fund_expedient_disposition,group_fund_expedient_user,1,1,1,1
+access_fund_expedient_disposition_manager,fund.expedient.disposition.manager,model_fund_expedient_disposition,group_fund_expedient_manager,1,1,1,1
 access_fund_expedient_line_wizard,fund.expedient.line.wizard,model_fund_expedient_line_wizard,group_fund_expedient_user,1,1,1,1
 access_fund_budget_user,fund.budget.user,model_fund_budget,group_fund_expedient_user,1,0,0,0
 access_fund_budget_manager,fund.budget.manager,model_fund_budget,group_fund_expedient_manager,1,1,1,1
