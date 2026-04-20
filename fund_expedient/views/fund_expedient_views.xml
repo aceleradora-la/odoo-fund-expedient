@@ -166,7 +166,6 @@
                                 <list create="1" delete="1" edit="1">
                                     <field name="sequence" widget="handle"/>
                                     <field name="stage_id" options="{'no_create': True}"/>
-                                    <field name="sequence_number"/>
                                     <field name="number" readonly="1"/>
                                 </list>
                                 <form string="Disposición">
@@ -175,7 +174,6 @@
                                             <field name="expedient_id" readonly="1"/>
                                             <field name="stage_id" options="{'no_create': True}"/>
                                             <field name="sequence"/>
-                                            <field name="sequence_number"/>
                                             <field name="number" readonly="1"/>
                                         </group>
                                     </group>

@@ -8,7 +8,7 @@ from odoo.exceptions import ValidationError
 class FundExpedientDisposition(models.Model):
     _name = "fund.expedient.disposition"
     _description = "Disposición del expediente"
-    _order = "stage_id, sequence_number, id"
+    _order = "sequence, id"
 
     expedient_id = fields.Many2one(
         "fund.expedient",
@@ -26,16 +26,13 @@ class FundExpedientDisposition(models.Model):
         default=lambda self: self.env.context.get("default_stage_id"),
     )
     sequence = fields.Integer(default=10, help="Orden visual en listas.")
-    sequence_number = fields.Integer(
-        string="Nº Disposición",
-        default=1,
-        help="Numeración configurable de la disposición (usada en el identificador).",
-    )
     number = fields.Char(
         string="Número",
-        compute="_compute_number",
-        store=True,
+        readonly=True,
         index=True,
+        copy=False,
+        default="/",
+        help="Numeración automática según Secuencias de Odoo (por compañía).",
     )
     name = fields.Char(
         string="Disposición",
@@ -57,8 +54,8 @@ class FundExpedientDisposition(models.Model):
 
     _sql_constraints = [
         (
-            "expedient_stage_sequence_uniq",
-            "unique(expedient_id, stage_id, sequence_number)",
+            "expedient_stage_number_uniq",
+            "unique(expedient_id, stage_id, number)",
             "Ya existe una disposición con ese número para este expediente y etapa.",
         )
     ]
@@ -85,19 +82,19 @@ class FundExpedientDisposition(models.Model):
                     if assign and assign.default_disposition_notes:
                         vals["notes"] = assign.default_disposition_notes
 
-        return super().create(vals_list)
+            # Numeración automática por compañía (configurable en Secuencias).
+            if vals.get("number", "/") == "/":
+                company = False
+                if exp_id:
+                    company = self.env["fund.expedient"].browse(exp_id).company_id
+                seq_env = (
+                    self.env["ir.sequence"].with_company(company)
+                    if company
+                    else self.env["ir.sequence"]
+                )
+                vals["number"] = seq_env.next_by_code("fund.expedient.disposition") or "/"
 
-    @api.depends("expedient_id.number", "stage_id.name", "sequence_number")
-    def _compute_number(self):
-        for rec in self:
-            exp = (rec.expedient_id.number or "").strip()
-            stg = (rec.stage_id.name or "").strip()
-            if exp and stg:
-                rec.number = f"{exp}-{stg}-{rec.sequence_number}"
-            elif exp:
-                rec.number = f"{exp}-{rec.sequence_number}"
-            else:
-                rec.number = str(rec.sequence_number or "")
+        return super().create(vals_list)
 
     @api.depends("number", "stage_id.name")
     def _compute_name(self):
