@@ -31,6 +31,13 @@
                         </group>
                     </group>
                     <notebook>
+                        <page string="Valores por defecto" name="defaults">
+                            <group>
+                                <field name="default_description"
+                                       placeholder="Texto predeterminado para el campo Descripción/Memo al crear un expediente..."
+                                       nolabel="1"/>
+                            </group>
+                        </page>
                         <page string="Encuadres" name="encuadres">
                             <field name="encuadre_ids" widget="many2many_tags" nolabel="1"/>
                         </page>

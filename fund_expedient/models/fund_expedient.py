@@ -466,6 +466,11 @@ class FundExpedient(models.Model):
         los totales en la unidad que corresponda al nuevo tipo."""
         if self.type_id:
             self.amount_estimated = 0.0
+            if (not self.description or not self.description.strip()) and (
+                self.type_id.default_description
+                and self.type_id.default_description.strip()
+            ):
+                self.description = self.type_id.default_description
 
         # Evitar quedar en una etapa incompatible con el tipo seleccionado.
         if self.type_id:
@@ -791,6 +796,13 @@ class FundExpedient(models.Model):
             if vals.get("number", "/") == "/":
                 seq = self.env["ir.sequence"].next_by_code("fund.expedient") or "/"
                 vals["number"] = seq
+            # Aplicar memo/descripcion por defecto del tipo si no se envió descripción.
+            desc = vals.get("description")
+            if (not desc or not str(desc).strip()) and vals.get("type_id"):
+                expedient_type = Type.browse(vals["type_id"])
+                type_desc = expedient_type.default_description or ""
+                if type_desc and type_desc.strip():
+                    vals["description"] = type_desc
             # Si viene type_id y no viene stage_id (o es incompatible), setear una etapa válida.
             if vals.get("type_id"):
                 company = (
