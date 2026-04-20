@@ -168,7 +168,7 @@ class ExpedientType(models.Model):
 
     name = fields.Char(required=True, string="Tipo")
     sequence = fields.Integer(default=10)
-    default_description = fields.Text(
+    default_description = fields.Html(
         string="Descripción/Memo por defecto",
         help="Texto predeterminado que se copiará al campo Descripción/Memo al crear un expediente de este tipo. "
         "No sobrescribe una descripción ingresada manualmente.",

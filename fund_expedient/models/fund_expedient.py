@@ -6,6 +6,7 @@ import logging
 from odoo import api, fields, models
 from odoo.exceptions import UserError
 from odoo import _
+from odoo.tools import html2plaintext
 
 _logger = logging.getLogger(__name__)
 
@@ -16,7 +17,7 @@ class FundExpedient(models.Model):
     _inherit = ["mail.thread", "mail.activity.mixin"]
     _order = "id desc"
     _rec_name = "number"
-    _rec_names_search = ["number", "description"]
+    _rec_names_search = ["number", "description_plain"]
 
     number = fields.Char(
         string="Número",
@@ -137,9 +138,16 @@ class FundExpedient(models.Model):
         string="Tipo",
         tracking=True,
     )
-    description = fields.Text(
+    description = fields.Html(
         string="Descripción/Memo",
         tracking=True,
+    )
+    description_plain = fields.Text(
+        string="Descripción (texto)",
+        compute="_compute_description_plain",
+        store=True,
+        index=True,
+        help="Versión en texto plano de la descripción HTML, usada para búsquedas y vistas resumidas (kanban/lista).",
     )
     stage_id = fields.Many2one(
         "fund.expedient.stage",
@@ -466,9 +474,8 @@ class FundExpedient(models.Model):
         los totales en la unidad que corresponda al nuevo tipo."""
         if self.type_id:
             self.amount_estimated = 0.0
-            if (not self.description or not self.description.strip()) and (
+            if self._is_empty_html(self.description) and not self._is_empty_html(
                 self.type_id.default_description
-                and self.type_id.default_description.strip()
             ):
                 self.description = self.type_id.default_description
 
@@ -798,10 +805,10 @@ class FundExpedient(models.Model):
                 vals["number"] = seq
             # Aplicar memo/descripcion por defecto del tipo si no se envió descripción.
             desc = vals.get("description")
-            if (not desc or not str(desc).strip()) and vals.get("type_id"):
+            if self._is_empty_html(desc) and vals.get("type_id"):
                 expedient_type = Type.browse(vals["type_id"])
                 type_desc = expedient_type.default_description or ""
-                if type_desc and type_desc.strip():
+                if not self._is_empty_html(type_desc):
                     vals["description"] = type_desc
             # Si viene type_id y no viene stage_id (o es incompatible), setear una etapa válida.
             if vals.get("type_id"):
@@ -821,6 +828,22 @@ class FundExpedient(models.Model):
                         expedient_type, company=company
                     ).id or vals["stage_id"]
         return super().create(vals_list)
+
+    @api.depends("description")
+    def _compute_description_plain(self):
+        for rec in self:
+            rec.description_plain = html2plaintext(rec.description or "").strip()
+
+    @api.model
+    def _is_empty_html(self, value):
+        """Considera vacío HTML sin contenido (p.ej. '<p><br></p>')."""
+        if not value:
+            return True
+        try:
+            return not html2plaintext(str(value)).strip()
+        except Exception:
+            # Fallback: si algo raro llega, tratamos como no vacío para no borrar datos.
+            return False
 
     def unlink(self):
         raise UserError(

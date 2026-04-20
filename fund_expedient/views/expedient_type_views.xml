@@ -34,6 +34,7 @@
                         <page string="Valores por defecto" name="defaults">
                             <group>
                                 <field name="default_description"
+                                       widget="html"
                                        placeholder="Texto predeterminado para el campo Descripción/Memo al crear un expediente..."
                                        nolabel="1"/>
                             </group>
