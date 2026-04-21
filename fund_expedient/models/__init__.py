@@ -15,6 +15,7 @@ from . import fund_expedient_document
 from . import expedient_config
 from . import uf_rate
 from . import purchase_order
+from . import purchase_requisition_create_alternative
 from . import project_project
 from . import account_move
 from . import account_move_line

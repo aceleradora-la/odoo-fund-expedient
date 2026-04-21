@@ -15,6 +15,7 @@
         "mail",
         "hr",
         "purchase",
+        "purchase_requisition",
         "project",
         "account",
     ],
