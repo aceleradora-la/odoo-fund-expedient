@@ -9,6 +9,7 @@ class FundExpedientSpendRequest(models.Model):
     _name = "fund.expedient.spend.request"
     _description = "Solicitud de Gasto"
     _order = "id desc"
+    _rec_name = "display_name"
 
     expedient_id = fields.Many2one(
         "fund.expedient",
@@ -67,6 +68,17 @@ class FundExpedientSpendRequest(models.Model):
         string="Líneas",
         copy=False,
     )
+    display_name = fields.Char(compute="_compute_display_name", store=True)
+
+    @api.depends("expedient_id.number", "initial_number", "final_number")
+    def _compute_display_name(self):
+        for rec in self:
+            exp = rec.expedient_id.number if rec.expedient_id and rec.expedient_id.number else ""
+            ini = rec.initial_number if rec.initial_number and rec.initial_number != "/" else ""
+            fin = rec.final_number if rec.final_number and rec.final_number != "/" else ""
+            parts = [p for p in [ini, fin] if p]
+            label = " / ".join(parts) if parts else ""
+            rec.display_name = f"SG {exp} {label}".strip() if exp or label else "Solicitud de Gasto"
 
     _sql_constraints = [
         (

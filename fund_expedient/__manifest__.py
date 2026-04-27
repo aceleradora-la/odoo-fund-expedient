@@ -48,6 +48,7 @@
         "views/fund_budget_position_report_views.xml",
         "views/expedient_disposition_report_views.xml",
         "views/expedient_resolution_report_views.xml",
+        "views/expedient_spend_request_views.xml",
         "views/fund_expedient_menus.xml",
     ],
 }

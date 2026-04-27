@@ -165,6 +165,24 @@
                                    nolabel="1"
                                    readonly="state != 'draft'"/>
                         </page>
+                        <page string="Líneas" name="lines">
+                            <field name="can_create_purchase" invisible="1"/>
+                            <button name="action_wizard_create_purchase" type="object"
+                                    string="Crear solicitud desde líneas"
+                                    class="btn-primary mb-2"
+                                    invisible="not can_create_purchase or not line_ids"/>
+                            <field name="line_ids" nolabel="1">
+                                <list create="1" delete="1" edit="1">
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="display_type" column_invisible="1"/>
+                                    <field name="product_id"/>
+                                    <field name="name"/>
+                                    <field name="product_qty"/>
+                                    <field name="product_uom_id"/>
+                                    <field name="recommended_supplier_id"/>
+                                </list>
+                            </field>
+                        </page>
                         <page string="Solicitud de Gasto" name="spend_request">
                             <field name="spend_request_ids" nolabel="1" create="0" delete="0"
                                    context="{'default_expedient_id': id}">
@@ -359,24 +377,6 @@
                                         <field name="notes"/>
                                     </group>
                                 </form>
-                            </field>
-                        </page>
-                        <page string="Líneas" name="lines">
-                            <field name="can_create_purchase" invisible="1"/>
-                            <button name="action_wizard_create_purchase" type="object"
-                                    string="Crear solicitud desde líneas"
-                                    class="btn-primary mb-2"
-                                    invisible="not can_create_purchase or not line_ids"/>
-                            <field name="line_ids" nolabel="1">
-                                <list create="1" delete="1" edit="1">
-                                    <field name="sequence" widget="handle"/>
-                                    <field name="display_type" column_invisible="1"/>
-                                    <field name="product_id"/>
-                                    <field name="name"/>
-                                    <field name="product_qty"/>
-                                    <field name="product_uom_id"/>
-                                    <field name="recommended_supplier_id"/>
-                                </list>
                             </field>
                         </page>
                         <page string="Expedientes relacionados" name="children">
