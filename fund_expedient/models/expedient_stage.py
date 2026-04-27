@@ -57,15 +57,9 @@ class ExpedientStage(models.Model):
         """Crear vistas de etapas vía código (Odoo 18 list vs tree)."""
         module = "fund_expedient"
         View = self.env["ir.ui.view"]
-        # Vista lista
-        if not self.env["ir.model.data"].search(
-            [("module", "=", module), ("name", "=", "view_expedient_stage_tree")]
-        ):
-            view = View.create({
-                "name": "fund.expedient.stage.list",
-                "model": "fund.expedient.stage",
-                "type": "list",
-                "arch": """<?xml version="1.0"?>
+        IrModelData = self.env["ir.model.data"]
+
+        list_arch = """<?xml version="1.0"?>
 <list string="Etapas de expediente" create="1" delete="1" edit="1">
     <field name="sequence" widget="handle"/>
     <field name="name"/>
@@ -73,24 +67,9 @@ class ExpedientStage(models.Model):
     <field name="spend_request_mode" optional="hide"/>
     <field name="fold"/>
     <field name="report_id" optional="show"/>
-</list>""",
-            })
-            self.env["ir.model.data"].create({
-                "name": "view_expedient_stage_tree",
-                "module": module,
-                "model": "ir.ui.view",
-                "res_id": view.id,
-                "noupdate": True,
-            })
-        # Vista formulario para editar etapas
-        if not self.env["ir.model.data"].search(
-            [("module", "=", module), ("name", "=", "view_expedient_stage_form")]
-        ):
-            form_view = View.create({
-                "name": "fund.expedient.stage.form",
-                "model": "fund.expedient.stage",
-                "type": "form",
-                "arch": """<?xml version="1.0"?>
+</list>"""
+
+        form_arch = """<?xml version="1.0"?>
 <form string="Etapa de expediente">
     <sheet>
         <group>
@@ -107,12 +86,57 @@ class ExpedientStage(models.Model):
             </group>
         </group>
     </sheet>
-</form>""",
-            })
-            self.env["ir.model.data"].create({
-                "name": "view_expedient_stage_form",
-                "module": module,
-                "model": "ir.ui.view",
-                "res_id": form_view.id,
-                "noupdate": True,
-            })
+</form>"""
+        # Vista lista
+        md_list = IrModelData.search(
+            [("module", "=", module), ("name", "=", "view_expedient_stage_tree")], limit=1
+        )
+        if not md_list:
+            view = View.create(
+                {
+                    "name": "fund.expedient.stage.list",
+                    "model": "fund.expedient.stage",
+                    "type": "list",
+                    "arch": list_arch,
+                }
+            )
+            IrModelData.create(
+                {
+                    "name": "view_expedient_stage_tree",
+                    "module": module,
+                    "model": "ir.ui.view",
+                    "res_id": view.id,
+                    "noupdate": True,
+                }
+            )
+        else:
+            view = View.browse(md_list.res_id)
+            # Si el campo nuevo no está en la vista, actualizar el arch (sin depender de upgrades manuales).
+            if view and "spend_request_mode" not in (view.arch_db or ""):
+                view.write({"arch": list_arch})
+        # Vista formulario para editar etapas
+        md_form = IrModelData.search(
+            [("module", "=", module), ("name", "=", "view_expedient_stage_form")], limit=1
+        )
+        if not md_form:
+            form_view = View.create(
+                {
+                    "name": "fund.expedient.stage.form",
+                    "model": "fund.expedient.stage",
+                    "type": "form",
+                    "arch": form_arch,
+                }
+            )
+            IrModelData.create(
+                {
+                    "name": "view_expedient_stage_form",
+                    "module": module,
+                    "model": "ir.ui.view",
+                    "res_id": form_view.id,
+                    "noupdate": True,
+                }
+            )
+        else:
+            form_view = View.browse(md_form.res_id)
+            if form_view and "spend_request_mode" not in (form_view.arch_db or ""):
+                form_view.write({"arch": form_arch})
