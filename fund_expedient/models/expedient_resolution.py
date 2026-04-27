@@ -2,12 +2,11 @@
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 
 from odoo import api, fields, models
-from odoo.exceptions import ValidationError
 
 
-class FundExpedientDisposition(models.Model):
-    _name = "fund.expedient.disposition"
-    _description = "Disposición del expediente"
+class FundExpedientResolution(models.Model):
+    _name = "fund.expedient.resolution"
+    _description = "Resolución del expediente"
     _order = "sequence, id"
 
     expedient_id = fields.Many2one(
@@ -34,13 +33,8 @@ class FundExpedientDisposition(models.Model):
         default="/",
         help="Numeración automática según Secuencias de Odoo (por compañía).",
     )
-    disposition_date = fields.Date(
-        string="Fecha de Disposición",
-        default=fields.Date.context_today,
-        help="Fecha asociada a la disposición. Por defecto se propone la fecha de hoy.",
-    )
     name = fields.Char(
-        string="Disposición",
+        string="Resolución",
         compute="_compute_name",
         store=True,
     )
@@ -48,7 +42,7 @@ class FundExpedientDisposition(models.Model):
 
     document_ids = fields.One2many(
         "fund.expedient.document",
-        "disposition_id",
+        "resolution_id",
         string="Documentos relacionados",
         readonly=True,
     )
@@ -61,7 +55,7 @@ class FundExpedientDisposition(models.Model):
         (
             "expedient_stage_number_uniq",
             "unique(expedient_id, stage_id, number)",
-            "Ya existe una disposición con ese número para este expediente y etapa.",
+            "Ya existe una resolución con ese número para este expediente y etapa.",
         )
     ]
 
@@ -84,8 +78,8 @@ class FundExpedientDisposition(models.Model):
                         [("type_id", "=", exp.type_id.id), ("stage_id", "=", stage_id)],
                         limit=1,
                     )
-                    if assign and assign.default_disposition_notes:
-                        vals["notes"] = assign.default_disposition_notes
+                    if assign and assign.default_resolution_notes:
+                        vals["notes"] = assign.default_resolution_notes
 
             # Numeración automática por compañía (configurable en Secuencias).
             if vals.get("number", "/") == "/":
@@ -97,7 +91,7 @@ class FundExpedientDisposition(models.Model):
                     if company
                     else self.env["ir.sequence"]
                 )
-                vals["number"] = seq_env.next_by_code("fund.expedient.disposition") or "/"
+                vals["number"] = seq_env.next_by_code("fund.expedient.resolution") or "/"
 
         return super().create(vals_list)
 

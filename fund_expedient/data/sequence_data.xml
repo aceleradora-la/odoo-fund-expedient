@@ -17,5 +17,13 @@
             <field name="implementation">no_gap</field>
             <field name="company_id" eval="False"/>
         </record>
+        <record id="sequence_fund_expedient_resolution" model="ir.sequence">
+            <field name="name">Secuencia Resoluciones (Expedientes)</field>
+            <field name="code">fund.expedient.resolution</field>
+            <field name="prefix">RES-</field>
+            <field name="padding">5</field>
+            <field name="implementation">no_gap</field>
+            <field name="company_id" eval="False"/>
+        </record>
     </data>
 </odoo>

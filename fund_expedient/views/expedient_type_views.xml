@@ -26,7 +26,8 @@
                             <field name="sequence"/>
                         </group>
                         <group>
-                            <field name="unit_mode"/>
+                            <field name="approval_currency_id"/>
+                            <field name="unit_mode" invisible="1"/>
                             <field name="company_id" groups="base.group_multi_company"/>
                         </group>
                     </group>
@@ -81,6 +82,14 @@
                                                widget="html"
                                                invisible="not require_disposition"
                                                placeholder="Observaciones predeterminadas para Disposición en esta etapa..."/>
+                                    </group>
+                                    <group string="Resolución (por etapa)">
+                                        <field name="require_resolution"/>
+                                        <field name="resolution_file_required" invisible="not require_resolution"/>
+                                        <field name="default_resolution_notes"
+                                               widget="html"
+                                               invisible="not require_resolution"
+                                               placeholder="Observaciones predeterminadas para Resolución en esta etapa..."/>
                                     </group>
                                 </form>
                             </field>

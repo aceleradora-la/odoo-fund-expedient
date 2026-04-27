@@ -72,9 +72,9 @@ class AccountMove(models.Model):
                 expedients.invalidate_recordset(
                     [
                         "amount_committed",
-                        "amount_committed_uf",
                         "amount_real",
-                        "amount_real_uf",
+                        "amount_committed_unit",
+                        "amount_real_unit",
                     ]
                 )
         return res

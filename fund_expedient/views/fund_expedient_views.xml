@@ -64,6 +64,8 @@
                     <field name="state" invisible="1"/>
                     <field name="can_edit_in_stage" invisible="1"/>
                     <field name="allowed_stage_ids" invisible="1"/>
+                    <field name="has_dispositions_feature" invisible="1"/>
+                    <field name="has_resolutions_feature" invisible="1"/>
                     <field name="hide_type_id_stage" invisible="1"/>
                     <field name="hide_encuadre_id_stage" invisible="1"/>
                     <field name="hide_estimated_need_date_stage" invisible="1"/>
@@ -139,17 +141,11 @@
                             <field name="amount_committed" readonly="1"/>
                             <field name="amount_real" readonly="1"/>
                         </group>
-                        <group string="Unidades Retributivas (UR)" invisible="not show_ur_totals">
-                            <field name="show_ur_totals" invisible="1"/>
-                            <field name="amount_estimated_uf" readonly="1"/>
-                            <field name="amount_committed_uf" readonly="1"/>
-                            <field name="amount_real_uf" readonly="1"/>
-                        </group>
-                        <group string="Unidad Funcional (UF)" invisible="not show_uf_totals">
-                            <field name="show_uf_totals" invisible="1"/>
-                            <field name="amount_estimated_ufunc" readonly="1"/>
-                            <field name="amount_committed_ufunc" readonly="1"/>
-                            <field name="amount_real_ufunc" readonly="1"/>
+                        <group string="Moneda (tipo de expediente)" invisible="not approval_currency_id">
+                            <field name="approval_currency_id" readonly="1"/>
+                            <field name="amount_estimated_unit" readonly="1" invisible="hide_amount_estimated_stage"/>
+                            <field name="amount_committed_unit" readonly="1"/>
+                            <field name="amount_real_unit" readonly="1"/>
                         </group>
                     </group>
                     <notebook>
@@ -160,15 +156,55 @@
                                    nolabel="1"
                                    readonly="state != 'draft'"/>
                         </page>
-                        <page string="Disposiciones" name="dispositions">
+                        <page string="Disposiciones" name="dispositions" invisible="not has_dispositions_feature">
                             <field name="disposition_ids" nolabel="1"
                                    context="{'default_expedient_id': id, 'default_stage_id': stage_id}">
                                 <list create="1" delete="1" edit="1">
                                     <field name="sequence" widget="handle"/>
                                     <field name="stage_id" options="{'no_create': True}"/>
                                     <field name="number" readonly="1"/>
+                                    <field name="disposition_date"/>
                                 </list>
                                 <form string="Disposición">
+                                    <group>
+                                        <group>
+                                            <field name="expedient_id" readonly="1"/>
+                                            <field name="stage_id" options="{'no_create': True}"/>
+                                            <field name="sequence"/>
+                                            <field name="number" readonly="1"/>
+                                            <field name="disposition_date"/>
+                                        </group>
+                                    </group>
+                                    <group>
+                                        <field name="notes" widget="html" placeholder="Observaciones..." nolabel="1"/>
+                                    </group>
+                                    <group string="Documentos relacionados">
+                                        <field name="document_ids" nolabel="1"
+                                               context="{'default_expedient_id': expedient_id, 'default_stage_id': stage_id, 'default_disposition_id': id}">
+                                            <list create="1" delete="1" edit="1">
+                                                <field name="number"/>
+                                                <field name="file_name"/>
+                                                <field name="name"/>
+                                                <field name="delivered"/>
+                                                <button type="object"
+                                                        name="action_open_document"
+                                                        string="Abrir"
+                                                        class="btn-secondary"/>
+                                            </list>
+                                        </field>
+                                    </group>
+                                </form>
+                            </field>
+                        </page>
+                        <page string="Resoluciones" name="resolutions" invisible="not has_resolutions_feature">
+                            <field name="resolution_ids" nolabel="1"
+                                   context="{'default_expedient_id': id, 'default_stage_id': stage_id}">
+                                <list create="1" delete="1" edit="1">
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="stage_id" options="{'no_create': True}"/>
+                                    <field name="number" readonly="1"/>
+                                </list>
+                                <form string="Resolución">
                                     <group>
                                         <group>
                                             <field name="expedient_id" readonly="1"/>
@@ -182,7 +218,7 @@
                                     </group>
                                     <group string="Documentos relacionados">
                                         <field name="document_ids" nolabel="1"
-                                               context="{'default_expedient_id': expedient_id, 'default_stage_id': stage_id, 'default_disposition_id': id}">
+                                               context="{'default_expedient_id': expedient_id, 'default_stage_id': stage_id, 'default_resolution_id': id}">
                                             <list create="1" delete="1" edit="1">
                                                 <field name="number"/>
                                                 <field name="file_name"/>
@@ -208,6 +244,7 @@
                                     <field name="notes"/>
                                     <field name="stage_id" optional="hide" readonly="1"/>
                                     <field name="disposition_id" optional="hide"/>
+                                    <field name="resolution_id" optional="hide"/>
                                     <field name="can_download_file" column_invisible="1"/>
                                     <field name="can_unlink_file" column_invisible="1"/>
                                     <button type="object"
@@ -227,6 +264,7 @@
                                             <field name="number" readonly="1"/>
                                             <field name="stage_id" readonly="1" options="{'no_create': True}"/>
                                             <field name="disposition_id"/>
+                                            <field name="resolution_id"/>
                                             <field name="delivered"/>
                                         </group>
                                         <group>

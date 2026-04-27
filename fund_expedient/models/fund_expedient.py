@@ -65,6 +65,12 @@ class FundExpedient(models.Model):
         store=True,
         readonly=True,
     )
+    approval_currency_id = fields.Many2one(
+        related="type_id.approval_currency_id",
+        string="Moneda (tipo)",
+        store=True,
+        readonly=True,
+    )
     show_encuadre = fields.Boolean(
         string="Mostrar encuadre",
         compute="_compute_show_flags",
@@ -79,6 +85,18 @@ class FundExpedient(models.Model):
         string="Mostrar totales UF",
         compute="_compute_show_flags",
         store=True,
+    )
+    has_dispositions_feature = fields.Boolean(
+        string="Usa disposiciones (tipo)",
+        compute="_compute_feature_flags",
+        store=True,
+        help="True si el tipo de expediente configura al menos una etapa con 'Requiere disposición'.",
+    )
+    has_resolutions_feature = fields.Boolean(
+        string="Usa resoluciones (tipo)",
+        compute="_compute_feature_flags",
+        store=True,
+        help="True si el tipo de expediente configura al menos una etapa con 'Requiere resolución'.",
     )
     hide_type_id_stage = fields.Boolean(
         string="Ocultar Tipo por etapa",
@@ -214,6 +232,12 @@ class FundExpedient(models.Model):
         string="Disposiciones",
         copy=False,
     )
+    resolution_ids = fields.One2many(
+        "fund.expedient.resolution",
+        "expedient_id",
+        string="Resoluciones",
+        copy=False,
+    )
     # Relaciones con Purchase y Project (many2many: un expediente puede tener muchas)
     purchase_order_ids = fields.Many2many(
         "purchase.order",
@@ -301,23 +325,11 @@ class FundExpedient(models.Model):
         currency_field="currency_id",
         tracking=True,
     )
-    amount_estimated_uf = fields.Float(
-        string="Total Estimado (UR)",
-        compute="_compute_amount_estimated_uf",
-        store=True,
-        digits=(16, 4),
-    )
     amount_committed = fields.Monetary(
         string="Total Comprometido",
         compute="_compute_amounts",
         store=True,
         currency_field="currency_id",
-    )
-    amount_committed_uf = fields.Float(
-        string="Total Comprometido (UR)",
-        compute="_compute_amounts",
-        store=True,
-        digits=(16, 4),
     )
     amount_real = fields.Monetary(
         string="Total Real",
@@ -325,29 +337,26 @@ class FundExpedient(models.Model):
         store=True,
         currency_field="currency_id",
     )
-    amount_real_uf = fields.Float(
-        string="Total Real (UR)",
-        compute="_compute_amounts",
+    amount_estimated_unit = fields.Monetary(
+        string="Total Estimado (moneda tipo)",
+        compute="_compute_amounts_unit",
         store=True,
-        digits=(16, 4),
+        currency_field="approval_currency_id",
+        help="Total estimado expresado en la moneda configurada en el Tipo de Expediente.",
     )
-    amount_estimated_ufunc = fields.Float(
-        string="Total Estimado (UF)",
-        compute="_compute_amount_estimated_ufunc",
+    amount_committed_unit = fields.Monetary(
+        string="Total Comprometido (moneda tipo)",
+        compute="_compute_amounts_unit",
         store=True,
-        digits=(16, 4),
+        currency_field="approval_currency_id",
+        help="Total comprometido expresado en la moneda configurada en el Tipo de Expediente.",
     )
-    amount_committed_ufunc = fields.Float(
-        string="Total Comprometido (UF)",
-        compute="_compute_amounts",
+    amount_real_unit = fields.Monetary(
+        string="Total Real (moneda tipo)",
+        compute="_compute_amounts_unit",
         store=True,
-        digits=(16, 4),
-    )
-    amount_real_ufunc = fields.Float(
-        string="Total Real (UF)",
-        compute="_compute_amounts",
-        store=True,
-        digits=(16, 4),
+        currency_field="approval_currency_id",
+        help="Total real expresado en la moneda configurada en el Tipo de Expediente.",
     )
     report_count = fields.Integer(
         string="Cantidad",
@@ -412,6 +421,13 @@ class FundExpedient(models.Model):
             rec.show_encuadre = rec.state == "purchases"
             rec.show_ur_totals = rec.type_unit_mode != "uf"
             rec.show_uf_totals = rec.type_unit_mode == "uf"
+
+    @api.depends("type_id", "type_id.stage_assign_ids", "type_id.stage_assign_ids.require_disposition", "type_id.stage_assign_ids.require_resolution")
+    def _compute_feature_flags(self):
+        for rec in self:
+            assigns = rec.type_id.stage_assign_ids if rec.type_id else self.env["fund.expedient.type.stage.assign"]
+            rec.has_dispositions_feature = bool(assigns.filtered(lambda a: a.require_disposition))
+            rec.has_resolutions_feature = bool(assigns.filtered(lambda a: a.require_resolution))
 
     @api.depends(
         "type_id",
@@ -593,25 +609,73 @@ class FundExpedient(models.Model):
             rec.invoice_ids = all_invoices
             rec.invoice_count = len(all_invoices)
 
-    @api.depends("amount_estimated", "request_date", "company_id")
-    def _compute_amount_estimated_uf(self):
-        UfRate = self.env["fund.uf.rate"]
+    @api.depends(
+        "amount_estimated",
+        "request_date",
+        "company_id",
+        "currency_id",
+        "approval_currency_id",
+        "purchase_order_ids",
+        "purchase_order_ids.state",
+        "purchase_order_ids.invoice_status",
+        "purchase_order_ids.amount_total",
+        "purchase_order_ids.date_order",
+        "purchase_order_ids.currency_id",
+        "purchase_order_ids.invoice_ids",
+        "purchase_order_ids.invoice_ids.state",
+        "purchase_order_ids.invoice_ids.amount_total_signed",
+        "direct_invoice_ids",
+        "direct_invoice_ids.state",
+        "direct_invoice_ids.amount_total_signed",
+    )
+    def _compute_amounts_unit(self):
         for rec in self:
-            if not rec.amount_estimated or not rec.request_date:
-                rec.amount_estimated_uf = 0.0
-                continue
-            rate_ur = UfRate.get_rate(rec.company_id, rec.request_date, unit_type="ur")
-            rec.amount_estimated_uf = rate_ur and (rec.amount_estimated / rate_ur) or 0.0
+            unit_currency = rec.approval_currency_id
+            company_currency = rec.company_id.currency_id
+            company = rec.company_id
 
-    @api.depends("amount_estimated", "request_date", "company_id")
-    def _compute_amount_estimated_ufunc(self):
-        UfRate = self.env["fund.uf.rate"]
-        for rec in self:
-            if not rec.amount_estimated or not rec.request_date:
-                rec.amount_estimated_ufunc = 0.0
+            if not unit_currency:
+                rec.amount_estimated_unit = 0.0
+                rec.amount_committed_unit = 0.0
+                rec.amount_real_unit = 0.0
                 continue
-            rate_uf = UfRate.get_rate(rec.company_id, rec.request_date, unit_type="uf")
-            rec.amount_estimated_ufunc = rate_uf and (rec.amount_estimated / rate_uf) or 0.0
+
+            # Estimado: el valor base está en moneda compañía (amount_estimated).
+            if rec.amount_estimated and rec.request_date:
+                rec.amount_estimated_unit = company_currency._convert(
+                    rec.amount_estimated, unit_currency, company, rec.request_date
+                )
+            else:
+                rec.amount_estimated_unit = 0.0
+
+            # Comprometido: mismo criterio del compute actual, pero convertido a moneda del tipo.
+            pos_committed = rec.purchase_order_ids.filtered(
+                lambda po: po.state in ("purchase", "done") and po.invoice_status != "invoiced"
+            )
+            committed_unit = 0.0
+            for po in pos_committed:
+                po_date = po.date_order.date()
+                ordered_cc = po.currency_id._convert(po.amount_total, company_currency, company, po_date)
+                invoiced_cc = 0.0
+                for inv in po.invoice_ids.filtered(lambda m: m.state == "posted"):
+                    inv_date = inv.invoice_date or inv.date
+                    signed = -inv.amount_total_signed
+                    invoiced_cc += inv.currency_id._convert(signed, company_currency, company, inv_date)
+                pending_cc = max(0.0, ordered_cc - invoiced_cc)
+                committed_unit += company_currency._convert(pending_cc, unit_currency, company, po_date)
+            rec.amount_committed_unit = committed_unit
+
+            # Real: facturas posteadas (desde OC o directas) convertido a moneda del tipo por fecha de factura.
+            invoices_po = rec.purchase_order_ids.mapped("invoice_ids").filtered(lambda m: m.state == "posted")
+            invoices_direct = rec.direct_invoice_ids.filtered(lambda m: m.state == "posted")
+            all_invoices = invoices_po | invoices_direct
+            real_unit = 0.0
+            for inv in all_invoices:
+                inv_date = inv.invoice_date or inv.date
+                signed = -inv.amount_total_signed
+                amt_cc = inv.currency_id._convert(signed, company_currency, company, inv_date)
+                real_unit += company_currency._convert(amt_cc, unit_currency, company, inv_date)
+            rec.amount_real_unit = real_unit
 
     @api.depends(
         "purchase_order_ids",
@@ -634,7 +698,6 @@ class FundExpedient(models.Model):
         "company_id",
     )
     def _compute_amounts(self):
-        UfRate = self.env["fund.uf.rate"]
         for rec in self:
             company_currency = rec.company_id.currency_id
 
@@ -662,32 +725,6 @@ class FundExpedient(models.Model):
                 amount_committed += pending_cc
             rec.amount_committed = amount_committed
 
-            # Totales comprometidos en UR y UF
-            committed_ur = 0.0
-            committed_ufunc = 0.0
-            for po in pos_committed:
-                po_date = po.date_order.date()
-                ordered_cc = po.currency_id._convert(
-                    po.amount_total, company_currency, rec.company_id, po_date
-                )
-                invoiced_cc = 0.0
-                for inv in po.invoice_ids.filtered(lambda m: m.state == "posted"):
-                    inv_date = inv.invoice_date or inv.date
-                    signed = -inv.amount_total_signed
-                    invoiced_cc += inv.currency_id._convert(
-                        signed, company_currency, rec.company_id, inv_date
-                    )
-                amt_cc = max(0.0, ordered_cc - invoiced_cc)
-
-                rate_ur = UfRate.get_rate(rec.company_id, po_date, unit_type="ur")
-                if rate_ur:
-                    committed_ur += amt_cc / rate_ur
-                rate_uf = UfRate.get_rate(rec.company_id, po_date, unit_type="uf")
-                if rate_uf:
-                    committed_ufunc += amt_cc / rate_uf
-            rec.amount_committed_uf = committed_ur
-            rec.amount_committed_ufunc = committed_ufunc
-
             # Total Real: facturas posteadas (desde OC o directas)
             invoices_po = rec.purchase_order_ids.mapped("invoice_ids").filtered(
                 lambda m: m.state == "posted"
@@ -697,8 +734,6 @@ class FundExpedient(models.Model):
             )
             all_invoices = invoices_po | invoices_direct
             amount_real = 0.0
-            amount_real_ur = 0.0
-            amount_real_ufunc = 0.0
             for inv in all_invoices:
                 inv_date = inv.invoice_date or inv.date
                 # amount_total_signed: negativo para facturas, positivo para devoluciones
@@ -707,15 +742,7 @@ class FundExpedient(models.Model):
                     signed, company_currency, rec.company_id, inv_date
                 )
                 amount_real += amt_cc
-                rate_ur = UfRate.get_rate(rec.company_id, inv_date, unit_type="ur")
-                if rate_ur:
-                    amount_real_ur += amt_cc / rate_ur
-                rate_uf = UfRate.get_rate(rec.company_id, inv_date, unit_type="uf")
-                if rate_uf:
-                    amount_real_ufunc += amt_cc / rate_uf
             rec.amount_real = amount_real
-            rec.amount_real_uf = amount_real_ur
-            rec.amount_real_ufunc = amount_real_ufunc
 
     def write(self, vals):
         """Escritura con 2 reglas:
@@ -801,6 +828,40 @@ class FundExpedient(models.Model):
                             raise UserError(
                                 _(
                                     "Para salir de la etapa '%s' la Disposición debe tener un archivo adjunto.",
+                                    rec.stage_id.name,
+                                )
+                            )
+
+            # Reglas de resolución: al salir de la etapa actual, validar requisitos configurados.
+            if stage_will_change and rec.type_id and rec.stage_id and not self.env.context.get(
+                "skip_resolution_check"
+            ):
+                assign_cur = Assign.search(
+                    [
+                        ("type_id", "=", rec.type_id.id),
+                        ("stage_id", "=", rec.stage_id.id),
+                    ],
+                    limit=1,
+                )
+                if assign_cur and assign_cur.require_resolution:
+                    resolutions = rec.resolution_ids.filtered(lambda r: r.stage_id == rec.stage_id)
+                    if not resolutions:
+                        raise UserError(
+                            _(
+                                "Para salir de la etapa '%s' debe existir al menos una Resolución.",
+                                rec.stage_id.name,
+                            )
+                        )
+                    if assign_cur.resolution_file_required:
+                        docs_with_file = rec.document_ids.filtered(
+                            lambda doc: doc.stage_id == rec.stage_id
+                            and doc.resolution_id in resolutions
+                            and bool(doc.file_data)
+                        )
+                        if not docs_with_file:
+                            raise UserError(
+                                _(
+                                    "Para salir de la etapa '%s' la Resolución debe tener un archivo adjunto.",
                                     rec.stage_id.name,
                                 )
                             )

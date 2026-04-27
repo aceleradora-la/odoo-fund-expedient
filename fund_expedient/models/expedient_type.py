@@ -75,6 +75,18 @@ class ExpedientTypeStageAssign(models.Model):
         string="Observaciones por defecto (Disposición)",
         help="Texto predeterminado (HTML) que se copiará en Observaciones al crear una Disposición de esta etapa.",
     )
+    require_resolution = fields.Boolean(
+        string="Requiere resolución",
+        help="Si está activo, para esta etapa debe existir al menos una resolución vinculada al expediente.",
+    )
+    resolution_file_required = fields.Boolean(
+        string="Archivo obligatorio en resolución",
+        help="Si está activo, la resolución requerida debe tener un archivo subido.",
+    )
+    default_resolution_notes = fields.Html(
+        string="Observaciones por defecto (Resolución)",
+        help="Texto predeterminado (HTML) que se copiará en Observaciones al crear una Resolución de esta etapa.",
+    )
     company_id = fields.Many2one(
         related="type_id.company_id",
         store=True,
@@ -180,6 +192,14 @@ class ExpedientType(models.Model):
 
     name = fields.Char(required=True, string="Tipo")
     sequence = fields.Integer(default=10)
+    approval_currency_id = fields.Many2one(
+        "res.currency",
+        string="Moneda (tipo de expediente)",
+        required=True,
+        default=lambda self: self.env.company.currency_id,
+        help="Moneda estándar de Odoo usada para expresar totales del expediente para este tipo. "
+        "Las conversiones se realizan usando cotizaciones estándar (Monedas).",
+    )
     default_description = fields.Html(
         string="Descripción/Memo por defecto",
         help="Texto predeterminado que se copiará al campo Descripción/Memo al crear un expediente de este tipo. "

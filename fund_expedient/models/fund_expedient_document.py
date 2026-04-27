@@ -47,6 +47,13 @@ class FundExpedientDocument(models.Model):
         domain="[('expedient_id', '=', expedient_id), ('stage_id', '=', stage_id)]",
         help="Si existe una disposición para la etapa, el documento puede asociarse a ella.",
     )
+    resolution_id = fields.Many2one(
+        "fund.expedient.resolution",
+        string="Resolución",
+        ondelete="set null",
+        domain="[('expedient_id', '=', expedient_id), ('stage_id', '=', stage_id)]",
+        help="Si existe una resolución para la etapa, el documento puede asociarse a ella.",
+    )
     file_data = fields.Binary(
         string="Archivo",
         attachment=True,
@@ -126,6 +133,10 @@ class FundExpedientDocument(models.Model):
                 disp = self.env["fund.expedient.disposition"].browse(vals["disposition_id"])
                 if disp and disp.stage_id:
                     vals["stage_id"] = disp.stage_id.id
+            if not vals.get("stage_id") and vals.get("resolution_id"):
+                res = self.env["fund.expedient.resolution"].browse(vals["resolution_id"])
+                if res and res.stage_id:
+                    vals["stage_id"] = res.stage_id.id
             if not vals.get("stage_id") and vals.get("expedient_id"):
                 exp = self.env["fund.expedient"].browse(vals["expedient_id"])
                 if exp and exp.stage_id:
@@ -147,6 +158,19 @@ class FundExpedientDocument(models.Model):
                 )
                 if len(disp) == 1:
                     vals["disposition_id"] = disp.id
+
+            # Si existe una única resolución para el expediente+etapa, autovincular.
+            if vals.get("expedient_id") and vals.get("stage_id") and not vals.get("resolution_id"):
+                res = self.env["fund.expedient.resolution"].search(
+                    [
+                        ("expedient_id", "=", vals["expedient_id"]),
+                        ("stage_id", "=", vals["stage_id"]),
+                    ],
+                    order="sequence, id",
+                    limit=2,
+                )
+                if len(res) == 1:
+                    vals["resolution_id"] = res.id
 
             # Numeración correlativa por expediente: <NºExpediente>-###.
             if vals.get("expedient_id") and not vals.get("sequence_in_expedient"):
