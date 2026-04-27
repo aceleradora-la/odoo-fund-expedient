@@ -40,6 +40,20 @@
         <field name="target">current</field>
     </record>
 
+    <record id="action_fund_expedient_disposition_report" model="ir.actions.act_window">
+        <field name="name">Disposiciones</field>
+        <field name="res_model">fund.expedient.disposition</field>
+        <field name="view_mode">list,pivot,form</field>
+        <field name="view_id" ref="view_fund_expedient_disposition_list_report"/>
+    </record>
+
+    <record id="action_fund_expedient_resolution_report" model="ir.actions.act_window">
+        <field name="name">Resoluciones</field>
+        <field name="res_model">fund.expedient.resolution</field>
+        <field name="view_mode">list,pivot,form</field>
+        <field name="view_id" ref="view_fund_expedient_resolution_list_report"/>
+    </record>
+
     <!-- Menuitems (después de las acciones) -->
     <menuitem id="menu_fund_expedient_list"
               name="Expedientes"
@@ -56,6 +70,20 @@
               parent="menu_fund_expedient_reports"
               action="action_fund_expedient_dashboard"
               sequence="10"/>
+
+    <menuitem id="menu_fund_expedient_reports_resolutions"
+              name="Resoluciones"
+              parent="menu_fund_expedient_reports"
+              action="action_fund_expedient_resolution_report"
+              sequence="20"
+              groups="fund_expedient.group_fund_expedient_manager"/>
+
+    <menuitem id="menu_fund_expedient_reports_dispositions"
+              name="Disposiciones"
+              parent="menu_fund_expedient_reports"
+              action="action_fund_expedient_disposition_report"
+              sequence="25"
+              groups="fund_expedient.group_fund_expedient_manager"/>
 
     <menuitem id="menu_expedient_stage"
               name="Etapas de expediente"
