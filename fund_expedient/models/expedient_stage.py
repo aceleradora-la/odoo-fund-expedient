@@ -35,6 +35,17 @@ class ExpedientStage(models.Model):
         domain=[("model_id.model", "=", "fund.expedient")],
         help="Si se define, se mostrará el botón Imprimir con este reporte en el expediente.",
     )
+    spend_request_mode = fields.Selection(
+        selection=[
+            ("none", "Sin Solicitud de Gasto"),
+            ("initial", "Permite SG inicial"),
+            ("final", "Permite SG definitiva"),
+        ],
+        string="Solicitud de Gasto",
+        default="none",
+        required=True,
+        help="Habilita la creación de Solicitud de Gasto (inicial o definitiva) desde el expediente en esta etapa.",
+    )
     company_id = fields.Many2one(
         "res.company",
         string="Compañía",
@@ -59,6 +70,7 @@ class ExpedientStage(models.Model):
     <field name="sequence" widget="handle"/>
     <field name="name"/>
     <field name="state_type"/>
+    <field name="spend_request_mode" optional="hide"/>
     <field name="fold"/>
     <field name="report_id" optional="show"/>
 </list>""",
@@ -90,6 +102,7 @@ class ExpedientStage(models.Model):
             </group>
             <group>
                 <field name="report_id"/>
+                <field name="spend_request_mode"/>
                 <field name="company_id" groups="base.group_multi_company"/>
             </group>
         </group>

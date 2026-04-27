@@ -238,6 +238,12 @@ class FundExpedient(models.Model):
         string="Resoluciones",
         copy=False,
     )
+    spend_request_ids = fields.One2many(
+        "fund.expedient.spend.request",
+        "expedient_id",
+        string="Solicitudes de Gasto",
+        copy=False,
+    )
     # Relaciones con Purchase y Project (many2many: un expediente puede tener muchas)
     purchase_order_ids = fields.Many2many(
         "purchase.order",
@@ -357,6 +363,19 @@ class FundExpedient(models.Model):
         store=True,
         currency_field="approval_currency_id",
         help="Total real expresado en la moneda configurada en el Tipo de Expediente.",
+    )
+    amount_estimated_confirmed = fields.Monetary(
+        string="Total Estimado Confirmado",
+        currency_field="currency_id",
+        tracking=True,
+        help="Total confirmado (moneda compañía) usado para generar la Solicitud de Gasto definitiva.",
+    )
+    amount_estimated_confirmed_unit = fields.Monetary(
+        string="Total Estimado Confirmado (moneda tipo)",
+        compute="_compute_amount_estimated_confirmed_unit",
+        store=True,
+        currency_field="approval_currency_id",
+        help="Total confirmado expresado en la moneda configurada en el Tipo de Expediente.",
     )
     report_count = fields.Integer(
         string="Cantidad",
@@ -678,6 +697,25 @@ class FundExpedient(models.Model):
             rec.amount_real_unit = real_unit
 
     @api.depends(
+        "amount_estimated_confirmed",
+        "request_date",
+        "company_id",
+        "currency_id",
+        "approval_currency_id",
+    )
+    def _compute_amount_estimated_confirmed_unit(self):
+        for rec in self:
+            unit_currency = rec.approval_currency_id
+            company_currency = rec.company_id.currency_id
+            company = rec.company_id
+            if not unit_currency or not rec.amount_estimated_confirmed or not rec.request_date:
+                rec.amount_estimated_confirmed_unit = 0.0
+                continue
+            rec.amount_estimated_confirmed_unit = company_currency._convert(
+                rec.amount_estimated_confirmed, unit_currency, company, rec.request_date
+            )
+
+    @api.depends(
         "purchase_order_ids",
         "purchase_order_ids.state",
         "purchase_order_ids.invoice_status",
@@ -941,6 +979,43 @@ class FundExpedient(models.Model):
         """Considera vacío HTML sin contenido (p.ej. '<p><br></p>')."""
         if not value:
             return True
+
+    def _get_or_create_spend_request(self):
+        self.ensure_one()
+        sr = self.spend_request_ids[:1]
+        if sr:
+            return sr
+        return self.env["fund.expedient.spend.request"].create({"expedient_id": self.id})
+
+    def action_create_spend_request_initial(self):
+        self.ensure_one()
+        if not self.stage_id or self.stage_id.spend_request_mode != "initial":
+            raise UserError("La etapa actual no permite crear Solicitud de Gasto inicial.")
+        sr = self._get_or_create_spend_request()
+        sr.action_generate_initial()
+        return {
+            "type": "ir.actions.act_window",
+            "name": "Solicitud de Gasto",
+            "res_model": "fund.expedient.spend.request",
+            "res_id": sr.id,
+            "view_mode": "form",
+            "target": "current",
+        }
+
+    def action_create_spend_request_final(self):
+        self.ensure_one()
+        if not self.stage_id or self.stage_id.spend_request_mode != "final":
+            raise UserError("La etapa actual no permite crear Solicitud de Gasto definitiva.")
+        sr = self._get_or_create_spend_request()
+        sr.action_generate_final()
+        return {
+            "type": "ir.actions.act_window",
+            "name": "Solicitud de Gasto",
+            "res_model": "fund.expedient.spend.request",
+            "res_id": sr.id,
+            "view_mode": "form",
+            "target": "current",
+        }
         try:
             return not html2plaintext(str(value)).strip()
         except Exception:
