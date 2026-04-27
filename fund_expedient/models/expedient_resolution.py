@@ -33,6 +33,11 @@ class FundExpedientResolution(models.Model):
         default="/",
         help="Numeración automática según Secuencias de Odoo (por compañía).",
     )
+    resolution_date = fields.Date(
+        string="Fecha de Resolución",
+        default=fields.Date.context_today,
+        help="Fecha asociada a la resolución. Por defecto se propone la fecha de hoy.",
+    )
     name = fields.Char(
         string="Resolución",
         compute="_compute_name",

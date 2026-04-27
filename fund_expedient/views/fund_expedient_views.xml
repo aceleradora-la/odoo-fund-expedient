@@ -203,6 +203,7 @@
                                     <field name="sequence" widget="handle"/>
                                     <field name="stage_id" options="{'no_create': True}"/>
                                     <field name="number" readonly="1"/>
+                                    <field name="resolution_date"/>
                                 </list>
                                 <form string="Resolución">
                                     <group>
@@ -211,6 +212,7 @@
                                             <field name="stage_id" options="{'no_create': True}"/>
                                             <field name="sequence"/>
                                             <field name="number" readonly="1"/>
+                                            <field name="resolution_date"/>
                                         </group>
                                     </group>
                                     <group>
