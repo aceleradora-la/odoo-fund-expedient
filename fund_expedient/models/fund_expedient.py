@@ -158,7 +158,6 @@ class FundExpedient(models.Model):
     )
     description = fields.Html(
         string="Descripción/Memo",
-        tracking=True,
     )
     description_plain = fields.Text(
         string="Descripción (texto)",
@@ -176,6 +175,12 @@ class FundExpedient(models.Model):
         ondelete="restrict",
         domain="[('id', 'in', allowed_stage_ids)]",
         default=lambda self: self._default_stage_id(),
+    )
+    stage_spend_request_mode = fields.Selection(
+        related="stage_id.spend_request_mode",
+        string="Solicitud de Gasto (etapa)",
+        store=True,
+        readonly=True,
     )
     allowed_stage_ids = fields.Many2many(
         "fund.expedient.stage",
