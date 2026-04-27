@@ -35,7 +35,6 @@
         "data/expedient_type_data.xml",
         "data/budget_position_category_data.xml",
         "data/budget_position_views_init.xml",
-        "views/uf_rate_views.xml",
         "views/fund_expedient_views.xml",
         "wizard/expedient_line_wizard_views.xml",
         "views/expedient_type_views.xml",
