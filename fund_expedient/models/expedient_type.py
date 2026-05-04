@@ -87,6 +87,26 @@ class ExpedientTypeStageAssign(models.Model):
         string="Observaciones por defecto (Resolución)",
         help="Texto predeterminado (HTML) que se copiará en Observaciones al crear una Resolución de esta etapa.",
     )
+    is_final_stage = fields.Boolean(
+        string="Etapa final del flujo",
+        help="Si está activo, no se puede pasar a una etapa posterior salvo cancelar el expediente.",
+    )
+    require_notification = fields.Boolean(
+        string="Requiere notificación a oferentes",
+        help="Si está activo, debe enviarse correo a todos los oferentes que respondieron la cotización "
+        "antes de poder salir de esta etapa (según registro de envíos).",
+    )
+    notification_template_id = fields.Many2one(
+        "mail.template",
+        string="Plantilla de correo (notificación)",
+        domain="[('model_id.model', '=', 'fund.expedient')]",
+        help="Plantilla usada para notificar; los destinatarios se determinan por las cotizaciones del expediente.",
+    )
+    notification_mail_server_id = fields.Many2one(
+        "ir.mail_server",
+        string="Servidor de correo saliente",
+        help="Opcional. Si está vacío se usa el servidor por defecto de Odoo.",
+    )
     company_id = fields.Many2one(
         related="type_id.company_id",
         store=True,
@@ -145,6 +165,17 @@ class ExpedientTypeStageAssign(models.Model):
             vals["job_ids"] = [(5, 0, 0)]
             vals["user_ids"] = [(5, 0, 0)]
         return super().write(vals)
+
+    @api.constrains(
+        "require_notification",
+        "notification_template_id",
+    )
+    def _check_notification_template(self):
+        for rec in self:
+            if rec.require_notification and not rec.notification_template_id:
+                raise ValidationError(
+                    "Si marca 'Requiere notificación', debe indicar una plantilla de correo."
+                )
 
     def init(self):
         """Eliminar constraints legacy que impidan reutilizar etapas entre tipos.

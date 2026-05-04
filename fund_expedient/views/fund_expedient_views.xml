@@ -67,6 +67,13 @@
                     <field name="stage_spend_request_mode" invisible="1"/>
                     <field name="has_dispositions_feature" invisible="1"/>
                     <field name="has_resolutions_feature" invisible="1"/>
+                    <field name="current_assign_require_disposition" invisible="1"/>
+                    <field name="current_assign_require_resolution" invisible="1"/>
+                    <field name="current_assign_require_notification" invisible="1"/>
+                    <field name="current_stage_notification_template_id" invisible="1"/>
+                    <field name="line_amounts_drive_estimated" invisible="1"/>
+                    <field name="line_amounts_drive_confirmed" invisible="1"/>
+                    <field name="requestor_user_id" invisible="1"/>
                     <field name="hide_type_id_stage" invisible="1"/>
                     <field name="hide_encuadre_id_stage" invisible="1"/>
                     <field name="hide_estimated_need_date_stage" invisible="1"/>
@@ -79,10 +86,14 @@
                     <button name="action_next_stage" type="object" string="Siguiente etapa"
                             class="btn-primary"
                             modifiers='{"invisible": ["|", ["state", "=", "cancel"], ["can_edit_in_stage", "=", false]]}'/>
-                    <button name="action_create_spend_request_initial" type="object"
-                            string="Crear SG Inicial"
+                    <button name="action_open_notification_wizard" type="object"
+                            string="Notificar oferentes"
                             class="btn-secondary"
-                            invisible="state == 'cancel' or not can_edit_in_stage or stage_spend_request_mode != 'initial'"/>
+                            invisible="state == 'cancel' or not can_edit_in_stage or (not current_assign_require_notification and not current_stage_notification_template_id)"/>
+                    <button name="action_create_spend_request_initial" type="object"
+                            string="Crear SG preventiva"
+                            class="btn-secondary"
+                            invisible="state == 'cancel' or not can_edit_in_stage or stage_spend_request_mode != 'preventiva'"/>
                     <button name="action_create_spend_request_final" type="object"
                             string="Crear SG Definitiva"
                             class="btn-secondary"
@@ -146,7 +157,11 @@
                     <group string="Totales" name="totals">
                         <group string="Moneda (compañía)">
                             <field name="currency_id" invisible="1"/>
-                            <field name="amount_estimated" invisible="hide_amount_estimated_stage"/>
+                            <field name="amount_estimated_manual"
+                                   invisible="hide_amount_estimated_stage or line_amounts_drive_estimated"/>
+                            <field name="amount_estimated"
+                                   invisible="hide_amount_estimated_stage"
+                                   readonly="line_amounts_drive_estimated"/>
                             <field name="amount_committed" readonly="1"/>
                             <field name="amount_real" readonly="1"/>
                         </group>
@@ -175,10 +190,13 @@
                                 <list create="1" delete="1" edit="1">
                                     <field name="sequence" widget="handle"/>
                                     <field name="display_type" column_invisible="1"/>
+                                    <field name="currency_id" column_invisible="1"/>
                                     <field name="product_id"/>
                                     <field name="name"/>
                                     <field name="product_qty"/>
                                     <field name="product_uom_id"/>
+                                    <field name="amount_estimated_line"/>
+                                    <field name="amount_final_line"/>
                                     <field name="recommended_supplier_id"/>
                                 </list>
                             </field>
@@ -187,32 +205,39 @@
                             <field name="spend_request_ids" nolabel="1" create="0" delete="0"
                                    context="{'default_expedient_id': id}">
                                 <list create="0" delete="0" edit="0">
-                                    <field name="initial_number"/>
-                                    <field name="initial_date"/>
-                                    <field name="final_number"/>
-                                    <field name="final_date"/>
+                                    <field name="number"/>
+                                    <field name="spend_state"/>
+                                    <field name="date_preventiva"/>
+                                    <field name="date_definitiva"/>
                                 </list>
                                 <form string="Solicitud de Gasto">
-                                    <group string="Inicial">
+                                    <group string="Solicitud de gasto">
                                         <group>
-                                            <field name="initial_number" readonly="1"/>
-                                            <field name="initial_date" readonly="1"/>
+                                            <field name="number" readonly="1"/>
+                                            <field name="spend_state" readonly="1"/>
+                                            <field name="final_number" readonly="1" optional="hide"/>
                                         </group>
                                         <group>
                                             <field name="currency_id" invisible="1"/>
                                             <field name="approval_currency_id" invisible="1"/>
-                                            <field name="initial_amount" readonly="1"/>
-                                            <field name="initial_amount_unit" readonly="1"/>
+                                        </group>
+                                    </group>
+                                    <group string="Preventiva">
+                                        <group>
+                                            <field name="date_preventiva" readonly="1"/>
+                                        </group>
+                                        <group>
+                                            <field name="amount_preventiva" readonly="1"/>
+                                            <field name="amount_preventiva_unit" readonly="1"/>
                                         </group>
                                     </group>
                                     <group string="Definitiva">
                                         <group>
-                                            <field name="final_number" readonly="1"/>
-                                            <field name="final_date" readonly="1"/>
+                                            <field name="date_definitiva" readonly="1"/>
                                         </group>
                                         <group>
-                                            <field name="final_amount_confirmed" readonly="1"/>
-                                            <field name="final_amount_confirmed_unit" readonly="1"/>
+                                            <field name="amount_definitiva" readonly="1"/>
+                                            <field name="amount_definitiva_unit" readonly="1"/>
                                         </group>
                                     </group>
                                     <group string="Líneas">
@@ -231,7 +256,9 @@
                             </field>
                             <group string="Total Estimado Confirmado (expediente)">
                                 <group string="Moneda (compañía)">
-                                    <field name="amount_estimated_confirmed"/>
+                                    <field name="amount_estimated_confirmed_manual"
+                                           invisible="line_amounts_drive_confirmed"/>
+                                    <field name="amount_estimated_confirmed" readonly="line_amounts_drive_confirmed"/>
                                 </group>
                                 <group string="Moneda (tipo de expediente)" invisible="not approval_currency_id">
                                     <field name="amount_estimated_confirmed_unit" readonly="1"/>
@@ -240,6 +267,7 @@
                         </page>
                         <page string="Disposiciones" name="dispositions" invisible="not has_dispositions_feature">
                             <field name="disposition_ids" nolabel="1"
+                                   readonly="not current_assign_require_disposition"
                                    context="{'default_expedient_id': id, 'default_stage_id': stage_id}">
                                 <list create="1" delete="1" edit="1">
                                     <field name="sequence" widget="handle"/>
@@ -280,6 +308,7 @@
                         </page>
                         <page string="Resoluciones" name="resolutions" invisible="not has_resolutions_feature">
                             <field name="resolution_ids" nolabel="1"
+                                   readonly="not current_assign_require_resolution"
                                    context="{'default_expedient_id': id, 'default_stage_id': stage_id}">
                                 <list create="1" delete="1" edit="1">
                                     <field name="sequence" widget="handle"/>
@@ -316,6 +345,18 @@
                                         </field>
                                     </group>
                                 </form>
+                            </field>
+                        </page>
+                        <page string="Notificaciones (correo)" name="notification_mails">
+                            <field name="notification_mail_ids" nolabel="1" create="0" delete="0" edit="0">
+                                <list>
+                                    <field name="create_date" string="Fecha"/>
+                                    <field name="stage_id"/>
+                                    <field name="partner_id"/>
+                                    <field name="subject"/>
+                                    <field name="state"/>
+                                    <field name="template_id" optional="hide"/>
+                                </list>
                             </field>
                         </page>
                         <page string="Documentos por etapa" name="stage_documents">

@@ -59,6 +59,14 @@ class FundExpedient(models.Model):
         default=lambda self: self._default_requestor_id(),
         tracking=True,
     )
+    requestor_user_id = fields.Many2one(
+        "res.users",
+        string="Usuario solicitante",
+        related="requestor_id.user_id",
+        store=True,
+        readonly=True,
+        help="Campo técnico para Tier Validation (reviewer field → usuario del solicitante).",
+    )
     type_unit_mode = fields.Selection(
         related="type_id.unit_mode",
         string="Unidad de aprobación (tipo)",
@@ -125,6 +133,31 @@ class FundExpedient(models.Model):
     hide_amount_estimated_stage = fields.Boolean(
         string="Ocultar Total estimado por etapa",
         compute="_compute_stage_field_visibility",
+    )
+    current_assign_require_disposition = fields.Boolean(
+        string="Etapa actual requiere disposición",
+        compute="_compute_current_assign_flags",
+    )
+    current_assign_require_resolution = fields.Boolean(
+        string="Etapa actual requiere resolución",
+        compute="_compute_current_assign_flags",
+    )
+    current_assign_require_notification = fields.Boolean(
+        string="Etapa actual requiere notificación",
+        compute="_compute_current_assign_flags",
+    )
+    current_stage_notification_template_id = fields.Many2one(
+        "mail.template",
+        string="Plantilla notificación (etapa)",
+        compute="_compute_current_assign_flags",
+    )
+    line_amounts_drive_estimated = fields.Boolean(
+        string="Total estimado viene de líneas",
+        compute="_compute_line_amount_flags",
+    )
+    line_amounts_drive_confirmed = fields.Boolean(
+        string="Total definitivo viene de líneas",
+        compute="_compute_line_amount_flags",
     )
     budget_position_id = fields.Many2one(
         "fund.budget.position",
@@ -249,6 +282,12 @@ class FundExpedient(models.Model):
         string="Solicitudes de Gasto",
         copy=False,
     )
+    notification_mail_ids = fields.One2many(
+        "fund.expedient.notification.mail",
+        "expedient_id",
+        string="Notificaciones enviadas",
+        readonly=True,
+    )
     # Relaciones con Purchase y Project (many2many: un expediente puede tener muchas)
     purchase_order_ids = fields.Many2many(
         "purchase.order",
@@ -331,9 +370,18 @@ class FundExpedient(models.Model):
         related="company_id.currency_id",
         string="Moneda",
     )
+    amount_estimated_manual = fields.Monetary(
+        string="Total estimado (manual)",
+        currency_field="currency_id",
+        tracking=True,
+        help="Se usa cuando no hay líneas de detalle con importes; si hay líneas, el total estimado es la suma.",
+    )
     amount_estimated = fields.Monetary(
         string="Total Estimado",
         currency_field="currency_id",
+        compute="_compute_amount_estimated_total",
+        inverse="_inverse_amount_estimated_total",
+        store=True,
         tracking=True,
     )
     amount_committed = fields.Monetary(
@@ -369,11 +417,20 @@ class FundExpedient(models.Model):
         currency_field="approval_currency_id",
         help="Total real expresado en la moneda configurada en el Tipo de Expediente.",
     )
+    amount_estimated_confirmed_manual = fields.Monetary(
+        string="Importe definitivo (manual)",
+        currency_field="currency_id",
+        tracking=True,
+        help="Si hay líneas con importe definitivo, el total definitivo es la suma de las líneas.",
+    )
     amount_estimated_confirmed = fields.Monetary(
         string="Total Estimado Confirmado",
         currency_field="currency_id",
+        compute="_compute_amount_estimated_confirmed_total",
+        inverse="_inverse_amount_estimated_confirmed_total",
+        store=True,
         tracking=True,
-        help="Total confirmado (moneda compañía) usado para generar la Solicitud de Gasto definitiva.",
+        help="Total confirmado (moneda compañía) usado para Solicitud de Gasto definitiva.",
     )
     amount_estimated_confirmed_unit = fields.Monetary(
         string="Total Estimado Confirmado (moneda tipo)",
@@ -494,6 +551,89 @@ class FundExpedient(models.Model):
             rec.hide_analytic_account_id_stage = assign.hide_budget_position_id
             rec.hide_amount_estimated_stage = assign.hide_amount_estimated
 
+    @api.depends(
+        "type_id",
+        "stage_id",
+        "type_id.stage_assign_ids",
+        "type_id.stage_assign_ids.require_disposition",
+        "type_id.stage_assign_ids.require_resolution",
+        "type_id.stage_assign_ids.require_notification",
+        "type_id.stage_assign_ids.notification_template_id",
+    )
+    def _compute_current_assign_flags(self):
+        Assign = self.env["fund.expedient.type.stage.assign"]
+        for rec in self:
+            rec.current_assign_require_disposition = False
+            rec.current_assign_require_resolution = False
+            rec.current_assign_require_notification = False
+            rec.current_stage_notification_template_id = False
+            if not rec.type_id or not rec.stage_id:
+                continue
+            assign = Assign.search(
+                [
+                    ("type_id", "=", rec.type_id.id),
+                    ("stage_id", "=", rec.stage_id.id),
+                ],
+                limit=1,
+            )
+            if assign:
+                rec.current_assign_require_disposition = assign.require_disposition
+                rec.current_assign_require_resolution = assign.require_resolution
+                rec.current_assign_require_notification = bool(assign.require_notification)
+                rec.current_stage_notification_template_id = assign.notification_template_id
+
+    @api.depends(
+        "line_ids",
+        "line_ids.display_type",
+        "line_ids.amount_estimated_line",
+        "line_ids.amount_final_line",
+    )
+    def _compute_line_amount_flags(self):
+        for rec in self:
+            detail_lines = rec.line_ids.filtered(lambda l: not l.display_type)
+            rec.line_amounts_drive_estimated = bool(detail_lines)
+            rec.line_amounts_drive_confirmed = bool(detail_lines)
+
+    @api.depends(
+        "line_ids",
+        "line_ids.display_type",
+        "line_ids.amount_estimated_line",
+        "amount_estimated_manual",
+    )
+    def _compute_amount_estimated_total(self):
+        for rec in self:
+            detail_lines = rec.line_ids.filtered(lambda l: not l.display_type)
+            if detail_lines:
+                rec.amount_estimated = sum(detail_lines.mapped("amount_estimated_line"))
+            else:
+                rec.amount_estimated = rec.amount_estimated_manual or 0.0
+
+    def _inverse_amount_estimated_total(self):
+        for rec in self:
+            detail_lines = rec.line_ids.filtered(lambda l: not l.display_type)
+            if not detail_lines:
+                rec.amount_estimated_manual = rec.amount_estimated
+
+    @api.depends(
+        "line_ids",
+        "line_ids.display_type",
+        "line_ids.amount_final_line",
+        "amount_estimated_confirmed_manual",
+    )
+    def _compute_amount_estimated_confirmed_total(self):
+        for rec in self:
+            detail_lines = rec.line_ids.filtered(lambda l: not l.display_type)
+            if detail_lines:
+                rec.amount_estimated_confirmed = sum(detail_lines.mapped("amount_final_line"))
+            else:
+                rec.amount_estimated_confirmed = rec.amount_estimated_confirmed_manual or 0.0
+
+    def _inverse_amount_estimated_confirmed_total(self):
+        for rec in self:
+            detail_lines = rec.line_ids.filtered(lambda l: not l.display_type)
+            if not detail_lines:
+                rec.amount_estimated_confirmed_manual = rec.amount_estimated_confirmed
+
     @api.depends("company_id")
     def _compute_analytic_plan_id(self):
         Config = self.env["fund.expedient.config"]
@@ -501,14 +641,41 @@ class FundExpedient(models.Model):
             plan = Config.get_analytic_plan(rec.company_id)
             rec.analytic_plan_id = plan.id if plan else False
 
-    @api.depends("type_id", "type_id.stage_assign_ids", "company_id")
+    @api.depends(
+        "type_id",
+        "type_id.stage_assign_ids",
+        "type_id.stage_assign_ids.stage_id",
+        "type_id.stage_assign_ids.is_final_stage",
+        "stage_id",
+        "company_id",
+    )
     def _compute_allowed_stage_ids(self):
         Stage = self.env["fund.expedient.stage"]
+        Assign = self.env["fund.expedient.type.stage.assign"]
         for rec in self:
             if rec.type_id and rec.type_id.stage_assign_ids:
-                rec.allowed_stage_ids = rec.type_id.stage_assign_ids.mapped("stage_id").sorted(
+                ordered = rec.type_id.stage_assign_ids.mapped("stage_id").sorted(
                     key=lambda s: (s.sequence, s.id)
                 )
+                assign = False
+                if rec.stage_id:
+                    assign = Assign.search(
+                        [
+                            ("type_id", "=", rec.type_id.id),
+                            ("stage_id", "=", rec.stage_id.id),
+                        ],
+                        limit=1,
+                    )
+                if (
+                    assign
+                    and assign.is_final_stage
+                    and rec.stage_id
+                    and rec.stage_id.id in ordered.ids
+                ):
+                    idx = ordered.ids.index(rec.stage_id.id)
+                    rec.allowed_stage_ids = ordered[: idx + 1]
+                else:
+                    rec.allowed_stage_ids = ordered
             else:
                 rec.allowed_stage_ids = Stage.search(
                     [("company_id", "in", [False, rec.company_id.id])], order="sequence, id"
@@ -570,6 +737,90 @@ class FundExpedient(models.Model):
                 )
                 yield rec, all_stages
 
+    def _current_stage_assign(self):
+        self.ensure_one()
+        if not self.type_id or not self.stage_id:
+            return self.env["fund.expedient.type.stage.assign"]
+        return self.env["fund.expedient.type.stage.assign"].search(
+            [
+                ("type_id", "=", self.type_id.id),
+                ("stage_id", "=", self.stage_id.id),
+            ],
+            limit=1,
+        )
+
+    @api.model
+    def _purchase_order_has_quote_response(self, po):
+        """Heurística: cotización respondida (precio en líneas o RFQ ya enviada/confirmada)."""
+        if po.state == "cancel":
+            return False
+        if po.state in ("sent", "purchase", "done"):
+            return True
+        for line in po.order_line:
+            if line.display_type:
+                continue
+            if line.price_unit:
+                return True
+        return False
+
+    def _purchase_orders_with_response(self):
+        self.ensure_one()
+        pos = self.purchase_order_ids.filtered(lambda p: p.state != "cancel")
+        return pos.filtered(lambda p: self._purchase_order_has_quote_response(p))
+
+    def _get_responded_rfq_partners(self):
+        """Partners (oferentes) con cotización respondida en órdenes vinculadas al expediente."""
+        self.ensure_one()
+        partners = self.env["res.partner"]
+        for po in self._purchase_orders_with_response():
+            if po.partner_id:
+                partners |= po.partner_id
+        return partners
+
+    def _notification_stage_satisfied(self):
+        """True si no exige notificación o ya se notificó a todos los oferentes requeridos."""
+        self.ensure_one()
+        assign = self._current_stage_assign()
+        if not assign or not assign.require_notification:
+            return True
+        partners = self._get_responded_rfq_partners()
+        if not partners:
+            return False
+        Log = self.env["fund.expedient.notification.mail"]
+        for partner in partners:
+            ok = Log.search_count(
+                [
+                    ("expedient_id", "=", self.id),
+                    ("stage_id", "=", self.stage_id.id),
+                    ("partner_id", "=", partner.id),
+                    ("state", "=", "sent"),
+                ]
+            )
+            if not ok:
+                return False
+        return True
+
+    def action_open_notification_wizard(self):
+        self.ensure_one()
+        assign = self._current_stage_assign()
+        if not assign or not assign.notification_template_id:
+            raise UserError(
+                _("Configure plantilla de notificación en el tipo de expediente para esta etapa.")
+            )
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Notificar oferentes"),
+            "res_model": "fund.expedient.notification.send.wizard",
+            "view_mode": "form",
+            "target": "new",
+            "context": {
+                "default_expedient_id": self.id,
+                "default_stage_id": self.stage_id.id,
+                "default_mail_template_id": assign.notification_template_id.id,
+                "default_mail_server_id": assign.notification_mail_server_id.id,
+            },
+        }
+
     def action_next_stage(self):
         for rec in self:
             if not rec.can_edit_in_stage:
@@ -584,6 +835,29 @@ class FundExpedient(models.Model):
             current_index = stages.ids.index(rec.stage_id.id) if rec.stage_id.id in stages.ids else -1
             if current_index == -1 or current_index + 1 >= len(stages):
                 continue
+            assign = rec._current_stage_assign()
+            if assign and assign.is_final_stage:
+                raise UserError(
+                    _(
+                        "Este expediente está en una etapa final del flujo. "
+                        "No puede avanzar; solo cancelar el expediente si corresponde."
+                    )
+                )
+            if assign and assign.require_notification:
+                if not rec._notification_stage_satisfied():
+                    if not rec._get_responded_rfq_partners():
+                        raise UserError(
+                            _(
+                                "No hay oferentes con cotización respondida; "
+                                "no se puede completar el requisito de notificación para salir de esta etapa."
+                            )
+                        )
+                    raise UserError(
+                        _(
+                            "Debe notificar a todos los oferentes (correo registrado) antes de pasar de etapa. "
+                            "Use el asistente 'Notificar oferentes'."
+                        )
+                    )
             target = stages[current_index + 1]
             # Integración simple con tier_validation: si existe y aún no está aprobado,
             # primero se envía a aprobar y no se cambia de etapa.
@@ -909,6 +1183,63 @@ class FundExpedient(models.Model):
                                 )
                             )
 
+            if stage_will_change and rec.type_id and rec.stage_id and not self.env.context.get(
+                "skip_notification_check"
+            ):
+                assign_cur = Assign.search(
+                    [
+                        ("type_id", "=", rec.type_id.id),
+                        ("stage_id", "=", rec.stage_id.id),
+                    ],
+                    limit=1,
+                )
+                if assign_cur and assign_cur.require_notification:
+                    if not rec._notification_stage_satisfied():
+                        if not rec._get_responded_rfq_partners():
+                            raise UserError(
+                                _(
+                                    "No hay oferentes con cotización respondida; "
+                                    "no se puede salir de la etapa '%s' con notificación obligatoria."
+                                )
+                                % rec.stage_id.name
+                            )
+                        raise UserError(
+                            _(
+                                "Para salir de la etapa '%s' debe registrar el envío de correo a todos los oferentes."
+                            )
+                            % rec.stage_id.name
+                        )
+
+            if stage_will_change and rec.type_id and rec.stage_id:
+                new_stage = self.env["fund.expedient.stage"].browse(new_vals["stage_id"])
+                expedient_type = rec.type_id
+                if expedient_type.stage_assign_ids:
+                    ordered = expedient_type.stage_assign_ids.mapped("stage_id").sorted(
+                        key=lambda s: (s.sequence, s.id)
+                    )
+                    if (
+                        rec.stage_id.id in ordered.ids
+                        and new_stage.id in ordered.ids
+                        and new_stage.state_type != "cancel"
+                    ):
+                        old_i = ordered.ids.index(rec.stage_id.id)
+                        new_i = ordered.ids.index(new_stage.id)
+                        if new_i > old_i:
+                            assign_old = Assign.search(
+                                [
+                                    ("type_id", "=", rec.type_id.id),
+                                    ("stage_id", "=", rec.stage_id.id),
+                                ],
+                                limit=1,
+                            )
+                            if assign_old and assign_old.is_final_stage:
+                                raise UserError(
+                                    _(
+                                        "No puede avanzar desde la etapa final del flujo; "
+                                        "solo puede volver a etapas anteriores o cancelar el expediente."
+                                    )
+                                )
+
             super(FundExpedient, rec).write(new_vals)
             if stage_will_change:
                 rec._notify_stage_assignees()
@@ -984,6 +1315,11 @@ class FundExpedient(models.Model):
         """Considera vacío HTML sin contenido (p.ej. '<p><br></p>')."""
         if not value:
             return True
+        try:
+            return not html2plaintext(str(value)).strip()
+        except Exception:
+            # Fallback: si algo raro llega, tratamos como no vacío para no borrar datos.
+            return False
 
     def _get_or_create_spend_request(self):
         self.ensure_one()
@@ -994,8 +1330,8 @@ class FundExpedient(models.Model):
 
     def action_create_spend_request_initial(self):
         self.ensure_one()
-        if not self.stage_id or self.stage_id.spend_request_mode != "initial":
-            raise UserError("La etapa actual no permite crear Solicitud de Gasto inicial.")
+        if not self.stage_id or self.stage_id.spend_request_mode != "preventiva":
+            raise UserError("La etapa actual no permite crear Solicitud de Gasto preventiva.")
         sr = self._get_or_create_spend_request()
         sr.action_generate_initial()
         return {
@@ -1021,11 +1357,6 @@ class FundExpedient(models.Model):
             "view_mode": "form",
             "target": "current",
         }
-        try:
-            return not html2plaintext(str(value)).strip()
-        except Exception:
-            # Fallback: si algo raro llega, tratamos como no vacío para no borrar datos.
-            return False
 
     def unlink(self):
         raise UserError(

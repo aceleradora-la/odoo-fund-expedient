@@ -25,18 +25,10 @@
             <field name="implementation">no_gap</field>
             <field name="company_id" eval="False"/>
         </record>
-        <record id="sequence_fund_expedient_spend_request_initial" model="ir.sequence">
-            <field name="name">Secuencia Solicitud de Gasto Inicial</field>
-            <field name="code">fund.expedient.spend.request.initial</field>
-            <field name="prefix">SGI-</field>
-            <field name="padding">5</field>
-            <field name="implementation">no_gap</field>
-            <field name="company_id" eval="False"/>
-        </record>
-        <record id="sequence_fund_expedient_spend_request_final" model="ir.sequence">
-            <field name="name">Secuencia Solicitud de Gasto Definitiva</field>
-            <field name="code">fund.expedient.spend.request.final</field>
-            <field name="prefix">SGD-</field>
+        <record id="sequence_fund_expedient_spend_request" model="ir.sequence">
+            <field name="name">Secuencia Solicitud de Gasto</field>
+            <field name="code">fund.expedient.spend.request</field>
+            <field name="prefix">SG-</field>
             <field name="padding">5</field>
             <field name="implementation">no_gap</field>
             <field name="company_id" eval="False"/>

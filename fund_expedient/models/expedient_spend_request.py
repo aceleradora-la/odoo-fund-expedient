@@ -24,42 +24,62 @@ class FundExpedientSpendRequest(models.Model):
         related="expedient_id.approval_currency_id", store=True, readonly=True
     )
 
-    initial_number = fields.Char(
-        string="Número (Inicial)",
+    number = fields.Char(
+        string="Número",
         readonly=True,
         index=True,
         copy=False,
         default="/",
+        oldname="initial_number",
     )
-    initial_date = fields.Date(string="Fecha (Inicial)")
-    initial_amount = fields.Monetary(
-        string="Importe (Inicial)",
+    spend_state = fields.Selection(
+        [
+            ("preventiva", "Preventiva"),
+            ("definitiva", "Definitiva"),
+        ],
+        string="Estado",
+        readonly=True,
+        index=True,
+    )
+    date_preventiva = fields.Date(
+        string="Fecha preventiva",
+        oldname="initial_date",
+    )
+    amount_preventiva = fields.Monetary(
+        string="Importe preventivo",
         currency_field="currency_id",
         readonly=True,
+        oldname="initial_amount",
     )
-    initial_amount_unit = fields.Monetary(
-        string="Importe (Inicial, moneda tipo)",
+    amount_preventiva_unit = fields.Monetary(
+        string="Importe preventivo (moneda tipo)",
         currency_field="approval_currency_id",
         readonly=True,
+        oldname="initial_amount_unit",
     )
 
-    final_number = fields.Char(
-        string="Número (Definitiva)",
-        readonly=True,
-        index=True,
-        copy=False,
-        default="/",
+    date_definitiva = fields.Date(
+        string="Fecha definitiva",
+        oldname="final_date",
     )
-    final_date = fields.Date(string="Fecha (Definitiva)")
-    final_amount_confirmed = fields.Monetary(
-        string="Importe confirmado (Definitiva)",
+    amount_definitiva = fields.Monetary(
+        string="Importe definitivo",
         currency_field="currency_id",
         readonly=True,
+        oldname="final_amount_confirmed",
     )
-    final_amount_confirmed_unit = fields.Monetary(
-        string="Importe confirmado (Definitiva, moneda tipo)",
+    amount_definitiva_unit = fields.Monetary(
+        string="Importe definitivo (moneda tipo)",
         currency_field="approval_currency_id",
         readonly=True,
+        oldname="final_amount_confirmed_unit",
+    )
+    # Conservado por compatibilidad con BD existente; no generar nuevos valores.
+    final_number = fields.Char(
+        string="Número definitiva (hist.)",
+        readonly=True,
+        copy=False,
+        default="/",
     )
 
     line_ids = fields.One2many(
@@ -70,15 +90,19 @@ class FundExpedientSpendRequest(models.Model):
     )
     display_name = fields.Char(compute="_compute_display_name", store=True)
 
-    @api.depends("expedient_id.number", "initial_number", "final_number")
+    @api.depends("expedient_id.number", "number", "spend_state")
     def _compute_display_name(self):
         for rec in self:
             exp = rec.expedient_id.number if rec.expedient_id and rec.expedient_id.number else ""
-            ini = rec.initial_number if rec.initial_number and rec.initial_number != "/" else ""
-            fin = rec.final_number if rec.final_number and rec.final_number != "/" else ""
-            parts = [p for p in [ini, fin] if p]
-            label = " / ".join(parts) if parts else ""
-            rec.display_name = f"SG {exp} {label}".strip() if exp or label else "Solicitud de Gasto"
+            num = rec.number if rec.number and rec.number != "/" else ""
+            state_lbl = ""
+            if rec.spend_state == "preventiva":
+                state_lbl = _("Preventiva")
+            elif rec.spend_state == "definitiva":
+                state_lbl = _("Definitiva")
+            parts = [p for p in [num, state_lbl] if p]
+            label = " · ".join(parts) if parts else ""
+            rec.display_name = f"SG {exp} {label}".strip() if exp or label else _("Solicitud de Gasto")
 
     _sql_constraints = [
         (
@@ -93,23 +117,22 @@ class FundExpedientSpendRequest(models.Model):
         seq_env = self.env["ir.sequence"].with_company(self.company_id)
         return seq_env.next_by_code(code) or "/"
 
-    def action_generate_initial(self):
+    def action_generate_preventiva(self):
+        """Genera número único y snapshot preventivo (antes SG inicial)."""
         self.ensure_one()
         exp = self.expedient_id
         if not exp:
             raise UserError(_("La Solicitud de Gasto debe estar vinculada a un expediente."))
-        if exp.stage_id.spend_request_mode != "initial":
-            raise UserError(
-                _("La etapa actual no permite crear Solicitud de Gasto inicial.")
-            )
-        if not self.initial_number or self.initial_number == "/":
-            self.initial_number = self._next_number("fund.expedient.spend.request.initial")
-        if not self.initial_date:
-            self.initial_date = fields.Date.context_today(self)
-        self.initial_amount = exp.amount_estimated or 0.0
-        self.initial_amount_unit = exp.amount_estimated_unit or 0.0
+        if exp.stage_id.spend_request_mode != "preventiva":
+            raise UserError(_("La etapa actual no permite crear Solicitud de Gasto preventiva."))
+        if not self.number or self.number == "/":
+            self.number = self._next_number("fund.expedient.spend.request")
+        self.spend_state = "preventiva"
+        if not self.date_preventiva:
+            self.date_preventiva = fields.Date.context_today(self)
+        self.amount_preventiva = exp.amount_estimated or 0.0
+        self.amount_preventiva_unit = exp.amount_estimated_unit or 0.0
 
-        # Snapshot de líneas del expediente
         self.line_ids.unlink()
         lines_vals = []
         for line in exp.line_ids.sorted(key=lambda l: (l.sequence, l.id)):
@@ -126,27 +149,29 @@ class FundExpedientSpendRequest(models.Model):
         self.line_ids = [(0, 0, v) for v in lines_vals]
         return True
 
+    def action_generate_initial(self):
+        """Alias retrocompatible."""
+        return self.action_generate_preventiva()
+
     def action_generate_final(self):
+        """Pasa a definitiva: mismo número, completa importes."""
         self.ensure_one()
         exp = self.expedient_id
         if not exp:
             raise UserError(_("La Solicitud de Gasto debe estar vinculada a un expediente."))
         if exp.stage_id.spend_request_mode != "final":
-            raise UserError(
-                _("La etapa actual no permite crear Solicitud de Gasto definitiva.")
-            )
-        if not self.initial_number or self.initial_number == "/":
-            raise UserError(_("Primero debe existir la Solicitud de Gasto inicial."))
+            raise UserError(_("La etapa actual no permite pasar a Solicitud de Gasto definitiva."))
+        if not self.number or self.number == "/":
+            raise UserError(_("Primero debe existir la Solicitud de Gasto preventiva con número asignado."))
         if not self.line_ids:
-            raise UserError(_("La Solicitud de Gasto inicial no tiene líneas."))
+            raise UserError(_("La Solicitud de Gasto preventiva no tiene líneas."))
 
-        if not self.final_number or self.final_number == "/":
-            self.final_number = self._next_number("fund.expedient.spend.request.final")
-        if not self.final_date:
-            self.final_date = fields.Date.context_today(self)
+        self.spend_state = "definitiva"
+        if not self.date_definitiva:
+            self.date_definitiva = fields.Date.context_today(self)
 
-        self.final_amount_confirmed = exp.amount_estimated_confirmed or 0.0
-        self.final_amount_confirmed_unit = exp.amount_estimated_confirmed_unit or 0.0
+        self.amount_definitiva = exp.amount_estimated_confirmed or 0.0
+        self.amount_definitiva_unit = exp.amount_estimated_confirmed_unit or 0.0
         return True
 
 
@@ -193,4 +218,3 @@ class FundExpedientSpendRequestLine(models.Model):
                 and not (line.name and str(line.name).strip())
             ):
                 raise ValidationError(_("La descripción es obligatoria cuando no hay producto."))
-

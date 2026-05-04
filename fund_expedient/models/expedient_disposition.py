@@ -76,6 +76,18 @@ class FundExpedientDisposition(models.Model):
             if stage_id and not vals.get("stage_id"):
                 vals["stage_id"] = stage_id
 
+            if exp_id and stage_id:
+                exp = self.env["fund.expedient"].browse(exp_id)
+                if exp.type_id:
+                    assign = Assign.search(
+                        [("type_id", "=", exp.type_id.id), ("stage_id", "=", stage_id)],
+                        limit=1,
+                    )
+                    if assign and not assign.require_disposition:
+                        raise ValidationError(
+                            "La etapa seleccionada no requiere disposición; no puede crear una en este contexto."
+                        )
+
             # Observaciones por defecto desde config tipo×etapa (si está vacía).
             if (not vals.get("notes") or not str(vals.get("notes")).strip()) and exp_id and stage_id:
                 exp = self.env["fund.expedient"].browse(exp_id)

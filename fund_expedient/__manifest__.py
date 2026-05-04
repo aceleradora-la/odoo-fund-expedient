@@ -4,13 +4,14 @@
 {
     "name": "Fundación - Expedientes",
     "summary": "Gestión de expedientes con etapas, partidas presupuestarias y relaciones con compras y proyectos",
-    "version": "18.0.2.8",
+    "version": "18.0.2.9",
     "category": "Administration",
     "website": "",
     "author": "",
     "license": "AGPL-3",
     "application": False,
     "installable": True,
+    "post_init_hook": "post_init_hook",
     "depends": [
         "mail",
         "hr",
@@ -37,6 +38,7 @@
         "data/budget_position_views_init.xml",
         "views/fund_expedient_views.xml",
         "wizard/expedient_line_wizard_views.xml",
+        "wizard/fund_expedient_notification_send_wizard_views.xml",
         "views/expedient_type_views.xml",
         "views/expedient_config_views.xml",
         "views/purchase_order_views.xml",

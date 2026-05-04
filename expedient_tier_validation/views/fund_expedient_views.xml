@@ -17,6 +17,7 @@
                 <field name="can_restart_validation_stage" invisible="1"/>
                 <field name="stage_validation_status" invisible="1"/>
                 <field name="has_stage_reviews" invisible="1"/>
+                <field name="requestor_user_id" invisible="1"/>
             </xpath>
             <xpath expr="//button[@name='action_next_stage']" position="attributes">
                 <attribute name="modifiers">{"invisible": ["|", ["state", "=", "cancel"], ["validation_status", "in", ["pending", "waiting", "rejected"]]]}</attribute>

@@ -55,6 +55,21 @@ class ExpedientLine(models.Model):
         related="expedient_id.company_id",
         store=True,
     )
+    currency_id = fields.Many2one(
+        related="expedient_id.currency_id",
+        store=True,
+        readonly=True,
+    )
+    amount_estimated_line = fields.Monetary(
+        string="Importe estimado",
+        currency_field="currency_id",
+        default=0.0,
+    )
+    amount_final_line = fields.Monetary(
+        string="Importe definitivo",
+        currency_field="currency_id",
+        default=0.0,
+    )
 
     @api.model
     def _default_uom(self):

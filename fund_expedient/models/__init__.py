@@ -11,6 +11,7 @@ from . import expedient_type
 from . import expedient_disposition
 from . import expedient_resolution
 from . import expedient_spend_request
+from . import expedient_notification_mail
 from . import expedient_line
 from . import fund_expedient
 from . import fund_expedient_document

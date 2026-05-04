@@ -38,13 +38,13 @@ class ExpedientStage(models.Model):
     spend_request_mode = fields.Selection(
         selection=[
             ("none", "Sin Solicitud de Gasto"),
-            ("initial", "Permite SG inicial"),
+            ("preventiva", "Permite SG preventiva"),
             ("final", "Permite SG definitiva"),
         ],
         string="Solicitud de Gasto",
         default="none",
         required=True,
-        help="Habilita la creación de Solicitud de Gasto (inicial o definitiva) desde el expediente en esta etapa.",
+        help="Habilita la creación de Solicitud de Gasto (preventiva o definitiva) desde el expediente en esta etapa.",
     )
     company_id = fields.Many2one(
         "res.company",

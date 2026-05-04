@@ -52,6 +52,8 @@
                                     <field name="group_ids" widget="many2many_tags" readonly="use_requestor"/>
                                     <field name="job_ids" widget="many2many_tags" readonly="use_requestor"/>
                                     <field name="user_ids" widget="many2many_tags" readonly="use_requestor"/>
+                                    <field name="is_final_stage" optional="show"/>
+                                    <field name="require_notification" optional="show"/>
                                 </list>
                                 <form string="Asignaciones por etapa">
                                     <group>
@@ -90,6 +92,14 @@
                                                widget="html"
                                                invisible="not require_resolution"
                                                placeholder="Observaciones predeterminadas para Resolución en esta etapa..."/>
+                                    </group>
+                                    <group string="Flujo">
+                                        <field name="is_final_stage"/>
+                                    </group>
+                                    <group string="Notificación a oferentes (por etapa)">
+                                        <field name="require_notification"/>
+                                        <field name="notification_template_id" invisible="not require_notification" required="require_notification"/>
+                                        <field name="notification_mail_server_id" invisible="not require_notification"/>
                                     </group>
                                 </form>
                             </field>

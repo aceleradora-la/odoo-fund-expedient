@@ -10,32 +10,43 @@ class PurchaseRequisitionCreateAlternative(models.TransientModel):
     def action_create_alternative(self):
         """Crear alternativas y copiar expedientes desde la RFQ original.
 
-        El wizard estándar crea una o varias RFQs alternativas a partir de la RFQ activa.
-        Como `expedient_ids` es un Many2many custom, lo replicamos explícitamente.
+        Las RFQs nuevas se detectan por diferencia en alternative_po_ids antes/después
+        del wizard estándar (más robusto que parsear solo el dict de retorno).
         """
-        # Capturar RFQ original antes de crear alternativas
         active_id = self.env.context.get("active_id")
-        original_po = self.env["purchase.order"].browse(active_id).exists() if active_id else self.env["purchase.order"]
+        original_po = (
+            self.env["purchase.order"].browse(active_id).exists()
+            if active_id
+            else self.env["purchase.order"]
+        )
+        before_alt_ids = set()
+        if original_po and hasattr(original_po, "alternative_po_ids"):
+            before_alt_ids = set(original_po.alternative_po_ids.ids)
 
         res = super().action_create_alternative()
 
         if not original_po or not original_po.expedient_ids:
             return res
 
-        # Intentar recuperar alternativas creadas:
-        # - algunas versiones retornan un act_window con domain res_id(s)
-        # - fallback: usar relación alternative_po_ids del original
-        alt_pos = self.env["purchase.order"]
-        if isinstance(res, dict):
-            if res.get("res_model") == "purchase.order" and res.get("res_id"):
-                alt_pos = self.env["purchase.order"].browse(res["res_id"]).exists()
-            elif res.get("res_model") == "purchase.order" and res.get("domain"):
-                alt_pos = self.env["purchase.order"].search(res["domain"])
-        if not alt_pos and hasattr(original_po, "alternative_po_ids"):
-            alt_pos = original_po.alternative_po_ids
+        original_po.invalidate_recordset(["alternative_po_ids"])
+        new_alts = self.env["purchase.order"]
+        if hasattr(original_po, "alternative_po_ids"):
+            new_alts = original_po.alternative_po_ids.filtered(lambda p: p.id not in before_alt_ids)
 
-        if alt_pos:
-            alt_pos.write({"expedient_ids": [(6, 0, original_po.expedient_ids.ids)]})
+        if not new_alts and isinstance(res, dict):
+            if res.get("res_model") == "purchase.order":
+                rid = res.get("res_id")
+                if rid:
+                    new_alts = self.env["purchase.order"].browse(rid).exists()
+                if not new_alts:
+                    rids = res.get("res_ids")
+                    if isinstance(rids, (list, tuple)) and rids:
+                        new_alts = self.env["purchase.order"].browse(rids).exists()
+                if not new_alts and res.get("domain"):
+                    dom = res["domain"]
+                    new_alts = self.env["purchase.order"].search(dom)
+
+        if new_alts:
+            new_alts.write({"expedient_ids": [(6, 0, original_po.expedient_ids.ids)]})
 
         return res
-
