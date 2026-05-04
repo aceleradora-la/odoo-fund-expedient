@@ -30,7 +30,6 @@ class FundExpedientSpendRequest(models.Model):
         index=True,
         copy=False,
         default="/",
-        oldname="initial_number",
     )
     spend_state = fields.Selection(
         [
@@ -41,38 +40,28 @@ class FundExpedientSpendRequest(models.Model):
         readonly=True,
         index=True,
     )
-    date_preventiva = fields.Date(
-        string="Fecha preventiva",
-        oldname="initial_date",
-    )
+    date_preventiva = fields.Date(string="Fecha preventiva")
     amount_preventiva = fields.Monetary(
         string="Importe preventivo",
         currency_field="currency_id",
         readonly=True,
-        oldname="initial_amount",
     )
     amount_preventiva_unit = fields.Monetary(
         string="Importe preventivo (moneda tipo)",
         currency_field="approval_currency_id",
         readonly=True,
-        oldname="initial_amount_unit",
     )
 
-    date_definitiva = fields.Date(
-        string="Fecha definitiva",
-        oldname="final_date",
-    )
+    date_definitiva = fields.Date(string="Fecha definitiva")
     amount_definitiva = fields.Monetary(
         string="Importe definitivo",
         currency_field="currency_id",
         readonly=True,
-        oldname="final_amount_confirmed",
     )
     amount_definitiva_unit = fields.Monetary(
         string="Importe definitivo (moneda tipo)",
         currency_field="approval_currency_id",
         readonly=True,
-        oldname="final_amount_confirmed_unit",
     )
     # Conservado por compatibilidad con BD existente; no generar nuevos valores.
     final_number = fields.Char(

@@ -53,15 +53,10 @@ class FundExpedientNotificationMail(models.Model):
         "attachment_id",
         string="Adjuntos enviados",
     )
+    # Misma selección que mail.mail.state (no duplicar selection en related: Odoo 18 lo ignora y avisa).
     state = fields.Selection(
-        [
-            ("outgoing", "Enviando"),
-            ("sent", "Enviado"),
-            ("exception", "Error"),
-            ("cancel", "Cancelado"),
-        ],
-        string="Estado correo",
         related="mail_mail_id.state",
+        string="Estado correo",
         store=True,
         readonly=True,
     )

@@ -1,6 +1,52 @@
 # Copyright 2026
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 
+
+def _table_exists(cr, table_name):
+    cr.execute(
+        """
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = %s
+        """,
+        (table_name,),
+    )
+    return bool(cr.fetchone())
+
+
+def _column_exists(cr, table_name, column_name):
+    cr.execute(
+        """
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = %s
+          AND column_name = %s
+        """,
+        (table_name, column_name),
+    )
+    return bool(cr.fetchone())
+
+
+def pre_init_hook(cr):
+    """Antes de cargar modelos: renombrar columnas legacy de Solicitud de Gasto (sin usar oldname en Odoo 18)."""
+    table = "fund_expedient_spend_request"
+    if not _table_exists(cr, table):
+        return
+    renames = [
+        ("initial_number", "number"),
+        ("initial_date", "date_preventiva"),
+        ("initial_amount", "amount_preventiva"),
+        ("initial_amount_unit", "amount_preventiva_unit"),
+        ("final_date", "date_definitiva"),
+        ("final_amount_confirmed", "amount_definitiva"),
+        ("final_amount_confirmed_unit", "amount_definitiva_unit"),
+    ]
+    for old_name, new_name in renames:
+        if _column_exists(cr, table, old_name) and not _column_exists(cr, table, new_name):
+            cr.execute(
+                'ALTER TABLE "%s" RENAME COLUMN "%s" TO "%s";' % (table, old_name, new_name)
+            )
+
+
 def post_init_hook(cr, registry):
     """Migraciones ligeras al actualizar el módulo."""
     cr.execute(

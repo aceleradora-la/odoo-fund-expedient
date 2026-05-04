@@ -32,7 +32,10 @@ class FundExpedientNotificationSendWizard(models.TransientModel):
         string="Servidor saliente",
     )
     document_ids = fields.Many2many(
-        "fund.expedient.document",
+        comodel_name="fund.expedient.document",
+        relation="fund_exp_notif_wiz_doc_rel",
+        column1="wiz_id",
+        column2="doc_id",
         string="Documentos a adjuntar",
         domain="[('expedient_id', '=', expedient_id)]",
         help="Archivos cargados en el expediente que se adjuntarán al correo.",
