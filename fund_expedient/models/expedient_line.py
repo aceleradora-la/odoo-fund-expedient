@@ -45,11 +45,21 @@ class ExpedientLine(models.Model):
         required=True,
         default=lambda self: self._default_uom(),
     )
+    # Compatibilidad: mantenemos el campo legacy (Many2one) y migramos a multi-proveedor.
     recommended_supplier_id = fields.Many2one(
         "res.partner",
-        string="Proveedor recomendado",
+        string="Proveedor recomendado (legacy)",
         domain=[("is_company", "=", True)],
-        help="Si está vacío, se usa el proveedor recomendado del expediente.",
+        help="Campo legacy. Use 'Proveedores recomendados'.",
+    )
+    recommended_supplier_ids = fields.Many2many(
+        comodel_name="res.partner",
+        relation="fund_expedient_line_recommended_supplier_rel",
+        column1="line_id",
+        column2="partner_id",
+        string="Proveedores recomendados",
+        domain=[("is_company", "=", True)],
+        help="Lista de proveedores recomendados para esta línea. Si está vacío, se usarán los recomendados del expediente.",
     )
     company_id = fields.Many2one(
         related="expedient_id.company_id",

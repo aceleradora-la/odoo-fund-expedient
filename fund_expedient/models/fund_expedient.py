@@ -46,11 +46,23 @@ class FundExpedient(models.Model):
         string="Fecha estimada de la necesidad",
         tracking=True,
     )
+    # Compatibilidad: mantenemos el campo legacy (Many2one) y migramos a multi-proveedor.
     recommended_supplier_id = fields.Many2one(
         "res.partner",
-        string="Proveedor recomendado",
+        string="Proveedor recomendado (legacy)",
         tracking=True,
         domain=[("is_company", "=", True)],
+        help="Campo legacy. Use 'Proveedores recomendados'.",
+    )
+    recommended_supplier_ids = fields.Many2many(
+        comodel_name="res.partner",
+        relation="fund_expedient_recommended_supplier_rel",
+        column1="expedient_id",
+        column2="partner_id",
+        string="Proveedores recomendados",
+        tracking=True,
+        domain=[("is_company", "=", True)],
+        help="Proveedores recomendados generales del expediente (se usan cuando las líneas no definen proveedores).",
     )
     requestor_id = fields.Many2one(
         "hr.employee",
@@ -120,6 +132,10 @@ class FundExpedient(models.Model):
     )
     hide_recommended_supplier_id_stage = fields.Boolean(
         string="Ocultar Proveedor recomendado por etapa",
+        compute="_compute_stage_field_visibility",
+    )
+    hide_recommended_supplier_ids_stage = fields.Boolean(
+        string="Ocultar Proveedores recomendados por etapa",
         compute="_compute_stage_field_visibility",
     )
     hide_budget_position_id_stage = fields.Boolean(
@@ -528,6 +544,7 @@ class FundExpedient(models.Model):
             rec.hide_encuadre_id_stage = False
             rec.hide_estimated_need_date_stage = False
             rec.hide_recommended_supplier_id_stage = False
+            rec.hide_recommended_supplier_ids_stage = False
             rec.hide_budget_position_id_stage = False
             rec.hide_analytic_account_id_stage = False
             rec.hide_amount_estimated_stage = False
@@ -546,6 +563,7 @@ class FundExpedient(models.Model):
             rec.hide_encuadre_id_stage = assign.hide_encuadre_id
             rec.hide_estimated_need_date_stage = assign.hide_estimated_need_date
             rec.hide_recommended_supplier_id_stage = assign.hide_recommended_supplier_id
+            rec.hide_recommended_supplier_ids_stage = assign.hide_recommended_supplier_id
             rec.hide_budget_position_id_stage = assign.hide_budget_position_id
             # Reutilizamos el mismo flag de ocultación para la nueva cuenta analítica.
             rec.hide_analytic_account_id_stage = assign.hide_budget_position_id

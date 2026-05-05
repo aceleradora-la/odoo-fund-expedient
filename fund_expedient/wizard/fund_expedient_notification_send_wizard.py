@@ -52,6 +52,29 @@ class FundExpedientNotificationSendWizard(models.TransientModel):
         store=False,
     )
 
+    @api.model
+    def default_get(self, fields_list):
+        res = super().default_get(fields_list)
+        exp_id = res.get("expedient_id") or self.env.context.get("default_expedient_id")
+        stage_id = res.get("stage_id") or self.env.context.get("default_stage_id")
+        if exp_id and stage_id and "document_ids" in fields_list:
+            exp = self.env["fund.expedient"].browse(exp_id).exists()
+            if exp:
+                # Preseleccionar documentos vinculados a disposición y/o resolución de la etapa actual
+                dispo_ids = exp.disposition_ids.filtered(lambda d: d.stage_id.id == stage_id).ids
+                reso_ids = exp.resolution_ids.filtered(lambda r: r.stage_id.id == stage_id).ids
+                docs = exp.document_ids.filtered(
+                    lambda doc: doc.stage_id.id == stage_id
+                    and (
+                        (doc.disposition_id and doc.disposition_id.id in dispo_ids)
+                        or (doc.resolution_id and doc.resolution_id.id in reso_ids)
+                    )
+                    and bool(doc.file_data)
+                )
+                if docs:
+                    res["document_ids"] = [(6, 0, docs.ids)]
+        return res
+
     @api.depends("expedient_id", "stage_id")
     def _compute_pending_partners(self):
         for wiz in self:

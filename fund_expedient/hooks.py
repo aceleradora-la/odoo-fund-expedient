@@ -102,3 +102,25 @@ def post_init_hook(cr, registry):
            )
         """
     )
+
+    # Migración proveedor recomendado (legacy Many2one → Many2many)
+    # Expediente: copiar recommended_supplier_id hacia tabla rel.
+    cr.execute(
+        """
+        INSERT INTO fund_expedient_recommended_supplier_rel (expedient_id, partner_id)
+        SELECT fe.id, fe.recommended_supplier_id
+          FROM fund_expedient fe
+         WHERE fe.recommended_supplier_id IS NOT NULL
+        ON CONFLICT DO NOTHING
+        """
+    )
+    # Líneas: copiar recommended_supplier_id hacia tabla rel.
+    cr.execute(
+        """
+        INSERT INTO fund_expedient_line_recommended_supplier_rel (line_id, partner_id)
+        SELECT fl.id, fl.recommended_supplier_id
+          FROM fund_expedient_line fl
+         WHERE fl.recommended_supplier_id IS NOT NULL
+        ON CONFLICT DO NOTHING
+        """
+    )

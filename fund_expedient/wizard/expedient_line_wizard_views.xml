@@ -16,7 +16,7 @@
                             <field name="product_id"/>
                             <field name="name"/>
                             <field name="product_qty"/>
-                            <field name="recommended_supplier_id"/>
+                            <field name="recommended_supplier_ids" widget="many2many_tags"/>
                         </list>
                     </field>
                 </group>

@@ -47,7 +47,13 @@ class ExpedientLineWizard(models.TransientModel):
             res["line_ids"] = [(6, 0, lines.ids)]
         return res
 
-    @api.depends("line_ids", "line_ids.recommended_supplier_id", "expedient_id.recommended_supplier_id")
+    @api.depends(
+        "line_ids",
+        "line_ids.recommended_supplier_ids",
+        "line_ids.recommended_supplier_id",
+        "expedient_id.recommended_supplier_ids",
+        "expedient_id.recommended_supplier_id",
+    )
     def _compute_supplier_summary(self):
         for wiz in self:
             if not wiz.line_ids:
@@ -61,11 +67,28 @@ class ExpedientLineWizard(models.TransientModel):
             wiz.supplier_summary = " | ".join(parts) if parts else ""
 
     def _group_lines_by_supplier(self):
-        """Agrupa líneas por proveedor efectivo."""
+        """Agrupa líneas por proveedor efectivo.
+
+        Regla:
+        - Si la línea tiene proveedores recomendados (multi), la línea se duplica en cada proveedor.
+        - Si no tiene, y el expediente tiene proveedores recomendados (multi), se duplica para cada proveedor.
+        - Si no hay multi, usa campos legacy (Many2one) como fallback.
+        """
         grouped = defaultdict(list)
         for line in self.line_ids:
-            partner = line.recommended_supplier_id or self.expedient_id.recommended_supplier_id
-            grouped[partner].append(line)
+            partners = line.recommended_supplier_ids
+            if not partners:
+                partners = self.expedient_id.recommended_supplier_ids
+            # Fallback legacy
+            if not partners:
+                legacy = line.recommended_supplier_id or self.expedient_id.recommended_supplier_id
+                partners = legacy if legacy else self.env["res.partner"]
+            if isinstance(partners, models.BaseModel):
+                # recordset (res.partner)
+                for p in partners:
+                    grouped[p].append(line)
+            else:
+                grouped[False].append(line)
         return grouped
 
     def _get_service_product(self):
@@ -134,6 +157,15 @@ class ExpedientLineWizard(models.TransientModel):
                 vals["order_id"] = po.id
                 self.env["purchase.order.line"].create(vals)
             created |= po
+        # Vincular como alternativas (si está disponible en el modelo purchase.order)
+        if len(created) > 1 and hasattr(created, "alternative_po_ids"):
+            base = created.sorted(key=lambda p: p.id)[:1]
+            alts = created - base
+            try:
+                base.write({"alternative_po_ids": [(6, 0, alts.ids)]})
+            except Exception:
+                # Si el campo no permite escritura directa en esta instalación, omitimos sin bloquear.
+                pass
         return {
             "type": "ir.actions.act_window",
             "name": "Solicitudes creadas",

@@ -9,7 +9,7 @@
                 <field name="number"/>
                 <field name="request_date"/>
                 <field name="requestor_id"/>
-                <field name="recommended_supplier_id"/>
+                <field name="recommended_supplier_ids" widget="many2many_tags"/>
                 <field name="budget_position_id"/>
                 <field name="encuadre_id"/>
                 <field name="type_id"/>
@@ -34,7 +34,7 @@
                 <field name="number"/>
                 <field name="request_date"/>
                 <field name="requestor_id"/>
-                <field name="recommended_supplier_id"/>
+                <field name="recommended_supplier_ids" widget="many2many_tags"/>
                 <field name="stage_id" options="{'no_create': True}"/>
                 <field name="state"/>
                 <field name="description_plain"/>
@@ -78,6 +78,7 @@
                     <field name="hide_encuadre_id_stage" invisible="1"/>
                     <field name="hide_estimated_need_date_stage" invisible="1"/>
                     <field name="hide_recommended_supplier_id_stage" invisible="1"/>
+                    <field name="hide_recommended_supplier_ids_stage" invisible="1"/>
                     <field name="hide_budget_position_id_stage" invisible="1"/>
                     <field name="hide_amount_estimated_stage" invisible="1"/>
                     <button name="action_previous_stage" type="object" string="Etapa anterior"
@@ -144,7 +145,7 @@
                             <field name="encuadre_id" invisible="not show_encuadre or hide_encuadre_id_stage"/>
                             <field name="estimated_need_date" invisible="hide_estimated_need_date_stage"/>
                             <field name="requestor_id"/>
-                            <field name="recommended_supplier_id" invisible="hide_recommended_supplier_id_stage"/>
+                            <field name="recommended_supplier_ids" widget="many2many_tags" invisible="hide_recommended_supplier_ids_stage"/>
                         </group>
                         <group string="Clasificación">
                             <field name="analytic_plan_id" invisible="1"/>
@@ -197,7 +198,7 @@
                                     <field name="product_uom_id"/>
                                     <field name="amount_estimated_line"/>
                                     <field name="amount_final_line"/>
-                                    <field name="recommended_supplier_id"/>
+                                    <field name="recommended_supplier_ids" widget="many2many_tags"/>
                                 </list>
                             </field>
                         </page>

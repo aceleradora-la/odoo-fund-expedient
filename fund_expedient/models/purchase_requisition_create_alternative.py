@@ -13,28 +13,36 @@ class PurchaseRequisitionCreateAlternative(models.TransientModel):
         Las RFQs nuevas se detectan por diferencia en alternative_po_ids antes/después
         del wizard estándar (más robusto que parsear solo el dict de retorno).
         """
+        active_ids = self.env.context.get("active_ids") or []
         active_id = self.env.context.get("active_id")
-        original_po = (
-            self.env["purchase.order"].browse(active_id).exists()
-            if active_id
-            else self.env["purchase.order"]
-        )
-        before_alt_ids = set()
-        if original_po and hasattr(original_po, "alternative_po_ids"):
-            before_alt_ids = set(original_po.alternative_po_ids.ids)
+        if not active_ids and active_id:
+            active_ids = [active_id]
+
+        originals = self.env["purchase.order"].browse(active_ids).exists()
+        before_by_original = {}
+        for po in originals:
+            if hasattr(po, "alternative_po_ids"):
+                before_by_original[po.id] = set(po.alternative_po_ids.ids)
+            else:
+                before_by_original[po.id] = set()
 
         res = super().action_create_alternative()
 
-        if not original_po or not original_po.expedient_ids:
-            return res
+        for original_po in originals:
+            if not original_po.expedient_ids:
+                continue
 
-        original_po.invalidate_recordset(["alternative_po_ids"])
-        new_alts = self.env["purchase.order"]
-        if hasattr(original_po, "alternative_po_ids"):
-            new_alts = original_po.alternative_po_ids.filtered(lambda p: p.id not in before_alt_ids)
+            # 1) Detectar alternativas nuevas con before/after
+            original_po.invalidate_recordset(["alternative_po_ids", "order_line"])
+            new_alts = self.env["purchase.order"]
+            if hasattr(original_po, "alternative_po_ids"):
+                before_alt_ids = before_by_original.get(original_po.id, set())
+                new_alts = original_po.alternative_po_ids.filtered(
+                    lambda p: p.id not in before_alt_ids
+                )
 
-        if not new_alts and isinstance(res, dict):
-            if res.get("res_model") == "purchase.order":
+            # 2) Fallback: parsear retorno (último recurso)
+            if not new_alts and isinstance(res, dict) and res.get("res_model") == "purchase.order":
                 rid = res.get("res_id")
                 if rid:
                     new_alts = self.env["purchase.order"].browse(rid).exists()
@@ -43,10 +51,25 @@ class PurchaseRequisitionCreateAlternative(models.TransientModel):
                     if isinstance(rids, (list, tuple)) and rids:
                         new_alts = self.env["purchase.order"].browse(rids).exists()
                 if not new_alts and res.get("domain"):
-                    dom = res["domain"]
-                    new_alts = self.env["purchase.order"].search(dom)
+                    new_alts = self.env["purchase.order"].search(res["domain"])
 
-        if new_alts:
+            if not new_alts:
+                continue
+
+            # Copiar expediente(s)
             new_alts.write({"expedient_ids": [(6, 0, original_po.expedient_ids.ids)]})
+
+            # Copiar descripción extendida de líneas (campo name) hacia alternativas
+            orig_lines = original_po.order_line.sorted(key=lambda l: (l.sequence, l.id))
+            for alt in new_alts:
+                alt.invalidate_recordset(["order_line"])
+                alt_lines = alt.order_line.sorted(key=lambda l: (l.sequence, l.id))
+                for ol, al in zip(orig_lines, alt_lines):
+                    # Mantener también secciones/notas si existen
+                    if ol.name and al.name != ol.name:
+                        try:
+                            al.write({"name": ol.name})
+                        except Exception:
+                            pass
 
         return res

@@ -133,6 +133,8 @@ class FundExpedientSpendRequest(models.Model):
                     "name": line.name,
                     "product_qty": line.product_qty,
                     "product_uom_id": line.product_uom_id.id,
+                    "amount_estimated_line": line.amount_estimated_line or 0.0,
+                    "amount_final_line": line.amount_final_line or 0.0,
                 }
             )
         self.line_ids = [(0, 0, v) for v in lines_vals]
@@ -161,6 +163,18 @@ class FundExpedientSpendRequest(models.Model):
 
         self.amount_definitiva = exp.amount_estimated_confirmed or 0.0
         self.amount_definitiva_unit = exp.amount_estimated_confirmed_unit or 0.0
+        # Refrescar importes definitivos desde las líneas actuales del expediente
+        exp_lines = exp.line_ids.sorted(key=lambda l: (l.sequence, l.id))
+        snap_lines = self.line_ids.sorted(key=lambda l: (l.sequence, l.id))
+        for snap, src in zip(snap_lines, exp_lines):
+            if snap.display_type or src.display_type:
+                continue
+            snap.write(
+                {
+                    "amount_estimated_line": src.amount_estimated_line or 0.0,
+                    "amount_final_line": src.amount_final_line or 0.0,
+                }
+            )
         return True
 
 
@@ -197,6 +211,17 @@ class FundExpedientSpendRequestLine(models.Model):
     )
     product_uom_id = fields.Many2one("uom.uom", string="Unidad")
     company_id = fields.Many2one(related="spend_request_id.company_id", store=True)
+    currency_id = fields.Many2one(related="spend_request_id.currency_id", store=True, readonly=True)
+    amount_estimated_line = fields.Monetary(
+        string="Importe estimado",
+        currency_field="currency_id",
+        readonly=True,
+    )
+    amount_final_line = fields.Monetary(
+        string="Importe definitivo",
+        currency_field="currency_id",
+        readonly=True,
+    )
 
     @api.constrains("product_id", "name", "display_type")
     def _check_name_required(self):
