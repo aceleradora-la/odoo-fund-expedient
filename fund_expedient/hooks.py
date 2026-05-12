@@ -2,6 +2,11 @@
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 
 
+def _cursor_from_hook_arg(cr_or_env):
+    """Odoo 18: `pre_init_hook` recibe `Environment`; en versiones anteriores recibía `cr`."""
+    return cr_or_env.cr if hasattr(cr_or_env, "cr") else cr_or_env
+
+
 def _table_exists(cr, table_name):
     cr.execute(
         """
@@ -26,8 +31,9 @@ def _column_exists(cr, table_name, column_name):
     return bool(cr.fetchone())
 
 
-def pre_init_hook(cr):
+def pre_init_hook(cr_or_env):
     """Antes de cargar modelos: renombrar columnas legacy de Solicitud de Gasto (sin usar oldname en Odoo 18)."""
+    cr = _cursor_from_hook_arg(cr_or_env)
     table = "fund_expedient_spend_request"
     if not _table_exists(cr, table):
         return
@@ -47,8 +53,9 @@ def pre_init_hook(cr):
             )
 
 
-def post_init_hook(cr, registry):
+def post_init_hook(cr_or_env, registry=None):
     """Migraciones ligeras al actualizar el módulo."""
+    cr = _cursor_from_hook_arg(cr_or_env)
     cr.execute(
         """
         UPDATE fund_expedient_stage
