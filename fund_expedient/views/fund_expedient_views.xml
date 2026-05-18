@@ -7,6 +7,7 @@
         <field name="arch" type="xml">
             <list string="Expedientes" multi_edit="1" create="1">
                 <field name="number"/>
+                <field name="type_number" optional="show"/>
                 <field name="request_date"/>
                 <field name="requestor_id"/>
                 <field name="recommended_supplier_ids" widget="many2many_tags"/>
@@ -75,6 +76,7 @@
                     <field name="line_amounts_drive_confirmed" invisible="1"/>
                     <field name="requestor_user_id" invisible="1"/>
                     <field name="hide_type_id_stage" invisible="1"/>
+                    <field name="type_id_editable_in_stage" invisible="1"/>
                     <field name="hide_encuadre_id_stage" invisible="1"/>
                     <field name="hide_estimated_need_date_stage" invisible="1"/>
                     <field name="hide_recommended_supplier_id_stage" invisible="1"/>
@@ -138,8 +140,9 @@
                     <group>
                         <group string="Identificación">
                             <field name="number" readonly="1"/>
+                            <field name="type_number" readonly="1" invisible="not type_number"/>
                             <field name="request_date"/>
-                            <field name="type_id" invisible="hide_type_id_stage"/>
+                            <field name="type_id" invisible="hide_type_id_stage" readonly="not type_id_editable_in_stage"/>
                             <field name="type_unit_mode" invisible="1"/>
                             <field name="show_encuadre" invisible="1"/>
                             <field name="encuadre_id" invisible="not show_encuadre or hide_encuadre_id_stage"/>

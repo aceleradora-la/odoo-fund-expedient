@@ -25,6 +25,13 @@ class FundExpedient(models.Model):
         readonly=True,
         index=True,
     )
+    type_number = fields.Char(
+        string="Número por tipo",
+        copy=False,
+        readonly=True,
+        index=True,
+        help="Numeración según la secuencia configurada en el tipo de expediente.",
+    )
     @api.model
     def _default_requestor_id(self):
         employee = self.env["hr.employee"].search(
@@ -120,6 +127,10 @@ class FundExpedient(models.Model):
     )
     hide_type_id_stage = fields.Boolean(
         string="Ocultar Tipo por etapa",
+        compute="_compute_stage_field_visibility",
+    )
+    type_id_editable_in_stage = fields.Boolean(
+        string="Tipo editable en etapa",
         compute="_compute_stage_field_visibility",
     )
     hide_encuadre_id_stage = fields.Boolean(
@@ -531,6 +542,7 @@ class FundExpedient(models.Model):
         "stage_id",
         "type_id.stage_assign_ids",
         "type_id.stage_assign_ids.hide_type_id",
+        "type_id.stage_assign_ids.allow_edit_type_id",
         "type_id.stage_assign_ids.hide_encuadre_id",
         "type_id.stage_assign_ids.hide_estimated_need_date",
         "type_id.stage_assign_ids.hide_recommended_supplier_id",
@@ -541,6 +553,7 @@ class FundExpedient(models.Model):
         Assign = self.env["fund.expedient.type.stage.assign"]
         for rec in self:
             rec.hide_type_id_stage = False
+            rec.type_id_editable_in_stage = True
             rec.hide_encuadre_id_stage = False
             rec.hide_estimated_need_date_stage = False
             rec.hide_recommended_supplier_id_stage = False
@@ -548,6 +561,8 @@ class FundExpedient(models.Model):
             rec.hide_budget_position_id_stage = False
             rec.hide_analytic_account_id_stage = False
             rec.hide_amount_estimated_stage = False
+            if not rec.id:
+                rec.type_id_editable_in_stage = True
             if not rec.type_id or not rec.stage_id:
                 continue
             assign = Assign.search(
@@ -560,6 +575,8 @@ class FundExpedient(models.Model):
             if not assign:
                 continue
             rec.hide_type_id_stage = assign.hide_type_id
+            if rec.id:
+                rec.type_id_editable_in_stage = bool(assign.allow_edit_type_id)
             rec.hide_encuadre_id_stage = assign.hide_encuadre_id
             rec.hide_estimated_need_date_stage = assign.hide_estimated_need_date
             rec.hide_recommended_supplier_id_stage = assign.hide_recommended_supplier_id
@@ -1111,6 +1128,28 @@ class FundExpedient(models.Model):
                 )
 
             new_vals = dict(vals)
+            if (
+                "type_id" in new_vals
+                and new_vals.get("type_id")
+                and new_vals.get("type_id") != rec.type_id.id
+                and not self.env.context.get("skip_type_change_check")
+            ):
+                assign_cur = Assign.search(
+                    [
+                        ("type_id", "=", rec.type_id.id),
+                        ("stage_id", "=", rec.stage_id.id),
+                    ],
+                    limit=1,
+                )
+                if assign_cur and not assign_cur.allow_edit_type_id:
+                    raise UserError(
+                        _(
+                            "No puede cambiar el tipo de expediente en la etapa «%s». "
+                            "Habilite «Permitir modificar tipo» en la configuración del tipo para esta etapa."
+                        )
+                        % rec.stage_id.name
+                    )
+
             company = (
                 self.env["res.company"].browse(new_vals["company_id"])
                 if new_vals.get("company_id")
@@ -1297,6 +1336,10 @@ class FundExpedient(models.Model):
             if vals.get("number", "/") == "/":
                 seq = self.env["ir.sequence"].next_by_code("fund.expedient") or "/"
                 vals["number"] = seq
+            if vals.get("type_id") and not vals.get("type_number"):
+                expedient_type = Type.browse(vals["type_id"])
+                if expedient_type.sequence_id:
+                    vals["type_number"] = expedient_type.sequence_id.next_by_id() or False
             # Aplicar memo/descripcion por defecto del tipo si no se envió descripción.
             desc = vals.get("description")
             if self._is_empty_html(desc) and vals.get("type_id"):

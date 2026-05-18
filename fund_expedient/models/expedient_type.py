@@ -1,9 +1,9 @@
 # Copyright 2025
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 
-from odoo import api, fields, models
+from odoo import _, api, fields, models
 from odoo.tools.sql import table_exists
-from odoo.exceptions import ValidationError
+from odoo.exceptions import UserError, ValidationError
 
 
 class ExpedientTypeStageAssign(models.Model):
@@ -58,6 +58,11 @@ class ExpedientTypeStageAssign(models.Model):
         help="Usuarios concretos asignados a esta etapa (además de grupos y puestos).",
     )
     hide_type_id = fields.Boolean(string="Ocultar Tipo")
+    allow_edit_type_id = fields.Boolean(
+        string="Permitir modificar tipo",
+        help="Si está activo, el campo Tipo del expediente puede editarse en esta etapa. "
+        "Si está inactivo y el tipo es visible, queda bloqueado.",
+    )
     hide_encuadre_id = fields.Boolean(string="Ocultar Encuadre")
     hide_estimated_need_date = fields.Boolean(string="Ocultar Fecha estimada")
     hide_recommended_supplier_id = fields.Boolean(string="Ocultar Proveedor recomendado")
@@ -241,6 +246,12 @@ class ExpedientType(models.Model):
         "type_id",
         string="Asignaciones por etapa",
     )
+    sequence_id = fields.Many2one(
+        "ir.sequence",
+        string="Secuencia numérica del tipo",
+        copy=False,
+        help="Numeración independiente para expedientes de este tipo (además del número interno EXP-).",
+    )
     encuadre_ids = fields.Many2many(
         "fund.expedient.encuadre",
         "fund_expedient_type_encuadre_rel",
@@ -264,3 +275,26 @@ class ExpedientType(models.Model):
         string="Compañía",
         default=lambda self: self.env.company,
     )
+
+    def action_create_type_sequence(self):
+        """Crea una secuencia dedicada para este tipo (numeración por tipo)."""
+        Sequence = self.env["ir.sequence"].sudo()
+        for rec in self:
+            if rec.sequence_id:
+                raise UserError(
+                    _("El tipo «%s» ya tiene una secuencia asignada (%s).")
+                    % (rec.name, rec.sequence_id.display_name)
+                )
+            prefix = "".join(c for c in (rec.name or "TIPO")[:12].upper() if c.isalnum()) or "TIPO"
+            seq = Sequence.create(
+                {
+                    "name": _("Numeración expedientes - %s") % rec.name,
+                    "code": "fund.expedient.type.%s" % rec.id,
+                    "prefix": "%s-" % prefix,
+                    "padding": 4,
+                    "implementation": "no_gap",
+                    "company_id": rec.company_id.id or False,
+                }
+            )
+            rec.sequence_id = seq.id
+        return True
