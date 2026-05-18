@@ -63,6 +63,11 @@ class ExpedientTypeStageAssign(models.Model):
         help="Si está activo, el campo Tipo del expediente puede editarse en esta etapa. "
         "Si está inactivo y el tipo es visible, queda bloqueado.",
     )
+    allow_edit_line_amount_final = fields.Boolean(
+        string="Permitir editar importe definitivo (líneas)",
+        help="Si está activo, se pueden cargar importes definitivos en las líneas del expediente "
+        "y el total confirmado manual en esta etapa.",
+    )
     hide_encuadre_id = fields.Boolean(string="Ocultar Encuadre")
     hide_estimated_need_date = fields.Boolean(string="Ocultar Fecha estimada")
     hide_recommended_supplier_id = fields.Boolean(string="Ocultar Proveedor recomendado")

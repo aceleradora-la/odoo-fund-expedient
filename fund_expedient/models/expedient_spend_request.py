@@ -36,11 +36,33 @@ class FundExpedientSpendRequest(models.Model):
             ("preventiva", "Preventiva"),
             ("definitiva", "Definitiva"),
         ],
-        string="Estado",
+        string="Fase SG",
         readonly=True,
         index=True,
     )
-    date_preventiva = fields.Date(string="Fecha preventiva")
+    preventiva_state = fields.Selection(
+        [
+            ("draft", "Borrador"),
+            ("generated", "Generada"),
+            ("approved", "Aprobada"),
+        ],
+        string="Estado preventiva",
+        readonly=True,
+        default="draft",
+        index=True,
+    )
+    definitiva_state = fields.Selection(
+        [
+            ("draft", "Borrador"),
+            ("generated", "Generada"),
+            ("approved", "Aprobada"),
+        ],
+        string="Estado definitiva",
+        readonly=True,
+        default="draft",
+        index=True,
+    )
+    date_preventiva = fields.Date(string="Fecha preventiva", readonly=True)
     amount_preventiva = fields.Monetary(
         string="Importe preventivo",
         currency_field="currency_id",
@@ -52,7 +74,7 @@ class FundExpedientSpendRequest(models.Model):
         readonly=True,
     )
 
-    date_definitiva = fields.Date(string="Fecha definitiva")
+    date_definitiva = fields.Date(string="Fecha definitiva", readonly=True)
     amount_definitiva = fields.Monetary(
         string="Importe definitivo",
         currency_field="currency_id",
@@ -63,7 +85,6 @@ class FundExpedientSpendRequest(models.Model):
         currency_field="approval_currency_id",
         readonly=True,
     )
-    # Conservado por compatibilidad con BD existente; no generar nuevos valores.
     final_number = fields.Char(
         string="Número definitiva (hist.)",
         readonly=True,
@@ -101,13 +122,59 @@ class FundExpedientSpendRequest(models.Model):
         )
     ]
 
+    @api.model_create_multi
+    def create(self, vals_list):
+        for vals in vals_list:
+            exp_id = vals.get("expedient_id")
+            if exp_id and self.search_count([("expedient_id", "=", exp_id)]):
+                raise UserError(
+                    _("Ya existe una Solicitud de Gasto para este expediente.")
+                )
+        return super().create(vals_list)
+
     def _next_number(self, code):
         self.ensure_one()
         seq_env = self.env["ir.sequence"].with_company(self.company_id)
         return seq_env.next_by_code(code) or "/"
 
+    def _line_vals_from_expedient_line(self, line):
+        return {
+            "sequence": line.sequence,
+            "display_type": line.display_type,
+            "product_id": line.product_id.id,
+            "name": line.name,
+            "product_qty": line.product_qty,
+            "product_uom_id": line.product_uom_id.id,
+            "amount_estimated_line": line.amount_estimated_line or 0.0,
+            "amount_final_line": line.amount_final_line or 0.0,
+            "budget_position_id": line.budget_position_id.id,
+            "analytic_account_id": line.analytic_account_id.id,
+        }
+
+    def _snapshot_lines_from_expedient(self, exp, replace=False):
+        """Copia líneas del expediente al snapshot de la SG."""
+        self.ensure_one()
+        if replace:
+            self.line_ids.unlink()
+        lines_vals = []
+        for line in exp.line_ids.sorted(key=lambda l: (l.sequence, l.id)):
+            lines_vals.append((0, 0, self._line_vals_from_expedient_line(line)))
+        if lines_vals:
+            self.write({"line_ids": lines_vals})
+
+    def _sync_lines_from_expedient(self, exp):
+        """Actualiza líneas existentes emparejando por sequence e id de origen."""
+        self.ensure_one()
+        exp_lines = exp.line_ids.sorted(key=lambda l: (l.sequence, l.id))
+        snap_lines = self.line_ids.sorted(key=lambda l: (l.sequence, l.id))
+        if len(snap_lines) != len(exp_lines):
+            self._snapshot_lines_from_expedient(exp, replace=True)
+            return
+        for snap, src in zip(snap_lines, exp_lines):
+            snap.write(self._line_vals_from_expedient_line(src))
+
     def action_generate_preventiva(self):
-        """Genera número único y snapshot preventivo (antes SG inicial)."""
+        """Genera número único y snapshot preventivo."""
         self.ensure_one()
         exp = self.expedient_id
         if not exp:
@@ -116,66 +183,73 @@ class FundExpedientSpendRequest(models.Model):
             raise UserError(_("La etapa actual no permite crear Solicitud de Gasto preventiva."))
         if not self.number or self.number == "/":
             self.number = self._next_number("fund.expedient.spend.request")
-        self.spend_state = "preventiva"
-        if not self.date_preventiva:
-            self.date_preventiva = fields.Date.context_today(self)
-        self.amount_preventiva = exp.amount_estimated or 0.0
-        self.amount_preventiva_unit = exp.amount_estimated_unit or 0.0
-
-        self.line_ids.unlink()
-        lines_vals = []
-        for line in exp.line_ids.sorted(key=lambda l: (l.sequence, l.id)):
-            lines_vals.append(
-                {
-                    "sequence": line.sequence,
-                    "display_type": line.display_type,
-                    "product_id": line.product_id.id,
-                    "name": line.name,
-                    "product_qty": line.product_qty,
-                    "product_uom_id": line.product_uom_id.id,
-                    "amount_estimated_line": line.amount_estimated_line or 0.0,
-                    "amount_final_line": line.amount_final_line or 0.0,
-                }
-            )
-        self.line_ids = [(0, 0, v) for v in lines_vals]
+        self.write(
+            {
+                "spend_state": "preventiva",
+                "preventiva_state": "generated",
+                "date_preventiva": fields.Date.context_today(self),
+                "amount_preventiva": exp.amount_estimated or 0.0,
+                "amount_preventiva_unit": exp.amount_estimated_unit or 0.0,
+            }
+        )
+        self._snapshot_lines_from_expedient(exp, replace=True)
         return True
 
     def action_generate_initial(self):
-        """Alias retrocompatible."""
         return self.action_generate_preventiva()
 
     def action_generate_final(self):
-        """Pasa a definitiva: mismo número, completa importes."""
+        """Pasa a definitiva: mismo número, snapshot actualizado desde expediente."""
         self.ensure_one()
         exp = self.expedient_id
         if not exp:
             raise UserError(_("La Solicitud de Gasto debe estar vinculada a un expediente."))
         if exp.stage_id.spend_request_mode != "final":
             raise UserError(_("La etapa actual no permite pasar a Solicitud de Gasto definitiva."))
+        if self.preventiva_state != "approved":
+            raise UserError(
+                _("La Solicitud de Gasto preventiva debe estar aprobada antes de generar la definitiva.")
+            )
         if not self.number or self.number == "/":
             raise UserError(_("Primero debe existir la Solicitud de Gasto preventiva con número asignado."))
         if not self.line_ids:
             raise UserError(_("La Solicitud de Gasto preventiva no tiene líneas."))
 
-        self.spend_state = "definitiva"
-        if not self.date_definitiva:
-            self.date_definitiva = fields.Date.context_today(self)
-
-        self.amount_definitiva = exp.amount_estimated_confirmed or 0.0
-        self.amount_definitiva_unit = exp.amount_estimated_confirmed_unit or 0.0
-        # Refrescar importes definitivos desde las líneas actuales del expediente
-        exp_lines = exp.line_ids.sorted(key=lambda l: (l.sequence, l.id))
-        snap_lines = self.line_ids.sorted(key=lambda l: (l.sequence, l.id))
-        for snap, src in zip(snap_lines, exp_lines):
-            if snap.display_type or src.display_type:
-                continue
-            snap.write(
-                {
-                    "amount_estimated_line": src.amount_estimated_line or 0.0,
-                    "amount_final_line": src.amount_final_line or 0.0,
-                }
-            )
+        self.write(
+            {
+                "spend_state": "definitiva",
+                "definitiva_state": "generated",
+                "date_definitiva": fields.Date.context_today(self),
+                "amount_definitiva": exp.amount_estimated_confirmed or 0.0,
+                "amount_definitiva_unit": exp.amount_estimated_confirmed_unit or 0.0,
+            }
+        )
+        self._sync_lines_from_expedient(exp)
         return True
+
+    def _mark_phase_approved(self, phase):
+        """Usado por tier validation al completar aprobaciones de una fase."""
+        self.ensure_one()
+        if phase == "preventiva":
+            self.preventiva_state = "approved"
+        elif phase == "definitiva":
+            self.definitiva_state = "approved"
+
+    def is_phase_approved(self, phase):
+        self.ensure_one()
+        if phase == "preventiva":
+            return self.preventiva_state == "approved"
+        if phase == "definitiva":
+            return self.definitiva_state == "approved"
+        return False
+
+    def is_phase_generated(self, phase):
+        self.ensure_one()
+        if phase == "preventiva":
+            return self.preventiva_state in ("generated", "approved")
+        if phase == "definitiva":
+            return self.definitiva_state in ("generated", "approved")
+        return False
 
 
 class FundExpedientSpendRequestLine(models.Model):
@@ -194,7 +268,6 @@ class FundExpedientSpendRequestLine(models.Model):
     display_type = fields.Selection(
         [("line_section", "Sección"), ("line_note", "Nota")],
         default=False,
-        help="Tipo de línea para secciones o notas.",
     )
     product_id = fields.Many2one(
         "product.product",
@@ -212,6 +285,16 @@ class FundExpedientSpendRequestLine(models.Model):
     product_uom_id = fields.Many2one("uom.uom", string="Unidad")
     company_id = fields.Many2one(related="spend_request_id.company_id", store=True)
     currency_id = fields.Many2one(related="spend_request_id.currency_id", store=True, readonly=True)
+    budget_position_id = fields.Many2one(
+        "fund.budget.position",
+        string="Partida presupuestaria",
+        readonly=True,
+    )
+    analytic_account_id = fields.Many2one(
+        "account.analytic.account",
+        string="Cuenta analítica",
+        readonly=True,
+    )
     amount_estimated_line = fields.Monetary(
         string="Importe estimado",
         currency_field="currency_id",

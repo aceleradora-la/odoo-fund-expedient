@@ -59,6 +59,7 @@
                                     <field name="job_ids" widget="many2many_tags" readonly="use_requestor"/>
                                     <field name="user_ids" widget="many2many_tags" readonly="use_requestor"/>
                                     <field name="allow_edit_type_id" optional="show"/>
+                                    <field name="allow_edit_line_amount_final" optional="show"/>
                                     <field name="is_final_stage" optional="show"/>
                                     <field name="require_notification" optional="show"/>
                                 </list>
@@ -78,6 +79,7 @@
                                     </group>
                                     <group string="Tipo de expediente">
                                         <field name="allow_edit_type_id"/>
+                                        <field name="allow_edit_line_amount_final"/>
                                         <field name="hide_type_id"/>
                                     </group>
                                     <group string="Campos ocultables en expediente">

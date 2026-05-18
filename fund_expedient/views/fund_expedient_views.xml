@@ -10,7 +10,9 @@
                 <field name="type_number" optional="show"/>
                 <field name="request_date"/>
                 <field name="requestor_id"/>
-                <field name="recommended_supplier_ids" widget="many2many_tags"/>
+                <field name="recommended_supplier_ids" widget="many2many_tags"
+                       options="{'no_create': True, 'search_view_ref': 'fund_expedient.view_res_partner_recommended_supplier_search'}"
+                       context="{'search_view_ref': 'fund_expedient.view_res_partner_recommended_supplier_search'}"/>
                 <field name="budget_position_id"/>
                 <field name="encuadre_id"/>
                 <field name="type_id"/>
@@ -35,7 +37,9 @@
                 <field name="number"/>
                 <field name="request_date"/>
                 <field name="requestor_id"/>
-                <field name="recommended_supplier_ids" widget="many2many_tags"/>
+                <field name="recommended_supplier_ids" widget="many2many_tags"
+                       options="{'no_create': True, 'search_view_ref': 'fund_expedient.view_res_partner_recommended_supplier_search'}"
+                       context="{'search_view_ref': 'fund_expedient.view_res_partner_recommended_supplier_search'}"/>
                 <field name="stage_id" options="{'no_create': True}"/>
                 <field name="state"/>
                 <field name="description_plain"/>
@@ -77,6 +81,7 @@
                     <field name="requestor_user_id" invisible="1"/>
                     <field name="hide_type_id_stage" invisible="1"/>
                     <field name="type_id_editable_in_stage" invisible="1"/>
+                    <field name="line_amount_final_editable" invisible="1"/>
                     <field name="hide_encuadre_id_stage" invisible="1"/>
                     <field name="hide_estimated_need_date_stage" invisible="1"/>
                     <field name="hide_recommended_supplier_id_stage" invisible="1"/>
@@ -148,7 +153,9 @@
                             <field name="encuadre_id" invisible="not show_encuadre or hide_encuadre_id_stage"/>
                             <field name="estimated_need_date" invisible="hide_estimated_need_date_stage"/>
                             <field name="requestor_id"/>
-                            <field name="recommended_supplier_ids" widget="many2many_tags" invisible="hide_recommended_supplier_ids_stage"/>
+                            <field name="recommended_supplier_ids" widget="many2many_tags" invisible="hide_recommended_supplier_ids_stage"
+                                   options="{'no_create': True, 'search_view_ref': 'fund_expedient.view_res_partner_recommended_supplier_search'}"
+                                   context="{'search_view_ref': 'fund_expedient.view_res_partner_recommended_supplier_search'}"/>
                         </group>
                         <group string="Clasificación">
                             <field name="analytic_plan_id" invisible="1"/>
@@ -200,8 +207,12 @@
                                     <field name="product_qty"/>
                                     <field name="product_uom_id"/>
                                     <field name="amount_estimated_line"/>
-                                    <field name="amount_final_line"/>
-                                    <field name="recommended_supplier_ids" widget="many2many_tags"/>
+                                    <field name="budget_position_id" optional="show"/>
+                                    <field name="analytic_account_id" optional="show"/>
+                                    <field name="amount_final_line" readonly="not parent.line_amount_final_editable"/>
+                                    <field name="recommended_supplier_ids" widget="many2many_tags"
+                       options="{'no_create': True, 'search_view_ref': 'fund_expedient.view_res_partner_recommended_supplier_search'}"
+                       context="{'search_view_ref': 'fund_expedient.view_res_partner_recommended_supplier_search'}"/>
                                 </list>
                             </field>
                         </page>
@@ -217,9 +228,11 @@
                                 <form string="Solicitud de Gasto">
                                     <group string="Solicitud de gasto">
                                         <group>
-                                            <field name="number" readonly="1"/>
-                                            <field name="spend_state" readonly="1"/>
-                                            <field name="final_number" readonly="1" optional="hide"/>
+                                    <field name="number" readonly="1"/>
+                                    <field name="spend_state" readonly="1"/>
+                                    <field name="preventiva_state" readonly="1"/>
+                                    <field name="definitiva_state" readonly="1"/>
+                                    <field name="final_number" readonly="1" optional="hide"/>
                                         </group>
                                         <group>
                                             <field name="currency_id" invisible="1"/>
@@ -253,6 +266,10 @@
                                                 <field name="name"/>
                                                 <field name="product_qty"/>
                                                 <field name="product_uom_id"/>
+                                                <field name="budget_position_id" optional="show"/>
+                                                <field name="analytic_account_id" optional="show"/>
+                                                <field name="amount_estimated_line"/>
+                                                <field name="amount_final_line"/>
                                             </list>
                                         </field>
                                     </group>
@@ -261,8 +278,9 @@
                             <group string="Total Estimado Confirmado (expediente)">
                                 <group string="Moneda (compañía)">
                                     <field name="amount_estimated_confirmed_manual"
-                                           invisible="line_amounts_drive_confirmed"/>
-                                    <field name="amount_estimated_confirmed" readonly="line_amounts_drive_confirmed"/>
+                                           invisible="line_amounts_drive_confirmed"
+                                           readonly="not line_amount_final_editable"/>
+                                    <field name="amount_estimated_confirmed" readonly="1"/>
                                 </group>
                                 <group string="Moneda (tipo de expediente)" invisible="not approval_currency_id">
                                     <field name="amount_estimated_confirmed_unit" readonly="1"/>
@@ -486,7 +504,7 @@
                 <field name="number"/>
                 <field name="description_plain" string="Descripción/Memo"/>
                 <field name="requestor_id"/>
-                <field name="recommended_supplier_id"/>
+                <field name="recommended_supplier_ids"/>
                 <field name="budget_position_id"/>
                 <field name="encuadre_id"/>
                 <field name="type_id"/>

@@ -461,6 +461,7 @@ class FundExpedient(models.Model):
                         "Solo los usuarios asignados a la etapa actual pueden pasar a la siguiente."
                     )
                 )
+            rec._check_spend_request_before_leave_stage()
             stage_reviews = rec._current_stage_reviews()
             if any(r.status in ("waiting", "pending", "rejected") for r in stage_reviews):
                 raise UserError(
@@ -485,6 +486,22 @@ class FundExpedient(models.Model):
             current_index = stages.ids.index(rec.stage_id.id) if rec.stage_id.id in stages.ids else -1
             if current_index == -1 or current_index + 1 >= len(stages):
                 continue
+            assign = rec._current_stage_assign()
+            if assign and assign.require_notification:
+                if not rec._notification_stage_satisfied():
+                    if not rec._get_responded_rfq_partners():
+                        raise UserError(
+                            _(
+                                "No hay oferentes con cotización respondida; "
+                                "no se puede completar el requisito de notificación para salir de esta etapa."
+                            )
+                        )
+                    raise UserError(
+                        _(
+                            "Debe notificar a todos los oferentes (correo registrado) antes de pasar de etapa. "
+                            "Use el asistente 'Notificar oferentes'."
+                        )
+                    )
             target = stages[current_index + 1]
             rec.with_context(skip_validation_check=True).write({"stage_id": target.id})
         return True

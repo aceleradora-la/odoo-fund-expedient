@@ -133,6 +133,10 @@ class FundExpedient(models.Model):
         string="Tipo editable en etapa",
         compute="_compute_stage_field_visibility",
     )
+    line_amount_final_editable = fields.Boolean(
+        string="Importe definitivo editable en etapa",
+        compute="_compute_stage_field_visibility",
+    )
     hide_encuadre_id_stage = fields.Boolean(
         string="Ocultar Encuadre por etapa",
         compute="_compute_stage_field_visibility",
@@ -543,6 +547,7 @@ class FundExpedient(models.Model):
         "type_id.stage_assign_ids",
         "type_id.stage_assign_ids.hide_type_id",
         "type_id.stage_assign_ids.allow_edit_type_id",
+        "type_id.stage_assign_ids.allow_edit_line_amount_final",
         "type_id.stage_assign_ids.hide_encuadre_id",
         "type_id.stage_assign_ids.hide_estimated_need_date",
         "type_id.stage_assign_ids.hide_recommended_supplier_id",
@@ -554,6 +559,7 @@ class FundExpedient(models.Model):
         for rec in self:
             rec.hide_type_id_stage = False
             rec.type_id_editable_in_stage = True
+            rec.line_amount_final_editable = False
             rec.hide_encuadre_id_stage = False
             rec.hide_estimated_need_date_stage = False
             rec.hide_recommended_supplier_id_stage = False
@@ -563,6 +569,7 @@ class FundExpedient(models.Model):
             rec.hide_amount_estimated_stage = False
             if not rec.id:
                 rec.type_id_editable_in_stage = True
+                rec.line_amount_final_editable = True
             if not rec.type_id or not rec.stage_id:
                 continue
             assign = Assign.search(
@@ -577,6 +584,7 @@ class FundExpedient(models.Model):
             rec.hide_type_id_stage = assign.hide_type_id
             if rec.id:
                 rec.type_id_editable_in_stage = bool(assign.allow_edit_type_id)
+                rec.line_amount_final_editable = bool(assign.allow_edit_line_amount_final)
             rec.hide_encuadre_id_stage = assign.hide_encuadre_id
             rec.hide_estimated_need_date_stage = assign.hide_estimated_need_date
             rec.hide_recommended_supplier_id_stage = assign.hide_recommended_supplier_id
@@ -893,6 +901,7 @@ class FundExpedient(models.Model):
                             "Use el asistente 'Notificar oferentes'."
                         )
                     )
+            rec._check_spend_request_before_leave_stage()
             target = stages[current_index + 1]
             # Integración simple con tier_validation: si existe y aún no está aprobado,
             # primero se envía a aprobar y no se cambia de etapa.
@@ -1167,12 +1176,32 @@ class FundExpedient(models.Model):
                         or False
                     )
 
-            # Reglas de disposición: al salir de la etapa actual, validar requisitos configurados.
             stage_will_change = (
                 "stage_id" in new_vals
                 and new_vals.get("stage_id")
                 and new_vals.get("stage_id") != rec.stage_id.id
             )
+
+            if (
+                "amount_estimated_confirmed_manual" in new_vals
+                and not rec.line_amount_final_editable
+                and not self.env.context.get("skip_final_amount_check")
+            ):
+                raise UserError(
+                    _(
+                        "No puede modificar el importe definitivo confirmado en la etapa «%s»."
+                    )
+                    % (rec.stage_id.name or "")
+                )
+
+            if (
+                stage_will_change
+                and rec.stage_id
+                and not self.env.context.get("skip_spend_request_check")
+            ):
+                rec._check_spend_request_before_leave_stage()
+
+            # Reglas de disposición: al salir de la etapa actual, validar requisitos configurados.
             if stage_will_change and rec.type_id and rec.stage_id and not self.env.context.get(
                 "skip_disposition_check"
             ):
@@ -1382,18 +1411,55 @@ class FundExpedient(models.Model):
             # Fallback: si algo raro llega, tratamos como no vacío para no borrar datos.
             return False
 
-    def _get_or_create_spend_request(self):
+    def _get_spend_request(self, create_if_missing=False):
         self.ensure_one()
         sr = self.spend_request_ids[:1]
         if sr:
             return sr
-        return self.env["fund.expedient.spend.request"].create({"expedient_id": self.id})
+        if create_if_missing:
+            return self.env["fund.expedient.spend.request"].create({"expedient_id": self.id})
+        raise UserError(
+            _("No existe Solicitud de Gasto para este expediente. Genérela desde la etapa correspondiente.")
+        )
+
+    def _check_spend_request_before_leave_stage(self):
+        """Valida SG al salir de etapa preventiva o definitiva."""
+        self.ensure_one()
+        mode = self.stage_id.spend_request_mode
+        if mode not in ("preventiva", "final"):
+            return
+        sr = self.spend_request_ids[:1]
+        if not sr:
+            raise UserError(
+                _("Debe generar la Solicitud de Gasto antes de salir de la etapa «%s».")
+                % self.stage_id.name
+            )
+        if mode == "preventiva":
+            if not sr.is_phase_generated("preventiva"):
+                raise UserError(
+                    _("Debe generar la Solicitud de Gasto preventiva antes de salir de esta etapa.")
+                )
+            if not sr.is_phase_approved("preventiva"):
+                raise UserError(
+                    _("La Solicitud de Gasto preventiva debe estar aprobada antes de salir de esta etapa.")
+                )
+        if mode == "final":
+            if not sr.is_phase_generated("definitiva"):
+                raise UserError(
+                    _("Debe generar la Solicitud de Gasto definitiva antes de salir de esta etapa.")
+                )
+            if not sr.is_phase_approved("definitiva"):
+                raise UserError(
+                    _("La Solicitud de Gasto definitiva debe estar aprobada antes de salir de esta etapa.")
+                )
 
     def action_create_spend_request_initial(self):
         self.ensure_one()
         if not self.stage_id or self.stage_id.spend_request_mode != "preventiva":
             raise UserError("La etapa actual no permite crear Solicitud de Gasto preventiva.")
-        sr = self._get_or_create_spend_request()
+        if self.spend_request_ids:
+            raise UserError(_("Ya existe una Solicitud de Gasto para este expediente."))
+        sr = self._get_spend_request(create_if_missing=True)
         sr.action_generate_initial()
         return {
             "type": "ir.actions.act_window",
@@ -1408,7 +1474,7 @@ class FundExpedient(models.Model):
         self.ensure_one()
         if not self.stage_id or self.stage_id.spend_request_mode != "final":
             raise UserError("La etapa actual no permite crear Solicitud de Gasto definitiva.")
-        sr = self._get_or_create_spend_request()
+        sr = self._get_spend_request()
         sr.action_generate_final()
         return {
             "type": "ir.actions.act_window",

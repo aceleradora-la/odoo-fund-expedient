@@ -16,7 +16,9 @@
                             <field name="product_id"/>
                             <field name="name"/>
                             <field name="product_qty"/>
-                            <field name="recommended_supplier_ids" widget="many2many_tags"/>
+                            <field name="recommended_supplier_ids" widget="many2many_tags"
+                                   options="{'no_create': True, 'search_view_ref': 'fund_expedient.view_res_partner_recommended_supplier_search'}"
+                                   context="{'search_view_ref': 'fund_expedient.view_res_partner_recommended_supplier_search'}"/>
                         </list>
                     </field>
                 </group>

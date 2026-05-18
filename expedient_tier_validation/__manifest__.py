@@ -4,7 +4,7 @@
 {
     "name": "Expedientes - Validación por niveles",
     "summary": "Extiende los expedientes con un proceso de validación por niveles (tier validation).",
-    "version": "18.0.1.0",
+    "version": "18.0.2.0",
     "category": "Administration",
     "website": "",
     "author": "",
@@ -17,6 +17,9 @@
     ],
     "data": [
         "views/fund_expedient_views.xml",
+        "views/fund_expedient_spend_request_views.xml",
+        "views/fund_expedient_disposition_views.xml",
+        "views/fund_expedient_resolution_views.xml",
         "templates/tier_validation_templates.xml",
     ],
 }

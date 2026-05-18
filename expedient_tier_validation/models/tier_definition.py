@@ -9,8 +9,14 @@ class TierDefinition(models.Model):
 
     @api.model
     def _get_tier_validation_model_names(self):
-        """Incluir fund.expedient en los modelos disponibles para definiciones de nivel."""
+        """Modelos fundación disponibles para definiciones de nivel."""
         result = super()._get_tier_validation_model_names()
-        if "fund.expedient" not in result:
-            result.append("fund.expedient")
+        for model_name in (
+            "fund.expedient",
+            "fund.expedient.spend.request",
+            "fund.expedient.disposition",
+            "fund.expedient.resolution",
+        ):
+            if model_name not in result:
+                result.append(model_name)
         return result
