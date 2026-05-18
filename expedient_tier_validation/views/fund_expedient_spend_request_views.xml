@@ -39,7 +39,7 @@
         <field name="model">fund.expedient</field>
         <field name="inherit_id" ref="fund_expedient.view_fund_expedient_form"/>
         <field name="arch" type="xml">
-            <xpath expr="//field[@name='spend_request_ids']/form/group[@string='Solicitud de gasto']" position="before">
+            <xpath expr="//field[@name='spend_request_ids']/form/group[@name='sg_identification']" position="before">
                 <field name="need_validation" invisible="1"/>
                 <field name="validation_status" invisible="1"/>
                 <field name="can_review" invisible="1"/>

@@ -226,7 +226,7 @@
                                     <field name="date_definitiva"/>
                                 </list>
                                 <form string="Solicitud de Gasto">
-                                    <group string="Solicitud de gasto">
+                                    <group string="Solicitud de gasto" name="sg_identification">
                                         <group>
                                     <field name="number" readonly="1"/>
                                     <field name="spend_state" readonly="1"/>
