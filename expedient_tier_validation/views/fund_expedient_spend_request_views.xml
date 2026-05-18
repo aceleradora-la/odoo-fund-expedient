@@ -39,19 +39,17 @@
         <field name="model">fund.expedient</field>
         <field name="inherit_id" ref="fund_expedient.view_fund_expedient_form"/>
         <field name="arch" type="xml">
-            <xpath expr="//field[@name='spend_request_ids']/form/sheet" position="before">
-                <header>
-                    <field name="need_validation" invisible="1"/>
-                    <field name="validation_status" invisible="1"/>
-                    <field name="can_review" invisible="1"/>
-                    <field name="hide_reviews" invisible="1"/>
-                    <field name="tier_stage_locked" invisible="1"/>
-                    <field name="can_restart_validation_stage" invisible="1"/>
-                    <field name="stage_validation_status" invisible="1"/>
-                    <field name="has_stage_reviews" invisible="1"/>
-                </header>
+            <xpath expr="//field[@name='spend_request_ids']/form/group[@string='Solicitud de gasto']" position="before">
+                <field name="need_validation" invisible="1"/>
+                <field name="validation_status" invisible="1"/>
+                <field name="can_review" invisible="1"/>
+                <field name="hide_reviews" invisible="1"/>
+                <field name="tier_stage_locked" invisible="1"/>
+                <field name="can_restart_validation_stage" invisible="1"/>
+                <field name="stage_validation_status" invisible="1"/>
+                <field name="has_stage_reviews" invisible="1"/>
             </xpath>
-            <xpath expr="//field[@name='spend_request_ids']/form/sheet" position="inside">
+            <xpath expr="//field[@name='spend_request_ids']/form" position="inside">
                 <group string="Aprobaciones" name="tier_reviews_embedded">
                     <field name="review_ids" nolabel="1">
                         <list create="0" delete="0">
