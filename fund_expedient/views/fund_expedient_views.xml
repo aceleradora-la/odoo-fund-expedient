@@ -255,11 +255,14 @@
                                 <form string="Solicitud de Gasto">
                                     <group string="Solicitud de gasto" name="sg_identification">
                                         <group>
-                                    <field name="number" readonly="1"/>
-                                    <field name="spend_state" readonly="1"/>
-                                    <field name="preventiva_state" readonly="1"/>
-                                    <field name="definitiva_state" readonly="1"/>
-                                    <field name="final_number" readonly="1" optional="hide"/>
+                                            <field name="number" readonly="1"/>
+                                            <field name="expedient_type_id" readonly="1"/>
+                                            <field name="expedient_type_number" readonly="1"
+                                                   invisible="not expedient_type_number"/>
+                                            <field name="spend_state" readonly="1"/>
+                                            <field name="preventiva_state" readonly="1"/>
+                                            <field name="definitiva_state" readonly="1"/>
+                                            <field name="final_number" readonly="1" optional="hide"/>
                                         </group>
                                         <group>
                                             <field name="currency_id" invisible="1"/>

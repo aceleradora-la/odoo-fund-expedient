@@ -23,6 +23,20 @@ class FundExpedientSpendRequest(models.Model):
     approval_currency_id = fields.Many2one(
         related="expedient_id.approval_currency_id", store=True, readonly=True
     )
+    # Lookup informativo (no se guarda): trae el "Número por tipo" del expediente para
+    # identificar visualmente la SG según el tipo. La numeración real vive en el expediente.
+    expedient_type_number = fields.Char(
+        related="expedient_id.type_number",
+        string="Número por tipo (expediente)",
+        readonly=True,
+        store=False,
+    )
+    expedient_type_id = fields.Many2one(
+        related="expedient_id.type_id",
+        string="Tipo de expediente",
+        readonly=True,
+        store=False,
+    )
 
     number = fields.Char(
         string="Número",
