@@ -6,7 +6,8 @@ from odoo import fields, models
 
 class FundExpedientResolution(models.Model):
     _name = "fund.expedient.resolution"
-    _inherit = ["fund.expedient.resolution", "mail.thread", "tier.validation", "fund.tier.validation.mixin"]
+    # Orden importa: mixin antes de tier.validation para que sus overrides ganen en MRO.
+    _inherit = ["fund.expedient.resolution", "mail.thread", "fund.tier.validation.mixin", "tier.validation"]
 
     # Manual: idem disposición; el form de resolución vive embebido en el expediente.
     _tier_validation_manual_config = True

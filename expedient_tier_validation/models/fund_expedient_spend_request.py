@@ -6,7 +6,11 @@ from odoo import api, fields, models
 
 class FundExpedientSpendRequest(models.Model):
     _name = "fund.expedient.spend.request"
-    _inherit = ["fund.expedient.spend.request", "mail.thread", "tier.validation", "fund.tier.validation.mixin"]
+    # El mixin debe ir ANTES que "tier.validation" en _inherit: por C3 linearization, los
+    # métodos del mixin (validate_tier, request_validation, restart_validation, etc.) ganan
+    # sobre los del base OCA. Sin esto, el botón Aprobar marca la review pero NO ejecuta
+    # _on_context_tier_validated y la fase nunca pasa a "approved".
+    _inherit = ["fund.expedient.spend.request", "mail.thread", "fund.tier.validation.mixin", "tier.validation"]
 
     # Manual: insertamos los botones/etiquetas tier explícitamente en el form (standalone y embebido),
     # porque el SG no tiene <header> nativo y el embedded view no pasa por get_view de SG.
@@ -31,10 +35,27 @@ class FundExpedientSpendRequest(models.Model):
         "preventiva_state",
         "definitiva_state",
         "spend_state",
+        "review_ids",
+        "review_ids.status",
+        "review_ids.spend_phase",
     )
     def _compute_tier_validation_state(self):
+        """Computa el estado tier y regulariza la fase si está validada por completo.
+
+        Side effect deliberado: si todas las reviews del contexto activo están aprobadas
+        pero la fase aún quedó en "generated" (caso típico: aprobación realizada por
+        wizard de comentarios o con un orden de _inherit antiguo donde el hook no
+        corrió), marcamos la fase como "approved" automáticamente. Esto evita tener
+        que reiniciar y re-aprobar la validación manualmente.
+        """
         for rec in self:
             phase = rec._get_active_spend_phase()
+            if rec.has_stage_reviews and rec.stage_validation_status == "validated":
+                current_state = (
+                    rec.preventiva_state if phase == "preventiva" else rec.definitiva_state
+                )
+                if current_state == "generated":
+                    rec.with_context(skip_validation_check=True)._mark_phase_approved(phase)
             phase_state = (
                 rec.preventiva_state if phase == "preventiva" else rec.definitiva_state
             )

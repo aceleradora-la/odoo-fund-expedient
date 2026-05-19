@@ -6,7 +6,8 @@ from odoo import fields, models
 
 class FundExpedientDisposition(models.Model):
     _name = "fund.expedient.disposition"
-    _inherit = ["fund.expedient.disposition", "mail.thread", "tier.validation", "fund.tier.validation.mixin"]
+    # Orden importa: mixin antes de tier.validation para que sus overrides ganen en MRO.
+    _inherit = ["fund.expedient.disposition", "mail.thread", "fund.tier.validation.mixin", "tier.validation"]
 
     # Manual: el form de disposición se renderiza embebido en el expediente; no pasa por
     # el get_view de fund.expedient.disposition, por eso inyectamos los botones a mano.
