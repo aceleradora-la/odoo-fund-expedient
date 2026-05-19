@@ -43,6 +43,17 @@ class FundExpedientDocument(models.Model):
             "Al notificar a oferentes, estos documentos se adjuntan automáticamente al correo."
         ),
     )
+    # Igual que la especificación técnica, pero para condiciones particulares del pliego
+    # (cláusulas comerciales, plazos, garantías). Se adjuntan en la invitación a cotizar.
+    is_particular_conditions = fields.Boolean(
+        string="Condiciones particulares",
+        index=True,
+        help=(
+            "Marcar si este documento contiene las condiciones particulares del pliego "
+            "(plazos, garantías, formas de pago). Al notificar a oferentes, se adjuntan "
+            "automáticamente al correo."
+        ),
+    )
     notes = fields.Html(string="Observaciones")
     stage_id = fields.Many2one(
         "fund.expedient.stage",

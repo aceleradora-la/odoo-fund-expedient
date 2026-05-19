@@ -14,6 +14,8 @@
                 <field name="requestor_id" optional="show"/>
                 <field name="requestor_department_id" optional="show"/>
                 <field name="requestor_department_manager_id" optional="hide"/>
+                <field name="contract_object" optional="hide"/>
+                <field name="delivery_location" optional="hide"/>
                 <field name="spend_state"/>
                 <field name="preventiva_state"/>
                 <field name="definitiva_state"/>
@@ -37,6 +39,8 @@
                 <field name="requestor_id"/>
                 <field name="requestor_department_id" string="Sector requirente"/>
                 <field name="requestor_department_manager_id" string="Responsable del sector"/>
+                <field name="contract_object" string="Objeto de la contratación"/>
+                <field name="delivery_location" string="Lugar de entrega"/>
                 <separator/>
                 <filter string="Preventiva" name="phase_preventiva"
                         domain="[('spend_state', '=', 'preventiva')]"/>
@@ -108,6 +112,12 @@
                             <field name="approval_currency_id" invisible="1"/>
                         </group>
                     </group>
+                    <group string="Datos de la contratación">
+                        <field name="contract_object" readonly="1"
+                               invisible="not contract_object"/>
+                        <field name="delivery_location" readonly="1"
+                               invisible="not delivery_location"/>
+                    </group>
                     <group string="Preventiva">
                         <group>
                             <field name="date_preventiva" readonly="1"/>
@@ -136,7 +146,9 @@
                                 <field name="product_qty"/>
                                 <field name="product_uom_id"/>
                                 <field name="analytic_account_id" optional="show"/>
+                                <field name="price_unit_estimated"/>
                                 <field name="amount_estimated_line"/>
+                                <field name="price_unit_final" optional="show"/>
                                 <field name="amount_final_line"/>
                             </list>
                         </field>

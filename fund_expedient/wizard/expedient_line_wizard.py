@@ -115,7 +115,9 @@ class ExpedientLineWizard(models.TransientModel):
             "product_id": product.id,
             "name": name,
             "product_qty": line.product_qty,
-            "price_unit": 0.0,
+            # Si la línea del expediente tiene un precio unitario estimado,
+            # se sugiere en la RFQ como referencia para el comprador.
+            "price_unit": line.price_unit_estimated or 0.0,
         }
         # Odoo 18 puede usar product_uom o product_uom_id según build/módulos.
         # Si no existe el campo, no lo seteamos y dejamos que Purchase complete defaults.

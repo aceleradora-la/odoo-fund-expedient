@@ -167,6 +167,10 @@
                             <field name="company_id" groups="base.group_multi_company"/>
                         </group>
                     </group>
+                    <group string="Datos de la contratación">
+                        <field name="contract_object" placeholder="Describí el objeto/alcance de la contratación..."/>
+                        <field name="delivery_location" placeholder="Lugar físico de entrega o ejecución..."/>
+                    </group>
                     <group string="Totales" name="totals">
                         <group string="Moneda (compañía)">
                             <field name="currency_id" invisible="1"/>
@@ -207,10 +211,13 @@
                                     <field name="name"/>
                                     <field name="product_qty"/>
                                     <field name="product_uom_id"/>
-                                    <field name="amount_estimated_line"/>
-                                    <field name="amount_final_line"
+                                    <field name="price_unit_estimated"/>
+                                    <field name="amount_estimated_line" readonly="1"/>
+                                    <field name="price_unit_final" optional="show"
                                            column_invisible="not parent.line_amount_final_editable"
                                            readonly="not parent.line_amount_final_editable"/>
+                                    <field name="amount_final_line" readonly="1"
+                                           column_invisible="not parent.line_amount_final_editable"/>
                                     <field name="analytic_account_id" optional="show"/>
                                     <field name="recommended_supplier_ids" widget="many2many_tags" optional="show"
                                            options="{'no_create': True, 'search_view_ref': 'fund_expedient.view_res_partner_recommended_supplier_search'}"
@@ -229,10 +236,13 @@
                                                 <field name="currency_id" invisible="1"/>
                                                 <field name="company_id" invisible="1"/>
                                                 <field name="analytic_plan_id" invisible="1"/>
-                                                <field name="amount_estimated_line"/>
-                                                <field name="amount_final_line"
+                                                <field name="price_unit_estimated"/>
+                                                <field name="amount_estimated_line" readonly="1"/>
+                                                <field name="price_unit_final"
                                                        invisible="not parent.line_amount_final_editable"
                                                        readonly="not parent.line_amount_final_editable"/>
+                                                <field name="amount_final_line" readonly="1"
+                                                       invisible="not parent.line_amount_final_editable"/>
                                                 <field name="analytic_account_id"
                                                        options="{'no_create': True}"/>
                                             </group>
@@ -300,7 +310,9 @@
                                                 <field name="product_qty"/>
                                                 <field name="product_uom_id"/>
                                                 <field name="analytic_account_id" optional="show"/>
+                                                <field name="price_unit_estimated"/>
                                                 <field name="amount_estimated_line"/>
+                                                <field name="price_unit_final" optional="show"/>
                                                 <field name="amount_final_line"/>
                                             </list>
                                         </field>
@@ -351,6 +363,7 @@
                                                 <field name="name"/>
                                                 <field name="delivered"/>
                                                 <field name="is_technical_spec" optional="show"/>
+                                                <field name="is_particular_conditions" optional="show"/>
                                                 <button type="object"
                                                         name="action_open_document"
                                                         string="Abrir"
@@ -393,6 +406,7 @@
                                                 <field name="name"/>
                                                 <field name="delivered"/>
                                                 <field name="is_technical_spec" optional="show"/>
+                                                <field name="is_particular_conditions" optional="show"/>
                                                 <button type="object"
                                                         name="action_open_document"
                                                         string="Abrir"
@@ -423,6 +437,7 @@
                                     <field name="file_name" string="Archivo"/>
                                     <field name="delivered"/>
                                     <field name="is_technical_spec" optional="show"/>
+                                    <field name="is_particular_conditions" optional="show"/>
                                     <field name="notes"/>
                                     <field name="stage_id" optional="hide" readonly="1"/>
                                     <field name="disposition_id" optional="hide"/>
@@ -449,6 +464,7 @@
                                             <field name="resolution_id"/>
                                             <field name="delivered"/>
                                             <field name="is_technical_spec"/>
+                                            <field name="is_particular_conditions"/>
                                         </group>
                                         <group>
                                             <field name="can_download_file" invisible="1"/>
@@ -480,17 +496,32 @@
                         </page>
                         <page string="Expedientes relacionados" name="children">
                             <!-- El readonly viene del <sheet readonly="not can_edit_in_stage">,
-                                 por eso aquí no fijamos readonly explícito: el usuario puede
-                                 agregar/editar relacionados sólo en las etapas con permiso.
-                                 Excluimos el propio expediente del dominio del padre. -->
-                            <field name="parent_id" domain="[('id', '!=', id)]"/>
-                            <field name="child_ids" nolabel="1"
-                                   context="{'default_parent_id': id}">
-                                <list create="1" delete="1" edit="1">
+                                 por eso aquí no fijamos readonly explícito.
+                                 Para "relacionados" usamos un selector + botón "Vincular":
+                                 evitamos que el One2many cree expedientes nuevos al agregar
+                                 una fila. -->
+                            <field name="parent_id" domain="[('id', '!=', id)]"
+                                   options="{'no_create': True, 'no_create_edit': True}"/>
+                            <group string="Agregar relacionado existente">
+                                <field name="child_picker_id"
+                                       domain="[('id', '!=', id), ('parent_id', '=', False)]"
+                                       options="{'no_create': True, 'no_create_edit': True}"
+                                       nolabel="1"/>
+                                <button name="action_link_child_expedient" type="object"
+                                        string="Vincular" class="btn-primary"
+                                        invisible="not child_picker_id"/>
+                            </group>
+                            <field name="child_ids" nolabel="1">
+                                <list create="0" delete="0" edit="0" open="0">
                                     <field name="number"/>
                                     <field name="request_date"/>
                                     <field name="stage_id"/>
                                     <field name="requestor_id"/>
+                                    <button name="action_unlink_child_expedient"
+                                            type="object"
+                                            string="Quitar vínculo"
+                                            class="btn-link text-danger"
+                                            icon="fa-unlink"/>
                                 </list>
                             </field>
                         </page>

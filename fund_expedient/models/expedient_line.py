@@ -79,16 +79,67 @@ class ExpedientLine(models.Model):
         store=True,
         readonly=True,
     )
+    # Precio unitario y total estimado: el precio unitario es el dato
+    # cargado por el usuario; el total se calcula automáticamente como
+    # `price_unit_estimated * product_qty`. Se mantiene `inverse` para
+    # tolerar la edición directa del total (recalcula el unitario).
+    price_unit_estimated = fields.Monetary(
+        string="Precio unitario estimado",
+        currency_field="currency_id",
+        default=0.0,
+        help="Precio unitario estimado de la línea. El total se calcula como unitario × cantidad.",
+    )
     amount_estimated_line = fields.Monetary(
         string="Importe estimado",
+        currency_field="currency_id",
+        compute="_compute_amount_estimated_line",
+        inverse="_inverse_amount_estimated_line",
+        store=True,
+        readonly=False,
+        help="Total estimado de la línea = precio unitario × cantidad.",
+    )
+    price_unit_final = fields.Monetary(
+        string="Precio unitario definitivo",
         currency_field="currency_id",
         default=0.0,
     )
     amount_final_line = fields.Monetary(
         string="Importe definitivo",
         currency_field="currency_id",
-        default=0.0,
+        compute="_compute_amount_final_line",
+        inverse="_inverse_amount_final_line",
+        store=True,
+        readonly=False,
     )
+
+    @api.depends("price_unit_estimated", "product_qty")
+    def _compute_amount_estimated_line(self):
+        for rec in self:
+            # Solo recalcula si hay unitario cargado; si no, respetamos
+            # cualquier valor que ya estuviera (compatibilidad con datos
+            # previos a la introducción del precio unitario).
+            if rec.price_unit_estimated:
+                rec.amount_estimated_line = rec.price_unit_estimated * (rec.product_qty or 0.0)
+            elif not rec.amount_estimated_line:
+                rec.amount_estimated_line = 0.0
+
+    def _inverse_amount_estimated_line(self):
+        for rec in self:
+            if rec.product_qty:
+                rec.price_unit_estimated = rec.amount_estimated_line / rec.product_qty
+
+    @api.depends("price_unit_final", "product_qty")
+    def _compute_amount_final_line(self):
+        for rec in self:
+            if rec.price_unit_final:
+                rec.amount_final_line = rec.price_unit_final * (rec.product_qty or 0.0)
+            elif not rec.amount_final_line:
+                rec.amount_final_line = 0.0
+
+    def _inverse_amount_final_line(self):
+        for rec in self:
+            if rec.product_qty:
+                rec.price_unit_final = rec.amount_final_line / rec.product_qty
 
     @api.model
     def _default_uom(self):
@@ -110,7 +161,14 @@ class ExpedientLine(models.Model):
         return super().create(vals_list)
 
     def write(self, vals):
-        if "amount_final_line" in vals and not self.env.context.get("skip_final_amount_check"):
+        # `amount_final_line` queda como total y `price_unit_final` como
+        # precio unitario; cualquiera de los dos al modificarse impacta
+        # el importe definitivo, por lo que aplicamos la misma regla de
+        # etapa en ambos.
+        sensitive_keys = ("amount_final_line", "price_unit_final")
+        if any(k in vals for k in sensitive_keys) and not self.env.context.get(
+            "skip_final_amount_check"
+        ):
             for rec in self:
                 if not rec.expedient_id.line_amount_final_editable:
                     raise UserError(

@@ -292,6 +292,18 @@ class FundExpedient(models.Model):
         default=lambda self: self.env.company,
         required=True,
     )
+    # Datos descriptivos de la contratación. Se usan tanto en la
+    # ficha del expediente como en la Solicitud de Gasto y reportes.
+    contract_object = fields.Text(
+        string="Objeto de la contratación",
+        tracking=True,
+        help="Descripción del objeto/alcance de la contratación.",
+    )
+    delivery_location = fields.Char(
+        string="Lugar de entrega",
+        tracking=True,
+        help="Lugar físico de entrega de los bienes o ejecución del servicio.",
+    )
     # Relación con otros expedientes
     parent_id = fields.Many2one(
         "fund.expedient",
@@ -303,6 +315,14 @@ class FundExpedient(models.Model):
         "fund.expedient",
         "parent_id",
         string="Expedientes relacionados",
+    )
+    # Selector auxiliar (no almacenado) para vincular un expediente existente
+    # como "relacionado" sin disparar la creación de uno nuevo desde el One2many.
+    child_picker_id = fields.Many2one(
+        "fund.expedient",
+        string="Vincular expediente existente",
+        store=False,
+        help="Elegí un expediente existente y presioná 'Vincular' para agregarlo como relacionado.",
     )
     line_ids = fields.One2many(
         "fund.expedient.line",
@@ -923,6 +943,18 @@ class FundExpedient(models.Model):
                         )
                     )
             rec._check_spend_request_before_leave_stage()
+            # En la primera etapa exigimos que el expediente tenga un monto
+            # estimado mayor a cero (cargado manualmente o por suma de líneas)
+            # antes de pasar a la siguiente. Sin monto no tiene sentido avanzar
+            # con la solicitud de aprobación / cotizaciones.
+            if current_index == 0 and not (rec.amount_estimated and rec.amount_estimated > 0):
+                raise UserError(
+                    _(
+                        "Debe cargar un monto estimado mayor a cero antes de "
+                        "pasar de la primera etapa. Cárguelo manualmente en "
+                        "«Total estimado» o detallándolo en las líneas."
+                    )
+                )
             target = stages[current_index + 1]
             # Integración simple con tier_validation: si existe y aún no está aprobado,
             # primero se envía a aprobar y no se cambia de etapa.
@@ -930,6 +962,43 @@ class FundExpedient(models.Model):
                 rec.request_validation()
             else:
                 rec.stage_id = target
+        return True
+
+    def action_link_child_expedient(self):
+        """Vincula como hijo el expediente elegido en `child_picker_id`.
+
+        Esta acción evita que al "Agregar línea" en el One2many de
+        expedientes relacionados se cree un expediente nuevo: el usuario
+        elige uno existente desde el selector y se asocia mediante
+        `parent_id`.
+        """
+        self.ensure_one()
+        picker = self.child_picker_id
+        if not picker:
+            raise UserError(_("Seleccione un expediente para vincular."))
+        if picker.id == self.id:
+            raise UserError(_("No puede vincularse un expediente consigo mismo."))
+        if picker.parent_id and picker.parent_id.id != self.id:
+            raise UserError(
+                _(
+                    "El expediente %s ya está vinculado como hijo del expediente %s."
+                )
+                % (picker.display_name, picker.parent_id.display_name)
+            )
+        if picker.id in self.child_ids.ids:
+            raise UserError(_("El expediente seleccionado ya figura como relacionado."))
+        picker.write({"parent_id": self.id})
+        self.child_picker_id = False
+        return True
+
+    def action_unlink_child_expedient(self):
+        """Quita el vínculo padre-hijo desde una fila del One2many `child_ids`.
+
+        Pensado para invocarse con `self` siendo el hijo a desvincular
+        (botón dentro de la lista).
+        """
+        for rec in self:
+            rec.parent_id = False
         return True
 
     def action_previous_stage(self):

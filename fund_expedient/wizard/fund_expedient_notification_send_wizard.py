@@ -74,10 +74,13 @@ class FundExpedientNotificationSendWizard(models.TransientModel):
                     )
                     and bool(doc.file_data)
                 )
-                spec_docs = exp.document_ids.filtered(
-                    lambda doc: doc.is_technical_spec and bool(doc.file_data)
+                # Documentos del "pliego" que se adjuntan en toda invitación
+                # a cotizar: especificaciones técnicas y condiciones particulares.
+                pliego_docs = exp.document_ids.filtered(
+                    lambda doc: (doc.is_technical_spec or doc.is_particular_conditions)
+                    and bool(doc.file_data)
                 )
-                docs = stage_docs | spec_docs
+                docs = stage_docs | pliego_docs
                 if docs:
                     res["document_ids"] = [(6, 0, docs.ids)]
         return res

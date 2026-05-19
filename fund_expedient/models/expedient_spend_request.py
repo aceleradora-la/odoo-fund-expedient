@@ -67,6 +67,20 @@ class FundExpedientSpendRequest(models.Model):
         readonly=True,
         index=True,
     )
+    # Datos descriptivos heredados del expediente; almacenados para
+    # poder verlos, filtrarlos e imprimirlos en el reporte de SG.
+    contract_object = fields.Text(
+        string="Objeto de la contratación",
+        related="expedient_id.contract_object",
+        store=True,
+        readonly=True,
+    )
+    delivery_location = fields.Char(
+        string="Lugar de entrega",
+        related="expedient_id.delivery_location",
+        store=True,
+        readonly=True,
+    )
 
     number = fields.Char(
         string="Número",
@@ -197,7 +211,9 @@ class FundExpedientSpendRequest(models.Model):
             "name": line.name,
             "product_qty": line.product_qty,
             "product_uom_id": line.product_uom_id.id,
+            "price_unit_estimated": line.price_unit_estimated or 0.0,
             "amount_estimated_line": line.amount_estimated_line or 0.0,
+            "price_unit_final": line.price_unit_final or 0.0,
             "amount_final_line": line.amount_final_line or 0.0,
             "analytic_account_id": line.analytic_account_id.id,
         }
@@ -348,8 +364,18 @@ class FundExpedientSpendRequestLine(models.Model):
         string="Cuenta analítica",
         readonly=True,
     )
+    price_unit_estimated = fields.Monetary(
+        string="Precio unitario estimado",
+        currency_field="currency_id",
+        readonly=True,
+    )
     amount_estimated_line = fields.Monetary(
         string="Importe estimado",
+        currency_field="currency_id",
+        readonly=True,
+    )
+    price_unit_final = fields.Monetary(
+        string="Precio unitario definitivo",
         currency_field="currency_id",
         readonly=True,
     )
