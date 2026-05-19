@@ -17,48 +17,52 @@
         <field name="model">fund.expedient.spend.request</field>
         <field name="inherit_id" ref="fund_expedient.view_fund_expedient_spend_request_form"/>
         <field name="arch" type="xml">
-            <xpath expr="//sheet" position="before">
-                <header>
-                    <!-- Statusbars: muestran el flujo de cada fase. Visibilidad condicionada
-                         para que el usuario vea solo la fase activa (preventiva o definitiva). -->
-                    <field name="preventiva_state" widget="statusbar"
-                           statusbar_visible="draft,generated,approved"
-                           invisible="spend_state == 'definitiva'"/>
-                    <field name="definitiva_state" widget="statusbar"
-                           statusbar_visible="draft,generated,approved"
-                           invisible="spend_state != 'definitiva'"/>
+            <!--
+                El form base ya define <header> con el botón "Imprimir SG". Aquí
+                inyectamos los botones/statusbars del tier DENTRO de ese header
+                (position="inside") para evitar que se generen dos <header>
+                separados, que renderizaban los botones en dos filas.
+            -->
+            <xpath expr="//header" position="inside">
+                <!-- Statusbars: muestran el flujo de cada fase. Visibilidad condicionada
+                     para que el usuario vea solo la fase activa (preventiva o definitiva). -->
+                <field name="preventiva_state" widget="statusbar"
+                       statusbar_visible="draft,generated,approved"
+                       invisible="spend_state == 'definitiva'"/>
+                <field name="definitiva_state" widget="statusbar"
+                       statusbar_visible="draft,generated,approved"
+                       invisible="spend_state != 'definitiva'"/>
 
-                    <!-- Campos requeridos por la lógica de tier (invisibles) -->
-                    <field name="spend_state" invisible="1"/>
-                    <field name="need_validation" invisible="1"/>
-                    <field name="validation_status" invisible="1"/>
-                    <field name="can_review" invisible="1"/>
-                    <field name="hide_reviews" invisible="1"/>
-                    <field name="has_comment" invisible="1"/>
-                    <field name="next_review" invisible="1"/>
-                    <field name="tier_stage_locked" invisible="1"/>
-                    <field name="can_restart_validation_stage" invisible="1"/>
-                    <field name="stage_validation_status" invisible="1"/>
-                    <field name="has_stage_reviews" invisible="1"/>
+                <!-- Campos requeridos por la lógica de tier (invisibles) -->
+                <field name="spend_state" invisible="1"/>
+                <field name="need_validation" invisible="1"/>
+                <field name="validation_status" invisible="1"/>
+                <field name="can_review" invisible="1"/>
+                <field name="hide_reviews" invisible="1"/>
+                <field name="has_comment" invisible="1"/>
+                <field name="next_review" invisible="1"/>
+                <field name="tier_stage_locked" invisible="1"/>
+                <field name="can_restart_validation_stage" invisible="1"/>
+                <field name="stage_validation_status" invisible="1"/>
+                <field name="has_stage_reviews" invisible="1"/>
 
-                    <button name="request_validation" type="object"
-                            string="Solicitar aprobación"
-                            class="btn-primary"
-                            invisible="not need_validation or stage_validation_status == 'rejected' or hide_reviews"/>
-                    <button name="validate_tier" type="object"
-                            string="Aprobar"
-                            class="btn-success"
-                            invisible="not can_review"/>
-                    <button name="reject_tier" type="object"
-                            string="Rechazar"
-                            class="btn-danger"
-                            invisible="not can_review"/>
-                    <button name="restart_validation" type="object"
-                            string="Reiniciar validación"
-                            class="btn-secondary"
-                            invisible="not can_restart_validation_stage or hide_reviews"
-                            confirm="¿Reiniciar la validación de la fase actual?"/>
-                </header>
+                <button name="request_validation" type="object"
+                        string="Solicitar aprobación"
+                        class="btn-primary"
+                        invisible="not need_validation or stage_validation_status == 'rejected' or hide_reviews"/>
+                <button name="validate_tier" type="object"
+                        string="Aprobar"
+                        class="btn-success"
+                        invisible="not can_review"/>
+                <button name="reject_tier" type="object"
+                        string="Rechazar"
+                        class="btn-danger"
+                        invisible="not can_review"/>
+                <button name="restart_validation" type="object"
+                        string="Reiniciar validación"
+                        class="btn-secondary"
+                        invisible="not can_restart_validation_stage or hide_reviews"
+                        confirm="¿Reiniciar la validación de la fase actual?"/>
             </xpath>
 
             <!-- Banner de estado y página de revisiones dentro del sheet -->

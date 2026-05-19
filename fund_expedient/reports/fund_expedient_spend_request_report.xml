@@ -120,19 +120,21 @@
                             <th class="text-end">Cantidad</th>
                             <th>UoM</th>
                             <th>Cuenta analítica</th>
+                            <th class="text-end">P. unitario est.</th>
                             <th class="text-end">Estimado</th>
+                            <th class="text-end">P. unitario def.</th>
                             <th class="text-end">Definitivo</th>
                         </tr>
                     </thead>
                     <tbody>
                         <t t-foreach="o.line_ids.sorted(key=lambda l: (l.sequence, l.id))" t-as="line">
                             <tr t-if="line.display_type == 'line_section'">
-                                <td colspan="8">
+                                <td colspan="10">
                                     <strong t-field="line.name"/>
                                 </td>
                             </tr>
                             <tr t-elif="line.display_type == 'line_note'">
-                                <td colspan="8">
+                                <td colspan="10">
                                     <em t-field="line.name"/>
                                 </td>
                             </tr>
@@ -144,7 +146,15 @@
                                 <td><span t-field="line.product_uom_id"/></td>
                                 <td><span t-field="line.analytic_account_id"/></td>
                                 <td class="text-end">
+                                    <span t-field="line.price_unit_estimated"
+                                          t-options='{"widget": "monetary", "display_currency": o.currency_id}'/>
+                                </td>
+                                <td class="text-end">
                                     <span t-field="line.amount_estimated_line"
+                                          t-options='{"widget": "monetary", "display_currency": o.currency_id}'/>
+                                </td>
+                                <td class="text-end">
+                                    <span t-field="line.price_unit_final"
                                           t-options='{"widget": "monetary", "display_currency": o.currency_id}'/>
                                 </td>
                                 <td class="text-end">
@@ -155,6 +165,95 @@
                         </t>
                     </tbody>
                 </table>
+
+                <!--
+                    Totalizador por partida presupuestaria.
+                    Hoy el expediente tiene UNA sola partida (budget_position_id);
+                    la grilla queda preparada para múltiples partidas a futuro
+                    (por ejemplo, agrupando por la partida derivada de la cuenta
+                    analítica de cada línea). Si no hay partida cargada, se omite.
+                -->
+                <t t-if="o.expedient_id.budget_position_id">
+                    <h4 class="mt-3">Totalizador por partida presupuestaria</h4>
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Partida</th>
+                                <th class="text-end">Total estimado</th>
+                                <th class="text-end">Total definitivo</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><span t-field="o.expedient_id.budget_position_id.code"/></td>
+                                <td><span t-field="o.expedient_id.budget_position_id.name"/></td>
+                                <td class="text-end">
+                                    <span t-esc="sum(o.line_ids.filtered(lambda l: not l.display_type).mapped('amount_estimated_line'))"
+                                          t-options='{"widget": "monetary", "display_currency": o.currency_id}'/>
+                                </td>
+                                <td class="text-end">
+                                    <span t-esc="sum(o.line_ids.filtered(lambda l: not l.display_type).mapped('amount_final_line'))"
+                                          t-options='{"widget": "monetary", "display_currency": o.currency_id}'/>
+                                </td>
+                            </tr>
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <th colspan="2" class="text-end">Totales</th>
+                                <th class="text-end">
+                                    <span t-field="o.amount_preventiva"
+                                          t-options='{"widget": "monetary", "display_currency": o.currency_id}'/>
+                                </th>
+                                <th class="text-end">
+                                    <span t-field="o.amount_definitiva"
+                                          t-options='{"widget": "monetary", "display_currency": o.currency_id}'/>
+                                </th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </t>
+
+                <!--
+                    Grilla de aprobaciones (tier validation). Sólo se renderiza
+                    si el módulo `expedient_tier_validation` está instalado y la
+                    SG tiene revisiones. Mostramos exclusivamente las validadas/rechazadas
+                    para que el reporte refleje historial real de aprobaciones.
+                -->
+                <t t-if="'review_ids' in o._fields">
+                    <t t-set="done_reviews" t-value="o.review_ids.filtered(lambda r: r.status in ('approved', 'rejected'))"/>
+                    <t t-if="done_reviews">
+                        <h4 class="mt-3">Aprobaciones</h4>
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Fase</th>
+                                    <th>Nivel</th>
+                                    <th>Estado</th>
+                                    <th>Fecha de validación</th>
+                                    <th>Aprobado por</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="done_reviews.sorted(key=lambda r: (r.spend_phase or '', r.sequence or 0, r.id))" t-as="rev">
+                                    <td>
+                                        <span t-if="rev.spend_phase == 'preventiva'">Preventiva</span>
+                                        <span t-elif="rev.spend_phase == 'definitiva'">Definitiva</span>
+                                        <span t-else=""/>
+                                    </td>
+                                    <td><span t-field="rev.sequence"/></td>
+                                    <td>
+                                        <span t-if="rev.status == 'approved'" class="text-success">Aprobada</span>
+                                        <span t-elif="rev.status == 'rejected'" class="text-danger">Rechazada</span>
+                                        <span t-else="" t-field="rev.status"/>
+                                    </td>
+                                    <td><span t-field="rev.reviewed_date"/></td>
+                                    <td><span t-field="rev.done_by"/></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </t>
+                </t>
 
                 <!-- Firmas: bloque simple para autorizaciones manuales. -->
                 <div class="row mt-5">
