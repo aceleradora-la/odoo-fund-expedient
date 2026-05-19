@@ -33,31 +33,30 @@
             -->
             <div class="page sg-report" style="font-size: 10px;">
                 <!--
-                    Estilos locales: el layout externo de Odoo aplica
-                    border-radius al `thead` de las tablas; combinado con el
-                    border-bottom del header + border-top del tbody se forma
-                    una línea recta justo debajo de la curva.
-                    Forzamos `border-collapse: separate` y quitamos los bordes
-                    huérfanos para que la transición header → cuerpo quede
-                    limpia. El alcance se restringe a `.sg-report` para no
-                    afectar otros reportes en la misma sesión.
+                    Estilos locales del reporte de SG.
+
+                    El layout externo de Odoo (o algún tema instalado) aplica
+                    `border-radius` al `<thead>` y/o al `<table>` de las
+                    tablas. Combinado con `border-collapse: collapse` (el
+                    default de Bootstrap), se genera el efecto de "rectángulo
+                    fantasma" debajo de la curva: la curva del thead queda
+                    visualmente despegada del resto de la tabla y aparece una
+                    línea recta extra debajo.
+
+                    Solución: forzar tablas RECTANGULARES (border-radius: 0)
+                    en este reporte y mantener `border-collapse: collapse`
+                    para que Bootstrap dibuje sus líneas internas como
+                    siempre. Así los totales y separaciones del tbody/tfoot
+                    se respetan tal cual.
                 -->
                 <style>
-                    .sg-report table.table {
-                        border-collapse: separate;
-                        border-spacing: 0;
-                    }
-                    .sg-report table.table thead th {
-                        border-top: 0;
-                        border-bottom: 0;
-                    }
+                    .sg-report table.table,
+                    .sg-report table.table thead,
+                    .sg-report table.table thead tr,
+                    .sg-report table.table thead th,
                     .sg-report table.table tbody tr:first-child td,
                     .sg-report table.table tbody tr:first-child th {
-                        border-top: 0;
-                    }
-                    .sg-report table.table tfoot tr:last-child td,
-                    .sg-report table.table tfoot tr:last-child th {
-                        border-bottom: 0;
+                        border-radius: 0 !important;
                     }
                 </style>
                 <h2 class="mb-1" style="font-size: 20px;">
