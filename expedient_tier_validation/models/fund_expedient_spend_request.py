@@ -109,8 +109,13 @@ class FundExpedientSpendRequest(models.Model):
         return res
 
     def action_generate_final(self):
-        res = super().action_generate_final()
-        for rec in self:
+        # La SG puede seguir "bloqueada" por reviews validadas de la fase
+        # preventiva. Generar la definitiva es una transición interna del flujo,
+        # no una edición funcional del usuario, por eso salteamos el guard de
+        # base_tier_validation para escribir fase/estado/fechas/importes.
+        records = self.with_context(skip_validation_check=True)
+        res = super(FundExpedientSpendRequest, records).action_generate_final()
+        for rec in records:
             if not rec._get_applicable_tier_definitions():
-                rec.definitiva_state = "approved"
+                rec.with_context(skip_validation_check=True).definitiva_state = "approved"
         return res
