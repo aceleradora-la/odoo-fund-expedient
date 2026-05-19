@@ -50,13 +50,22 @@
                     se respetan tal cual.
                 -->
                 <style>
-                    .sg-report table.table,
-                    .sg-report table.table thead,
-                    .sg-report table.table thead tr,
-                    .sg-report table.table thead th,
-                    .sg-report table.table tbody tr:first-child td,
-                    .sg-report table.table tbody tr:first-child th {
+                    /*
+                        Forzamos border-radius: 0 a TODOS los elementos del
+                        reporte. El tema/layout instalado aplica curvas en
+                        múltiples selectores (table, thead, tr, td, pseudo
+                        elementos) y un selector específico no cubre todos
+                        los casos, dejando "fantasmas" curvos en esquinas.
+                        Al usar `.sg-report *` con !important garantizamos
+                        rectángulos limpios sin afectar otros reportes ni
+                        al header/footer (que viven fuera de .sg-report).
+                    */
+                    .sg-report,
+                    .sg-report *,
+                    .sg-report *::before,
+                    .sg-report *::after {
                         border-radius: 0 !important;
+                        box-shadow: none !important;
                     }
                 </style>
                 <h2 class="mb-1" style="font-size: 20px;">
