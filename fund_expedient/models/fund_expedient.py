@@ -306,12 +306,16 @@ class FundExpedient(models.Model):
         "parent_id",
         string="Expedientes relacionados",
     )
-    # Selector auxiliar (no almacenado) para vincular un expediente existente
-    # como "relacionado" sin disparar la creación de uno nuevo desde el One2many.
+    # Selector auxiliar para vincular un expediente existente como
+    # "relacionado" sin disparar la creación de uno nuevo desde el One2many.
+    #
+    # Debe estar almacenado: los botones type="object" ejecutan el método
+    # sobre el registro guardado, y un Many2one store=False puede llegar
+    # vacío al servidor aunque el usuario lo haya elegido en la vista.
     child_picker_id = fields.Many2one(
         "fund.expedient",
         string="Vincular expediente existente",
-        store=False,
+        copy=False,
         help="Elegí un expediente existente y presioná 'Vincular' para agregarlo como relacionado.",
     )
     line_ids = fields.One2many(

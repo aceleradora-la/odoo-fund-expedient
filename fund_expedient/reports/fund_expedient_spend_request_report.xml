@@ -31,7 +31,35 @@
                 desbordar. El layout externo (encabezado/footer) no se ve
                 afectado porque su CSS está en otra escala.
             -->
-            <div class="page" style="font-size: 10px;">
+            <div class="page sg-report" style="font-size: 10px;">
+                <!--
+                    Estilos locales: el layout externo de Odoo aplica
+                    border-radius al `thead` de las tablas; combinado con el
+                    border-bottom del header + border-top del tbody se forma
+                    una línea recta justo debajo de la curva.
+                    Forzamos `border-collapse: separate` y quitamos los bordes
+                    huérfanos para que la transición header → cuerpo quede
+                    limpia. El alcance se restringe a `.sg-report` para no
+                    afectar otros reportes en la misma sesión.
+                -->
+                <style>
+                    .sg-report table.table {
+                        border-collapse: separate;
+                        border-spacing: 0;
+                    }
+                    .sg-report table.table thead th {
+                        border-top: 0;
+                        border-bottom: 0;
+                    }
+                    .sg-report table.table tbody tr:first-child td,
+                    .sg-report table.table tbody tr:first-child th {
+                        border-top: 0;
+                    }
+                    .sg-report table.table tfoot tr:last-child td,
+                    .sg-report table.table tfoot tr:last-child th {
+                        border-bottom: 0;
+                    }
+                </style>
                 <h2 class="mb-1" style="font-size: 20px;">
                     Solicitud de Gasto
                     <span t-if="o.number and o.number != '/'" t-esc="o.number"/>
@@ -68,20 +96,20 @@
                     </div>
                     <div class="col-6">
                         <!--
-                            Datos de la contratación primero (objeto y lugar de
-                            entrega), luego responsables. Mejor lectura: queda
-                            arriba el QUÉ se solicita y abajo QUIÉN lo solicita.
+                            Datos de la contratación SIEMPRE visibles (sin
+                            t-if): aunque el expediente no los tenga cargados,
+                            queremos que el reporte deje constancia explícita
+                            del espacio (con valor vacío) y mantenga un layout
+                            consistente con la vista en pantalla.
+                            Objeto y lugar arriba del solicitante: primero el
+                            "QUÉ" se contrata y luego "QUIÉN" lo pide.
                         -->
-                        <t t-if="o.contract_object">
-                            <strong>Objeto de la contratación:</strong>
-                            <span t-field="o.contract_object"/>
-                            <br/>
-                        </t>
-                        <t t-if="o.delivery_location">
-                            <strong>Lugar de entrega:</strong>
-                            <span t-field="o.delivery_location"/>
-                            <br/>
-                        </t>
+                        <strong>Objeto de la contratación:</strong>
+                        <span t-field="o.contract_object"/>
+                        <br/>
+                        <strong>Lugar de entrega:</strong>
+                        <span t-field="o.delivery_location"/>
+                        <br/>
                         <strong>Solicitante:</strong>
                         <span t-field="o.requestor_id"/>
                         <br/>

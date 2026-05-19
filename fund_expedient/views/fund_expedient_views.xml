@@ -296,10 +296,16 @@
                                             <field name="final_number" readonly="1" optional="hide"/>
                                         </group>
                                         <group>
-                                            <field name="contract_object" readonly="1"
-                                                   invisible="not contract_object"/>
-                                            <field name="delivery_location" readonly="1"
-                                                   invisible="not delivery_location"/>
+                                            <!--
+                                                Objeto y lugar SIEMPRE visibles
+                                                en la SG embebida: si el
+                                                expediente padre no los tiene
+                                                cargados, el campo se muestra
+                                                vacío pero presente para que el
+                                                usuario sepa que existe.
+                                            -->
+                                            <field name="contract_object" readonly="1"/>
+                                            <field name="delivery_location" readonly="1"/>
                                             <field name="requestor_id" readonly="1"/>
                                             <field name="requestor_department_id" readonly="1"/>
                                             <field name="requestor_department_manager_id" readonly="1"
