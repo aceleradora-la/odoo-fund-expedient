@@ -19,15 +19,10 @@ class AccountMove(models.Model):
     )
 
     @api.onchange("expedient_ids")
-    def _onchange_expedient_ids_budget_position(self):
+    def _onchange_expedient_ids_analytic(self):
+        """Si todos los expedientes apuntan a la misma cuenta analítica,
+        se sugiere para las líneas de factura sin distribución cargada."""
         for move in self.filtered(lambda m: m.move_type in ("in_invoice", "in_refund")):
-            positions = move.expedient_ids.mapped("budget_position_id").filtered(lambda p: p)
-            if len(positions) == 1:
-                position = positions[0]
-                for line in move.invoice_line_ids.filtered(
-                    lambda l: not l.display_type and not l.budget_position_id
-                ):
-                    line.budget_position_id = position
             analytics = move.expedient_ids.mapped("analytic_account_id").filtered(lambda a: a)
             if len(analytics) == 1:
                 analytic = analytics[0]
@@ -40,13 +35,6 @@ class AccountMove(models.Model):
         if "expedient_ids" in vals:
             for move in self:
                 if move.move_type in ("in_invoice", "in_refund") and move.expedient_ids:
-                    positions = move.expedient_ids.mapped("budget_position_id").filtered(lambda p: p)
-                    if len(positions) == 1:
-                        lines_to_update = move.invoice_line_ids.filtered(
-                            lambda l: not l.display_type and not l.budget_position_id
-                        )
-                        if lines_to_update:
-                            lines_to_update.write({"budget_position_id": positions[0].id})
                     analytics = move.expedient_ids.mapped("analytic_account_id").filtered(lambda a: a)
                     if len(analytics) == 1:
                         analytic = analytics[0]
@@ -59,9 +47,9 @@ class AccountMove(models.Model):
             f in vals
             for f in ("expedient_ids", "state", "amount_total", "currency_id", "invoice_line_ids")
         ):
-            # Facturas directas: expedient_ids
+            # Recompute de importes comprometidos/reales del expediente
+            # cuando cambia la factura o su vínculo.
             expedients = self.mapped("expedient_ids")
-            # Facturas desde OC: expedientes vía líneas con purchase_line_id
             for move in self:
                 if move.move_type in ("in_invoice", "in_refund"):
                     pos = move.invoice_line_ids.purchase_line_id.order_id

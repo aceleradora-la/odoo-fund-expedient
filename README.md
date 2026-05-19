@@ -1,6 +1,6 @@
 # Odoo - Expedientes para Fundación
 
-Módulos de Odoo para la gestión de expedientes en una fundación: expedientes con etapas, partidas presupuestarias, relación con compras y proyectos, y validación por niveles.
+Módulos de Odoo para la gestión de expedientes en una fundación: expedientes con etapas, cuentas analíticas, relación con compras y proyectos, y validación por niveles.
 
 ## Ramas
 
@@ -15,7 +15,7 @@ Clonar o descargar la rama que coincida con tu versión de Odoo.
 
 | Módulo | Descripción |
 |--------|-------------|
-| **fund_expedient** | Expedientes, etapas, partidas presupuestarias, encuadres, relación con Purchase y Project. |
+| **fund_expedient** | Expedientes, etapas, cuentas analíticas, encuadres, relación con Purchase y Project. |
 | **expedient_tier_validation** | Validación por niveles (tier validation) sobre expedientes. Requiere [base_tier_validation](https://github.com/OCA/server-ux) (OCA). |
 
 ## Instalación

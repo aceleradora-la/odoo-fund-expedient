@@ -85,7 +85,6 @@
                     <field name="hide_estimated_need_date_stage" invisible="1"/>
                     <field name="hide_recommended_supplier_id_stage" invisible="1"/>
                     <field name="hide_recommended_supplier_ids_stage" invisible="1"/>
-                    <field name="hide_budget_position_id_stage" invisible="1"/>
                     <field name="hide_amount_estimated_stage" invisible="1"/>
                     <button name="action_previous_stage" type="object" string="Etapa anterior"
                             class="btn-secondary"
@@ -162,7 +161,6 @@
                         <group string="Clasificación">
                             <field name="analytic_plan_id" invisible="1"/>
                             <field name="analytic_account_id" invisible="hide_analytic_account_id_stage"/>
-                            <field name="budget_position_id" invisible="1"/>
                             <field name="project_ids" widget="many2many_tags"/>
                             <field name="company_id" groups="base.group_multi_company"/>
                         </group>

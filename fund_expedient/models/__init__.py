@@ -1,7 +1,5 @@
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 
-from . import budget_position_category
-from . import budget_position
 from . import fund_budget
 from . import fund_budget_line
 from . import fund_budget_adjustment

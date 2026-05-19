@@ -174,10 +174,6 @@ class FundExpedient(models.Model):
         string="Ocultar Proveedores recomendados por etapa",
         compute="_compute_stage_field_visibility",
     )
-    hide_budget_position_id_stage = fields.Boolean(
-        string="Ocultar Partida presupuestaria por etapa",
-        compute="_compute_stage_field_visibility",
-    )
     hide_analytic_account_id_stage = fields.Boolean(
         string="Ocultar Cuenta analítica por etapa",
         compute="_compute_stage_field_visibility",
@@ -210,12 +206,6 @@ class FundExpedient(models.Model):
     line_amounts_drive_confirmed = fields.Boolean(
         string="Total definitivo viene de líneas",
         compute="_compute_line_amount_flags",
-    )
-    budget_position_id = fields.Many2one(
-        "fund.budget.position",
-        string="Partida presupuestaria asignada",
-        tracking=True,
-        domain="[('budget_assignment_allowed', '=', True)]",
     )
     analytic_account_id = fields.Many2one(
         "account.analytic.account",
@@ -592,7 +582,7 @@ class FundExpedient(models.Model):
         "type_id.stage_assign_ids.hide_encuadre_id",
         "type_id.stage_assign_ids.hide_estimated_need_date",
         "type_id.stage_assign_ids.hide_recommended_supplier_id",
-        "type_id.stage_assign_ids.hide_budget_position_id",
+        "type_id.stage_assign_ids.hide_analytic_account_id",
         "type_id.stage_assign_ids.hide_amount_estimated",
     )
     def _compute_stage_field_visibility(self):
@@ -605,7 +595,6 @@ class FundExpedient(models.Model):
             rec.hide_estimated_need_date_stage = False
             rec.hide_recommended_supplier_id_stage = False
             rec.hide_recommended_supplier_ids_stage = False
-            rec.hide_budget_position_id_stage = False
             rec.hide_analytic_account_id_stage = False
             rec.hide_amount_estimated_stage = False
             if not rec.id:
@@ -630,9 +619,7 @@ class FundExpedient(models.Model):
             rec.hide_estimated_need_date_stage = assign.hide_estimated_need_date
             rec.hide_recommended_supplier_id_stage = assign.hide_recommended_supplier_id
             rec.hide_recommended_supplier_ids_stage = assign.hide_recommended_supplier_id
-            rec.hide_budget_position_id_stage = assign.hide_budget_position_id
-            # Reutilizamos el mismo flag de ocultación para la nueva cuenta analítica.
-            rec.hide_analytic_account_id_stage = assign.hide_budget_position_id
+            rec.hide_analytic_account_id_stage = assign.hide_analytic_account_id
             rec.hide_amount_estimated_stage = assign.hide_amount_estimated
 
     @api.depends(

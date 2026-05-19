@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<odoo>
-    <data noupdate="0">
-        <!-- Crear vistas vía código para evitar XML tree en Odoo 18 -->
-        <function model="fund.budget.position.category" name="init_budget_position_views"/>
-        <function model="fund.expedient.stage" name="init_expedient_stage_view"/>
-        <function model="fund.expedient.encuadre" name="init_expedient_encuadre_view"/>
-    </data>
-</odoo>

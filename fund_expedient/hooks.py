@@ -35,22 +35,54 @@ def pre_init_hook(cr_or_env):
     """Antes de cargar modelos: renombrar columnas legacy de Solicitud de Gasto (sin usar oldname en Odoo 18)."""
     cr = _cursor_from_hook_arg(cr_or_env)
     table = "fund_expedient_spend_request"
-    if not _table_exists(cr, table):
-        return
-    renames = [
-        ("initial_number", "number"),
-        ("initial_date", "date_preventiva"),
-        ("initial_amount", "amount_preventiva"),
-        ("initial_amount_unit", "amount_preventiva_unit"),
-        ("final_date", "date_definitiva"),
-        ("final_amount_confirmed", "amount_definitiva"),
-        ("final_amount_confirmed_unit", "amount_definitiva_unit"),
+    if _table_exists(cr, table):
+        renames = [
+            ("initial_number", "number"),
+            ("initial_date", "date_preventiva"),
+            ("initial_amount", "amount_preventiva"),
+            ("initial_amount_unit", "amount_preventiva_unit"),
+            ("final_date", "date_definitiva"),
+            ("final_amount_confirmed", "amount_definitiva"),
+            ("final_amount_confirmed_unit", "amount_definitiva_unit"),
+        ]
+        for old_name, new_name in renames:
+            if _column_exists(cr, table, old_name) and not _column_exists(cr, table, new_name):
+                cr.execute(
+                    'ALTER TABLE "%s" RENAME COLUMN "%s" TO "%s";' % (table, old_name, new_name)
+                )
+
+    # ---- Limpieza definitiva de partida presupuestaria (deprecada) ----
+    # La funcionalidad "Partida presupuestaria" fue reemplazada por "Cuenta
+    # analítica" a nivel expediente y a nivel línea. Si instalaciones
+    # previas dejaron tablas o columnas residuales, las eliminamos antes
+    # de cargar el ORM para evitar errores de carga de modelos.
+    _drop_legacy_budget_position(cr)
+
+
+def _drop_legacy_budget_position(cr):
+    """Elimina tablas/columnas residuales del feature de Partida presupuestaria."""
+    # Columnas residuales en tablas que persisten.
+    legacy_columns = [
+        ("fund_expedient", "budget_position_id"),
+        ("account_move_line", "budget_position_id"),
+        ("fund_expedient_type_stage_assign", "hide_budget_position_id"),
+        ("fund_budget_line", "budget_position_id"),
+        ("fund_budget_adjustment_line", "budget_position_id"),
     ]
-    for old_name, new_name in renames:
-        if _column_exists(cr, table, old_name) and not _column_exists(cr, table, new_name):
-            cr.execute(
-                'ALTER TABLE "%s" RENAME COLUMN "%s" TO "%s";' % (table, old_name, new_name)
-            )
+    for table, column in legacy_columns:
+        if _table_exists(cr, table) and _column_exists(cr, table, column):
+            cr.execute('ALTER TABLE "%s" DROP COLUMN IF EXISTS "%s";' % (table, column))
+    # Tablas residuales: borrar en orden inverso por dependencias FK.
+    legacy_tables = [
+        "fund_budget_position_report",
+        "fund_budget_position",
+        "fund_budget_position_category",
+    ]
+    for table in legacy_tables:
+        if _table_exists(cr, table):
+            cr.execute('DROP TABLE IF EXISTS "%s" CASCADE;' % table)
+    # Vistas SQL residuales (el reporte era una vista).
+    cr.execute('DROP VIEW IF EXISTS fund_budget_position_report CASCADE;')
 
 
 def post_init_hook(cr_or_env, registry=None):
