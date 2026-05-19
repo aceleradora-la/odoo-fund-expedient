@@ -198,3 +198,62 @@ def post_init_hook(cr_or_env, registry=None):
         ON CONFLICT DO NOTHING
         """
     )
+
+    # ----------------------------------------------------------------------
+    # Backfill de campos `related` con `store=True`.
+    #
+    # Cuando se agrega un campo `related` con `store=True`, Odoo crea la
+    # columna nueva pero NO recomputa los datos para los registros
+    # existentes (sólo recalcula al escribir el registro). Eso provoca que
+    # el "Sector requirente" / "Responsable del sector" aparezcan vacíos
+    # en SGs ya creadas a pesar de estar bien definidos en el expediente.
+    # Forzamos el rellenado vía SQL para evitar pedirle al usuario que
+    # toque manualmente cada expediente/SG.
+    # ----------------------------------------------------------------------
+
+    # 1) Expediente: derivar departamento del empleado solicitante.
+    cr.execute(
+        """
+        UPDATE fund_expedient fe
+           SET requestor_department_id = he.department_id
+          FROM hr_employee he
+         WHERE fe.requestor_id = he.id
+           AND he.department_id IS NOT NULL
+           AND (fe.requestor_department_id IS NULL
+                OR fe.requestor_department_id <> he.department_id)
+        """
+    )
+    # 2) Expediente: derivar manager del departamento del solicitante.
+    cr.execute(
+        """
+        UPDATE fund_expedient fe
+           SET requestor_department_manager_id = hd.manager_id
+          FROM hr_employee he
+          JOIN hr_department hd ON hd.id = he.department_id
+         WHERE fe.requestor_id = he.id
+           AND hd.manager_id IS NOT NULL
+           AND (fe.requestor_department_manager_id IS NULL
+                OR fe.requestor_department_manager_id <> hd.manager_id)
+        """
+    )
+    # 3) Solicitud de Gasto: heredar del expediente todos los campos
+    #    `related` con store=True que se agregaron recientemente.
+    cr.execute(
+        """
+        UPDATE fund_expedient_spend_request sg
+           SET requestor_id = fe.requestor_id,
+               requestor_department_id = fe.requestor_department_id,
+               requestor_department_manager_id = fe.requestor_department_manager_id,
+               contract_object = COALESCE(sg.contract_object, fe.contract_object),
+               delivery_location = COALESCE(sg.delivery_location, fe.delivery_location)
+          FROM fund_expedient fe
+         WHERE sg.expedient_id = fe.id
+           AND (
+                sg.requestor_id IS DISTINCT FROM fe.requestor_id
+             OR sg.requestor_department_id IS DISTINCT FROM fe.requestor_department_id
+             OR sg.requestor_department_manager_id IS DISTINCT FROM fe.requestor_department_manager_id
+             OR sg.contract_object IS NULL
+             OR sg.delivery_location IS NULL
+           )
+        """
+    )
