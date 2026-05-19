@@ -77,12 +77,20 @@
                         <strong>Expediente:</strong>
                         <span t-field="o.expedient_id.number"/>
                         <br/>
+                        <!--
+                            Tipo y "Número por tipo" en líneas separadas:
+                            mejora la legibilidad cuando el nombre del tipo
+                            es largo y evita la sintaxis "Tipo (NUM)" que se
+                            mezclaba con el resto del bloque.
+                        -->
                         <strong>Tipo de expediente:</strong>
                         <span t-field="o.expedient_type_id"/>
-                        <span t-if="o.expedient_type_number">
-                            (<span t-field="o.expedient_type_number"/>)
-                        </span>
                         <br/>
+                        <t t-if="o.expedient_type_number">
+                            <strong>Número por tipo:</strong>
+                            <span t-field="o.expedient_type_number"/>
+                            <br/>
+                        </t>
                         <strong>Fase:</strong>
                         <span t-field="o.spend_state"/>
                         <br/>
