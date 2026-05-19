@@ -21,6 +21,7 @@
                 <field name="definitiva_state"/>
                 <field name="date_preventiva"/>
                 <field name="date_definitiva"/>
+                <field name="amount_diff_pct" optional="hide"/>
                 <field name="company_id" groups="base.group_multi_company"/>
             </list>
         </field>
@@ -57,6 +58,18 @@
                 <separator/>
                 <filter string="De mi sector" name="my_department"
                         domain="[('requestor_department_id.member_ids.user_id', '=', uid)]"/>
+                <separator/>
+                <!--
+                    Filtros sobre la variación definitivo vs. preventivo.
+                    Útiles para revisar SGs con sobrecosto/ahorro relevante
+                    y para que el equipo de control pueda ubicarlas rápido.
+                -->
+                <filter string="Sobrecosto &gt; 10%" name="overrun_10"
+                        domain="[('amount_diff_pct', '&gt;', 10)]"/>
+                <filter string="Sobrecosto &gt; 20%" name="overrun_20"
+                        domain="[('amount_diff_pct', '&gt;', 20)]"/>
+                <filter string="Ahorro" name="savings"
+                        domain="[('amount_diff_pct', '&lt;', 0)]"/>
                 <group expand="0" string="Agrupar por">
                     <filter string="Expediente" name="group_expedient"
                             context="{'group_by': 'expedient_id'}"/>
@@ -136,6 +149,22 @@
                     <group string="Definitiva">
                         <group>
                             <field name="date_definitiva" readonly="1"/>
+                            <!--
+                                Variación % definitivo vs. preventivo.
+                                El campo ya almacena el porcentaje listo
+                                (5.0 = 5%), así que no usamos el widget
+                                "percentage" (que asume ratio 0..1).
+                                Lo mostramos solo cuando hay definitivo
+                                cargado para evitar el "0,00 %" en SGs
+                                que aún están en fase preventiva.
+                            -->
+                            <label for="amount_diff_pct"
+                                   invisible="not amount_definitiva"/>
+                            <div invisible="not amount_definitiva">
+                                <field name="amount_diff_pct" readonly="1"
+                                       nolabel="1" class="oe_inline"/>
+                                <span class="oe_inline">%</span>
+                            </div>
                         </group>
                         <group>
                             <field name="amount_definitiva" readonly="1"/>

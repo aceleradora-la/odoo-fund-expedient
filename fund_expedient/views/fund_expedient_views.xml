@@ -326,6 +326,14 @@
                                     <group string="Definitiva">
                                         <group>
                                             <field name="date_definitiva" readonly="1"/>
+                                            <!-- Variación % definitivo vs. preventivo (ver vista standalone). -->
+                                            <label for="amount_diff_pct"
+                                                   invisible="not amount_definitiva"/>
+                                            <div invisible="not amount_definitiva">
+                                                <field name="amount_diff_pct" readonly="1"
+                                                       nolabel="1" class="oe_inline"/>
+                                                <span class="oe_inline">%</span>
+                                            </div>
                                         </group>
                                         <group>
                                             <field name="amount_definitiva" readonly="1"/>

@@ -150,6 +150,48 @@ class FundExpedientSpendRequest(models.Model):
         default="/",
     )
 
+    # ------------------------------------------------------------------
+    # Variación entre preventivo y definitivo
+    # ------------------------------------------------------------------
+    # Campo calculado y ALMACENADO con la diferencia porcentual entre
+    # `amount_definitiva` y `amount_preventiva`. Lo necesitamos almacenado
+    # porque base_tier_validation evalúa los dominios de cada tier.definition
+    # con `search`, y los dominios sólo pueden referirse a campos guardados.
+    #
+    # Convención del signo:
+    #   - Positivo (+): el definitivo es MAYOR que el preventivo
+    #     (sobrecosto / ampliación de la SG).
+    #   - Negativo (−): el definitivo es MENOR (ahorro).
+    #   - 0.0 cuando no hay preventivo o ambos coinciden.
+    amount_diff_pct = fields.Float(
+        string="Variación definitivo vs. preventivo (%)",
+        compute="_compute_amount_diff_pct",
+        store=True,
+        readonly=True,
+        digits=(16, 2),
+        help=(
+            "Diferencia porcentual entre el importe definitivo y el preventivo. "
+            "Positivo = el definitivo supera al preventivo (sobrecosto). "
+            "Negativo = ahorro. 0 si aún no hay preventivo cargado."
+        ),
+    )
+
+    @api.depends("amount_preventiva", "amount_definitiva")
+    def _compute_amount_diff_pct(self):
+        """Cálculo de variación % entre definitivo y preventivo.
+
+        Se redondea a 2 decimales en la representación, pero el dato
+        almacenado conserva la precisión completa del Float para
+        comparaciones en dominios de tier validation sin pérdida.
+        """
+        for rec in self:
+            base = rec.amount_preventiva or 0.0
+            final = rec.amount_definitiva or 0.0
+            if base:
+                rec.amount_diff_pct = (final - base) / base * 100.0
+            else:
+                rec.amount_diff_pct = 0.0
+
     line_ids = fields.One2many(
         "fund.expedient.spend.request.line",
         "spend_request_id",
