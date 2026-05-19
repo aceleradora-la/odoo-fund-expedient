@@ -177,12 +177,24 @@
                             <field name="amount_estimated"
                                    invisible="hide_amount_estimated_stage"
                                    readonly="line_amounts_drive_estimated"/>
+                            <!--
+                                Importe definitivo (manual): editable cuando
+                                la etapa lo permite y el expediente no tiene
+                                líneas con importe definitivo cargado. Si hay
+                                líneas, el total se calcula sumándolas y el
+                                manual queda oculto para no inducir confusión.
+                            -->
+                            <field name="amount_estimated_confirmed_manual"
+                                   invisible="line_amounts_drive_confirmed"
+                                   readonly="not line_amount_final_editable"/>
+                            <field name="amount_estimated_confirmed" readonly="1"/>
                             <field name="amount_committed" readonly="1"/>
                             <field name="amount_real" readonly="1"/>
                         </group>
                         <group string="Moneda (tipo de expediente)" invisible="not approval_currency_id">
                             <field name="approval_currency_id" readonly="1"/>
                             <field name="amount_estimated_unit" readonly="1" invisible="hide_amount_estimated_stage"/>
+                            <field name="amount_estimated_confirmed_unit" readonly="1"/>
                             <field name="amount_committed_unit" readonly="1"/>
                             <field name="amount_real_unit" readonly="1"/>
                         </group>
@@ -359,17 +371,14 @@
                                     </group>
                                 </form>
                             </field>
-                            <group string="Total Estimado Confirmado (expediente)">
-                                <group string="Moneda (compañía)">
-                                    <field name="amount_estimated_confirmed_manual"
-                                           invisible="line_amounts_drive_confirmed"
-                                           readonly="not line_amount_final_editable"/>
-                                    <field name="amount_estimated_confirmed" readonly="1"/>
-                                </group>
-                                <group string="Moneda (tipo de expediente)" invisible="not approval_currency_id">
-                                    <field name="amount_estimated_confirmed_unit" readonly="1"/>
-                                </group>
-                            </group>
+                            <!--
+                                Bloque "Total Estimado Confirmado" eliminado de
+                                esta pestaña: los mismos campos viven ahora en
+                                la sección "Totales" principal del expediente
+                                para evitar duplicación visual y para que el
+                                usuario pueda cargar el importe definitivo
+                                manual sin tener que abrir la SG primero.
+                            -->
                         </page>
                         <page string="Disposiciones" name="dispositions" invisible="not has_dispositions_feature">
                             <field name="disposition_ids" nolabel="1"
