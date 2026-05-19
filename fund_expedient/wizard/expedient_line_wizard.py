@@ -123,6 +123,15 @@ class ExpedientLineWizard(models.TransientModel):
             vals["product_uom_id"] = line.product_uom_id.id
         elif "product_uom" in PurchaseOrderLine._fields:
             vals["product_uom"] = line.product_uom_id.id
+        if line.analytic_account_id:
+            if "analytic_distribution" in PurchaseOrderLine._fields:
+                # Odoo 18 usa analytic_distribution (json) en líneas de compra.
+                vals["analytic_distribution"] = {
+                    str(line.analytic_account_id.id): 100.0
+                }
+            elif "analytic_account_id" in PurchaseOrderLine._fields:
+                # Compatibilidad con instalaciones que aún expongan el campo legacy.
+                vals["analytic_account_id"] = line.analytic_account_id.id
         return vals
 
     def action_confirm(self):

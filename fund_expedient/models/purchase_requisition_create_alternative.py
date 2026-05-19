@@ -55,6 +55,36 @@ class PurchaseRequisitionCreateAlternative(models.TransientModel):
 
         return PurchaseOrder
 
+    def _copy_line_values_to_alternative(self, origin_line, alternative_line):
+        """Preserva valores propios del expediente que Odoo no siempre copia al alternar.
+
+        Las alternativas se crean desde el wizard estándar de compras; según el flujo,
+        puede no trasladar campos añadidos por otros módulos. Para nuestros RFQs, la
+        distribución analítica viene de la línea del expediente y debe mantenerse.
+        """
+        vals = {}
+        if (
+            "analytic_distribution" in origin_line._fields
+            and "analytic_distribution" in alternative_line._fields
+            and origin_line.analytic_distribution
+        ):
+            vals["analytic_distribution"] = origin_line.analytic_distribution
+        elif (
+            "analytic_account_id" in origin_line._fields
+            and "analytic_account_id" in alternative_line._fields
+            and origin_line.analytic_account_id
+        ):
+            vals["analytic_account_id"] = origin_line.analytic_account_id.id
+        if origin_line.name and alternative_line.name != origin_line.name:
+            vals["name"] = origin_line.name
+        if vals:
+            try:
+                alternative_line.write(vals)
+            except Exception:
+                # No bloqueamos la creación de alternativas por campos no editables
+                # o módulos analíticos no instalados en alguna base.
+                pass
+
     def action_create_alternative(self):
         """Crear alternativas y copiar expedientes desde la RFQ origen del wizard."""
         origin_po = self._get_origin_purchase_order()
@@ -80,10 +110,6 @@ class PurchaseRequisitionCreateAlternative(models.TransientModel):
             alt.invalidate_recordset(["order_line"])
             alt_lines = alt.order_line.sorted(key=lambda l: (l.sequence, l.id))
             for ol, al in zip(orig_lines, alt_lines):
-                if ol.name and al.name != ol.name:
-                    try:
-                        al.write({"name": ol.name})
-                    except Exception:
-                        pass
+                self._copy_line_values_to_alternative(ol, al)
 
         return res
