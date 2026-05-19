@@ -60,19 +60,54 @@ def pre_init_hook(cr_or_env):
 
 
 def _drop_legacy_budget_position(cr):
-    """Elimina tablas/columnas residuales del feature de Partida presupuestaria."""
-    # Columnas residuales en tablas que persisten.
+    """Elimina tablas/columnas residuales del feature de Partida presupuestaria.
+
+    Caso especial: en `fund.expedient.type.stage.assign` la bandera
+    `hide_budget_position_id` se reusaba como única forma de ocultar la
+    *cuenta analítica* por etapa, por lo que su configuración debe
+    PRESERVARSE bajo el nuevo nombre `hide_analytic_account_id`. Esto se
+    resuelve con un RENAME (en lugar de DROP) cuando la nueva columna no
+    existe todavía en la base.
+    """
+    # 1) Migración crítica: preservar la configuración de visibilidad
+    #    "Ocultar Partida presupuestaria" → "Ocultar Cuenta analítica".
+    assign_table = "fund_expedient_type_stage_assign"
+    if _table_exists(cr, assign_table):
+        old_col = "hide_budget_position_id"
+        new_col = "hide_analytic_account_id"
+        old_exists = _column_exists(cr, assign_table, old_col)
+        new_exists = _column_exists(cr, assign_table, new_col)
+        if old_exists and not new_exists:
+            # Caso normal en upgrade: renombrar columna preservando datos.
+            cr.execute(
+                'ALTER TABLE "%s" RENAME COLUMN "%s" TO "%s";'
+                % (assign_table, old_col, new_col)
+            )
+        elif old_exists and new_exists:
+            # Caso defensivo (ambas columnas presentes): copiar TRUE de la
+            # vieja a la nueva donde la nueva no esté seteada y luego dropear
+            # la vieja para no dejar el campo huérfano.
+            cr.execute(
+                'UPDATE "%s" SET "%s" = TRUE '
+                'WHERE COALESCE("%s", FALSE) = TRUE '
+                '  AND COALESCE("%s", FALSE) = FALSE;'
+                % (assign_table, new_col, old_col, new_col)
+            )
+            cr.execute('ALTER TABLE "%s" DROP COLUMN "%s";' % (assign_table, old_col))
+
+    # 2) Columnas residuales sin migración (datos descartables porque la
+    #    funcionalidad de partidas dejó de existir).
     legacy_columns = [
         ("fund_expedient", "budget_position_id"),
         ("account_move_line", "budget_position_id"),
-        ("fund_expedient_type_stage_assign", "hide_budget_position_id"),
         ("fund_budget_line", "budget_position_id"),
         ("fund_budget_adjustment_line", "budget_position_id"),
     ]
     for table, column in legacy_columns:
         if _table_exists(cr, table) and _column_exists(cr, table, column):
             cr.execute('ALTER TABLE "%s" DROP COLUMN IF EXISTS "%s";' % (table, column))
-    # Tablas residuales: borrar en orden inverso por dependencias FK.
+
+    # 3) Tablas residuales: borrar en orden inverso por dependencias FK.
     legacy_tables = [
         "fund_budget_position_report",
         "fund_budget_position",
