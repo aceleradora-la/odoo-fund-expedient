@@ -63,8 +63,9 @@ class FundExpedientSpendRequest(models.Model):
         return self.definitiva_state == "generated"
 
     def _get_company(self):
-        self.ensure_one()
-        return self.company_id or self.env.company
+        if not self:
+            return self.env.company
+        return self[:1].company_id or self.env.company
 
     def _on_context_tier_validated(self):
         for rec in self:

@@ -22,5 +22,6 @@ class FundExpedientDisposition(models.Model):
         return self.stage_id
 
     def _get_company(self):
-        self.ensure_one()
-        return self.expedient_id.company_id or self.env.company
+        if not self:
+            return self.env.company
+        return self[:1].expedient_id.company_id or self.env.company
