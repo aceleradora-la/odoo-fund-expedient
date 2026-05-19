@@ -321,8 +321,13 @@ class FundExpedientSpendRequest(models.Model):
             )
         if not self.number or self.number == "/":
             raise UserError(_("Primero debe existir la Solicitud de Gasto preventiva con número asignado."))
-        if not self.line_ids:
-            raise UserError(_("La Solicitud de Gasto preventiva no tiene líneas."))
+        if not exp.amount_estimated_confirmed:
+            raise UserError(
+                _(
+                    "Debe cargar un importe definitivo mayor a cero antes de generar "
+                    "la Solicitud de Gasto definitiva."
+                )
+            )
 
         self.write(
             {
