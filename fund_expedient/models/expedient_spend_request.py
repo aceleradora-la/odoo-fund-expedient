@@ -30,12 +30,14 @@ class FundExpedientSpendRequest(models.Model):
         string="Número por tipo (expediente)",
         readonly=True,
         store=False,
+        search="_search_expedient_type_number",
     )
     expedient_type_id = fields.Many2one(
         related="expedient_id.type_id",
         string="Tipo de expediente",
         readonly=True,
         store=False,
+        search="_search_expedient_type_id",
     )
 
     number = fields.Char(
@@ -127,6 +129,14 @@ class FundExpedientSpendRequest(models.Model):
             parts = [p for p in [num, state_lbl] if p]
             label = " · ".join(parts) if parts else ""
             rec.display_name = f"SG {exp} {label}".strip() if exp or label else _("Solicitud de Gasto")
+
+    def _search_expedient_type_number(self, operator, value):
+        """Buscar por el número por tipo sin almacenarlo en la SG."""
+        return [("expedient_id.type_number", operator, value)]
+
+    def _search_expedient_type_id(self, operator, value):
+        """Buscar por tipo de expediente sin duplicar el dato en la SG."""
+        return [("expedient_id.type_id", operator, value)]
 
     _sql_constraints = [
         (

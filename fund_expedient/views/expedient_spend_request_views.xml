@@ -21,6 +21,43 @@
         </field>
     </record>
 
+    <record id="view_fund_expedient_spend_request_search" model="ir.ui.view">
+        <field name="name">fund.expedient.spend.request.search</field>
+        <field name="model">fund.expedient.spend.request</field>
+        <field name="arch" type="xml">
+            <search string="Buscar solicitudes de gasto">
+                <field name="display_name" string="Solicitud"/>
+                <field name="expedient_id"/>
+                <field name="expedient_type_id"/>
+                <field name="expedient_type_number"/>
+                <field name="number"/>
+                <separator/>
+                <filter string="Preventiva" name="phase_preventiva"
+                        domain="[('spend_state', '=', 'preventiva')]"/>
+                <filter string="Definitiva" name="phase_definitiva"
+                        domain="[('spend_state', '=', 'definitiva')]"/>
+                <filter string="Preventiva generada" name="preventiva_generated"
+                        domain="[('preventiva_state', '=', 'generated')]"/>
+                <filter string="Preventiva aprobada" name="preventiva_approved"
+                        domain="[('preventiva_state', '=', 'approved')]"/>
+                <filter string="Definitiva generada" name="definitiva_generated"
+                        domain="[('definitiva_state', '=', 'generated')]"/>
+                <filter string="Definitiva aprobada" name="definitiva_approved"
+                        domain="[('definitiva_state', '=', 'approved')]"/>
+                <group expand="0" string="Agrupar por">
+                    <filter string="Expediente" name="group_expedient"
+                            context="{'group_by': 'expedient_id'}"/>
+                    <filter string="Fase SG" name="group_spend_state"
+                            context="{'group_by': 'spend_state'}"/>
+                    <filter string="Estado preventiva" name="group_preventiva_state"
+                            context="{'group_by': 'preventiva_state'}"/>
+                    <filter string="Estado definitiva" name="group_definitiva_state"
+                            context="{'group_by': 'definitiva_state'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
     <record id="view_fund_expedient_spend_request_form" model="ir.ui.view">
         <field name="name">fund.expedient.spend.request.form</field>
         <field name="model">fund.expedient.spend.request</field>
