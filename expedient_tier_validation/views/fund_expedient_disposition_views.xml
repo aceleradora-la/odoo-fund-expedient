@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+    <!--
+        Tier Validation embebida para Disposición: el form vive dentro del expediente y no
+        pasa por el get_view del modelo (auto-inyección no aplica). Insertamos botones y
+        banner manualmente. Las definiciones tier filtran por stage_id.
+    -->
     <record id="view_fund_expedient_form_disposition_tier" model="ir.ui.view">
         <field name="name">fund.expedient.form.disposition.tier</field>
         <field name="model">fund.expedient</field>
@@ -10,16 +15,57 @@
                 <field name="validation_status" invisible="1"/>
                 <field name="can_review" invisible="1"/>
                 <field name="hide_reviews" invisible="1"/>
+                <field name="has_comment" invisible="1"/>
+                <field name="next_review" invisible="1"/>
                 <field name="tier_stage_locked" invisible="1"/>
                 <field name="can_restart_validation_stage" invisible="1"/>
                 <field name="stage_validation_status" invisible="1"/>
                 <field name="has_stage_reviews" invisible="1"/>
+
+                <div class="o_button_bar mb-2">
+                    <button name="request_validation" type="object"
+                            string="Solicitar aprobación"
+                            class="btn-primary"
+                            invisible="not need_validation or stage_validation_status == 'rejected' or hide_reviews"/>
+                    <button name="validate_tier" type="object"
+                            string="Aprobar"
+                            class="btn-success"
+                            invisible="not can_review"/>
+                    <button name="reject_tier" type="object"
+                            string="Rechazar"
+                            class="btn-danger"
+                            invisible="not can_review"/>
+                    <button name="restart_validation" type="object"
+                            string="Reiniciar validación"
+                            class="btn-secondary"
+                            invisible="not can_restart_validation_stage or hide_reviews"
+                            confirm="¿Reiniciar la validación de la etapa actual?"/>
+                </div>
+
+                <div class="alert alert-warning mb-0" role="alert"
+                     invisible="stage_validation_status == 'validated' or hide_reviews or stage_validation_status == 'rejected' or not has_stage_reviews">
+                    <i class="fa fa-info-circle"/>
+                    Esta disposición necesita ser aprobada.
+                </div>
+                <div class="alert alert-success mb-0" role="alert"
+                     invisible="stage_validation_status != 'validated' or hide_reviews or not has_stage_reviews">
+                    <i class="fa fa-thumbs-up"/>
+                    Disposición aprobada.
+                </div>
+                <div class="alert alert-danger mb-0" role="alert"
+                     invisible="stage_validation_status != 'rejected' or hide_reviews or not has_stage_reviews">
+                    <i class="fa fa-thumbs-down"/>
+                    Disposición rechazada.
+                </div>
+
                 <group string="Aprobaciones" name="disposition_tier_reviews">
                     <field name="review_ids" nolabel="1">
                         <list create="0" delete="0">
                             <field name="stage_id" optional="show"/>
                             <field name="status"/>
                             <field name="todo_by"/>
+                            <field name="done_by" optional="show"/>
+                            <field name="reviewed_date" optional="show"/>
                         </list>
                     </field>
                 </group>

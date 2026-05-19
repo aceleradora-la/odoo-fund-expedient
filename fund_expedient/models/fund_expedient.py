@@ -1159,6 +1159,23 @@ class FundExpedient(models.Model):
                         % rec.stage_id.name
                     )
 
+            # Regenerar el "Número por tipo" cuando cambia el tipo:
+            # cada tipo mantiene su propia secuencia, por lo que el número anterior
+            # ya no corresponde. Si el nuevo tipo no tiene secuencia, limpiamos el campo.
+            if (
+                "type_id" in new_vals
+                and new_vals.get("type_id")
+                and new_vals.get("type_id") != rec.type_id.id
+                and "type_number" not in new_vals
+            ):
+                new_type = Type.browse(new_vals["type_id"])
+                if new_type.sequence_id:
+                    new_vals["type_number"] = (
+                        new_type.sequence_id.next_by_id() or False
+                    )
+                else:
+                    new_vals["type_number"] = False
+
             company = (
                 self.env["res.company"].browse(new_vals["company_id"])
                 if new_vals.get("company_id")

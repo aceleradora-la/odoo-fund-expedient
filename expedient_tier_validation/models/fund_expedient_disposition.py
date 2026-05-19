@@ -8,7 +8,9 @@ class FundExpedientDisposition(models.Model):
     _name = "fund.expedient.disposition"
     _inherit = ["fund.expedient.disposition", "mail.thread", "tier.validation", "fund.tier.validation.mixin"]
 
-    _tier_validation_manual_config = False
+    # Manual: el form de disposición se renderiza embebido en el expediente; no pasa por
+    # el get_view de fund.expedient.disposition, por eso inyectamos los botones a mano.
+    _tier_validation_manual_config = True
     _state_from = ["draft", "in_progress", "purchases", "to_approve", "approved"]
     _state_to = ["approved"]
     _cancel_state = "cancel"

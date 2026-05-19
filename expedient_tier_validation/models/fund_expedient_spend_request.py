@@ -8,7 +8,9 @@ class FundExpedientSpendRequest(models.Model):
     _name = "fund.expedient.spend.request"
     _inherit = ["fund.expedient.spend.request", "mail.thread", "tier.validation", "fund.tier.validation.mixin"]
 
-    _tier_validation_manual_config = False
+    # Manual: insertamos los botones/etiquetas tier explícitamente en el form (standalone y embebido),
+    # porque el SG no tiene <header> nativo y el embedded view no pasa por get_view de SG.
+    _tier_validation_manual_config = True
     _state_field = "tier_validation_state"
     _state_from = ["generated"]
     _state_to = ["approved"]

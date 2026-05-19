@@ -4,7 +4,7 @@
 {
     "name": "Fundación - Expedientes",
     "summary": "Gestión de expedientes con etapas, partidas presupuestarias y relaciones con compras y proyectos",
-    "version": "18.0.2.16",
+    "version": "18.0.2.17",
     "category": "Administration",
     "website": "",
     "author": "",

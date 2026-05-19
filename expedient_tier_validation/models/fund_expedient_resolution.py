@@ -8,7 +8,8 @@ class FundExpedientResolution(models.Model):
     _name = "fund.expedient.resolution"
     _inherit = ["fund.expedient.resolution", "mail.thread", "tier.validation", "fund.tier.validation.mixin"]
 
-    _tier_validation_manual_config = False
+    # Manual: idem disposición; el form de resolución vive embebido en el expediente.
+    _tier_validation_manual_config = True
     _state_from = ["draft", "in_progress", "purchases", "to_approve", "approved"]
     _state_to = ["approved"]
     _cancel_state = "cancel"
