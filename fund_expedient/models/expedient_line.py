@@ -60,11 +60,6 @@ class ExpedientLine(models.Model):
         domain=[("is_company", "=", True)],
         help="Lista de proveedores recomendados para esta línea. Si está vacío, se usarán los recomendados del expediente.",
     )
-    budget_position_id = fields.Many2one(
-        "fund.budget.position",
-        string="Partida presupuestaria",
-        domain="[('budget_assignment_allowed', '=', True)]",
-    )
     analytic_account_id = fields.Many2one(
         "account.analytic.account",
         string="Cuenta analítica",
@@ -110,11 +105,8 @@ class ExpedientLine(models.Model):
     def create(self, vals_list):
         for vals in vals_list:
             exp = self.env["fund.expedient"].browse(vals.get("expedient_id")) if vals.get("expedient_id") else False
-            if exp:
-                if not vals.get("budget_position_id") and exp.budget_position_id:
-                    vals["budget_position_id"] = exp.budget_position_id.id
-                if not vals.get("analytic_account_id") and exp.analytic_account_id:
-                    vals["analytic_account_id"] = exp.analytic_account_id.id
+            if exp and not vals.get("analytic_account_id") and exp.analytic_account_id:
+                vals["analytic_account_id"] = exp.analytic_account_id.id
         return super().create(vals_list)
 
     def write(self, vals):
@@ -137,11 +129,8 @@ class ExpedientLine(models.Model):
 
     @api.onchange("expedient_id")
     def _onchange_expedient_id_defaults(self):
-        if self.expedient_id:
-            if not self.budget_position_id:
-                self.budget_position_id = self.expedient_id.budget_position_id
-            if not self.analytic_account_id:
-                self.analytic_account_id = self.expedient_id.analytic_account_id
+        if self.expedient_id and not self.analytic_account_id:
+            self.analytic_account_id = self.expedient_id.analytic_account_id
 
     @api.constrains("product_id", "name", "display_type")
     def _check_name_required(self):

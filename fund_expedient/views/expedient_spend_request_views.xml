@@ -69,7 +69,6 @@
                                 <field name="name"/>
                                 <field name="product_qty"/>
                                 <field name="product_uom_id"/>
-                                <field name="budget_position_id" optional="show"/>
                                 <field name="analytic_account_id" optional="show"/>
                                 <field name="amount_estimated_line"/>
                                 <field name="amount_final_line"/>

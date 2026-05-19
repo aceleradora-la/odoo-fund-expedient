@@ -147,7 +147,6 @@ class FundExpedientSpendRequest(models.Model):
             "product_uom_id": line.product_uom_id.id,
             "amount_estimated_line": line.amount_estimated_line or 0.0,
             "amount_final_line": line.amount_final_line or 0.0,
-            "budget_position_id": line.budget_position_id.id,
             "analytic_account_id": line.analytic_account_id.id,
         }
 
@@ -285,11 +284,6 @@ class FundExpedientSpendRequestLine(models.Model):
     product_uom_id = fields.Many2one("uom.uom", string="Unidad")
     company_id = fields.Many2one(related="spend_request_id.company_id", store=True)
     currency_id = fields.Many2one(related="spend_request_id.currency_id", store=True, readonly=True)
-    budget_position_id = fields.Many2one(
-        "fund.budget.position",
-        string="Partida presupuestaria",
-        readonly=True,
-    )
     analytic_account_id = fields.Many2one(
         "account.analytic.account",
         string="Cuenta analítica",
