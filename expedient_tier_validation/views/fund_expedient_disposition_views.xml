@@ -2,14 +2,16 @@
 <odoo>
     <!--
         Tier Validation embebida para Disposición: el form vive dentro del expediente y no
-        pasa por el get_view del modelo (auto-inyección no aplica). Insertamos botones y
-        banner manualmente. Las definiciones tier filtran por stage_id.
+        pasa por get_view del modelo. Agregamos un <header> con statusbar de la etapa
+        (stage_id, related expediente) + botones de validación, replicando el patrón visual
+        del expediente. Definiciones tier filtran por stage_id.
     -->
     <record id="view_fund_expedient_form_disposition_tier" model="ir.ui.view">
         <field name="name">fund.expedient.form.disposition.tier</field>
         <field name="model">fund.expedient</field>
         <field name="inherit_id" ref="fund_expedient.view_fund_expedient_form"/>
         <field name="arch" type="xml">
+            <!-- Insertamos un <header> al inicio del form embebido de disposición -->
             <xpath expr="//field[@name='disposition_ids']/form" position="inside">
                 <field name="need_validation" invisible="1"/>
                 <field name="validation_status" invisible="1"/>
@@ -22,7 +24,50 @@
                 <field name="stage_validation_status" invisible="1"/>
                 <field name="has_stage_reviews" invisible="1"/>
 
-                <div class="o_button_bar mb-2">
+                <div class="alert alert-warning mb-2" role="alert"
+                     invisible="stage_validation_status == 'validated' or hide_reviews or stage_validation_status == 'rejected' or not has_stage_reviews">
+                    <i class="fa fa-info-circle"/>
+                    Esta disposición necesita ser aprobada.
+                </div>
+                <div class="alert alert-success mb-2" role="alert"
+                     invisible="stage_validation_status != 'validated' or hide_reviews or not has_stage_reviews">
+                    <i class="fa fa-thumbs-up"/>
+                    Disposición aprobada.
+                </div>
+                <div class="alert alert-danger mb-2" role="alert"
+                     invisible="stage_validation_status != 'rejected' or hide_reviews or not has_stage_reviews">
+                    <i class="fa fa-thumbs-down"/>
+                    Disposición rechazada.
+                </div>
+
+                <group string="Aprobaciones" name="disposition_tier_reviews">
+                    <field name="review_ids" nolabel="1">
+                        <list create="0" delete="0">
+                            <field name="stage_id" optional="show"/>
+                            <field name="status"/>
+                            <field name="todo_by"/>
+                            <field name="done_by" optional="show"/>
+                            <field name="reviewed_date" optional="show"/>
+                        </list>
+                    </field>
+                </group>
+            </xpath>
+
+            <!--
+                Header al principio del form embebido. Lo agregamos como primer hijo
+                usando position="inside" sobre el form. Odoo respeta el orden:
+                colocamos el <header> antes que los <group> con position="before"
+                sobre el primer grupo.
+            -->
+            <xpath expr="//field[@name='disposition_ids']/form/group[1]" position="before">
+                <header>
+                    <!-- Statusbar con el flujo del expediente (state es related al expediente),
+                         para que el usuario vea visualmente en qué estado está el dossier
+                         al que pertenece esta disposición. -->
+                    <field name="state" widget="statusbar"
+                           statusbar_visible="draft,in_progress,purchases,to_approve,approved"
+                           readonly="1"/>
+
                     <button name="request_validation" type="object"
                             string="Solicitar aprobación"
                             class="btn-primary"
@@ -40,35 +85,7 @@
                             class="btn-secondary"
                             invisible="not can_restart_validation_stage or hide_reviews"
                             confirm="¿Reiniciar la validación de la etapa actual?"/>
-                </div>
-
-                <div class="alert alert-warning mb-0" role="alert"
-                     invisible="stage_validation_status == 'validated' or hide_reviews or stage_validation_status == 'rejected' or not has_stage_reviews">
-                    <i class="fa fa-info-circle"/>
-                    Esta disposición necesita ser aprobada.
-                </div>
-                <div class="alert alert-success mb-0" role="alert"
-                     invisible="stage_validation_status != 'validated' or hide_reviews or not has_stage_reviews">
-                    <i class="fa fa-thumbs-up"/>
-                    Disposición aprobada.
-                </div>
-                <div class="alert alert-danger mb-0" role="alert"
-                     invisible="stage_validation_status != 'rejected' or hide_reviews or not has_stage_reviews">
-                    <i class="fa fa-thumbs-down"/>
-                    Disposición rechazada.
-                </div>
-
-                <group string="Aprobaciones" name="disposition_tier_reviews">
-                    <field name="review_ids" nolabel="1">
-                        <list create="0" delete="0">
-                            <field name="stage_id" optional="show"/>
-                            <field name="status"/>
-                            <field name="todo_by"/>
-                            <field name="done_by" optional="show"/>
-                            <field name="reviewed_date" optional="show"/>
-                        </list>
-                    </field>
-                </group>
+                </header>
             </xpath>
         </field>
     </record>

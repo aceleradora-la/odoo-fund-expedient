@@ -2,7 +2,8 @@
 <odoo>
     <!--
         Tier Validation embebida para Resolución: idem disposición. Form embebido en el
-        expediente; botones y banner manuales. Definiciones tier filtran por stage_id.
+        expediente; agregamos un <header> con statusbar del estado del expediente y los
+        botones de validación. Definiciones tier filtran por stage_id.
     -->
     <record id="view_fund_expedient_form_resolution_tier" model="ir.ui.view">
         <field name="name">fund.expedient.form.resolution.tier</field>
@@ -21,7 +22,42 @@
                 <field name="stage_validation_status" invisible="1"/>
                 <field name="has_stage_reviews" invisible="1"/>
 
-                <div class="o_button_bar mb-2">
+                <div class="alert alert-warning mb-2" role="alert"
+                     invisible="stage_validation_status == 'validated' or hide_reviews or stage_validation_status == 'rejected' or not has_stage_reviews">
+                    <i class="fa fa-info-circle"/>
+                    Esta resolución necesita ser aprobada.
+                </div>
+                <div class="alert alert-success mb-2" role="alert"
+                     invisible="stage_validation_status != 'validated' or hide_reviews or not has_stage_reviews">
+                    <i class="fa fa-thumbs-up"/>
+                    Resolución aprobada.
+                </div>
+                <div class="alert alert-danger mb-2" role="alert"
+                     invisible="stage_validation_status != 'rejected' or hide_reviews or not has_stage_reviews">
+                    <i class="fa fa-thumbs-down"/>
+                    Resolución rechazada.
+                </div>
+
+                <group string="Aprobaciones" name="resolution_tier_reviews">
+                    <field name="review_ids" nolabel="1">
+                        <list create="0" delete="0">
+                            <field name="stage_id" optional="show"/>
+                            <field name="status"/>
+                            <field name="todo_by"/>
+                            <field name="done_by" optional="show"/>
+                            <field name="reviewed_date" optional="show"/>
+                        </list>
+                    </field>
+                </group>
+            </xpath>
+
+            <xpath expr="//field[@name='resolution_ids']/form/group[1]" position="before">
+                <header>
+                    <!-- Statusbar con el flujo del expediente al que pertenece esta resolución. -->
+                    <field name="state" widget="statusbar"
+                           statusbar_visible="draft,in_progress,purchases,to_approve,approved"
+                           readonly="1"/>
+
                     <button name="request_validation" type="object"
                             string="Solicitar aprobación"
                             class="btn-primary"
@@ -39,35 +75,7 @@
                             class="btn-secondary"
                             invisible="not can_restart_validation_stage or hide_reviews"
                             confirm="¿Reiniciar la validación de la etapa actual?"/>
-                </div>
-
-                <div class="alert alert-warning mb-0" role="alert"
-                     invisible="stage_validation_status == 'validated' or hide_reviews or stage_validation_status == 'rejected' or not has_stage_reviews">
-                    <i class="fa fa-info-circle"/>
-                    Esta resolución necesita ser aprobada.
-                </div>
-                <div class="alert alert-success mb-0" role="alert"
-                     invisible="stage_validation_status != 'validated' or hide_reviews or not has_stage_reviews">
-                    <i class="fa fa-thumbs-up"/>
-                    Resolución aprobada.
-                </div>
-                <div class="alert alert-danger mb-0" role="alert"
-                     invisible="stage_validation_status != 'rejected' or hide_reviews or not has_stage_reviews">
-                    <i class="fa fa-thumbs-down"/>
-                    Resolución rechazada.
-                </div>
-
-                <group string="Aprobaciones" name="resolution_tier_reviews">
-                    <field name="review_ids" nolabel="1">
-                        <list create="0" delete="0">
-                            <field name="stage_id" optional="show"/>
-                            <field name="status"/>
-                            <field name="todo_by"/>
-                            <field name="done_by" optional="show"/>
-                            <field name="reviewed_date" optional="show"/>
-                        </list>
-                    </field>
-                </group>
+                </header>
             </xpath>
         </field>
     </record>
