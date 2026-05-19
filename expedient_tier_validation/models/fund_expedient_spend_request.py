@@ -91,9 +91,15 @@ class FundExpedientSpendRequest(models.Model):
         return self[:1].company_id or self.env.company
 
     def _on_context_tier_validated(self):
+        # skip_validation_check: el guard de base_tier_validation bloquea cualquier
+        # write distinto a "Followers" mientras hay tier activo. Aquí estamos completando
+        # el flujo desde dentro (todas las reviews del contexto están aprobadas), por lo
+        # que es seguro saltar el chequeo para persistir preventiva/definitiva = approved.
         for rec in self:
             if rec._is_context_tier_complete():
-                rec._mark_phase_approved(rec._get_active_spend_phase())
+                rec.with_context(skip_validation_check=True)._mark_phase_approved(
+                    rec._get_active_spend_phase()
+                )
 
     def action_generate_preventiva(self):
         res = super().action_generate_preventiva()
