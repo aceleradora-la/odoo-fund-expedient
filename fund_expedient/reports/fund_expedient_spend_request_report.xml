@@ -167,33 +167,51 @@
                 </table>
 
                 <!--
-                    Totalizador por partida presupuestaria.
-                    Hoy el expediente tiene UNA sola partida (budget_position_id);
-                    la grilla queda preparada para múltiples partidas a futuro
-                    (por ejemplo, agrupando por la partida derivada de la cuenta
-                    analítica de cada línea). Si no hay partida cargada, se omite.
+                    Totalizador por cuenta analítica.
+                    Se agrupan las líneas de detalle por su `analytic_account_id`
+                    y se suman los importes estimado y definitivo. Las líneas sin
+                    cuenta asignada se agrupan bajo "Sin cuenta analítica".
                 -->
-                <t t-if="o.expedient_id.budget_position_id">
-                    <h4 class="mt-3">Totalizador por partida presupuestaria</h4>
+                <t t-set="detail_lines" t-value="o.line_ids.filtered(lambda l: not l.display_type)"/>
+                <t t-if="detail_lines">
+                    <t t-set="analytic_accounts" t-value="detail_lines.mapped('analytic_account_id')"/>
+                    <h4 class="mt-3">Totalizador por cuenta analítica</h4>
                     <table class="table table-sm">
                         <thead>
                             <tr>
                                 <th>Código</th>
-                                <th>Partida</th>
+                                <th>Cuenta analítica</th>
                                 <th class="text-end">Total estimado</th>
                                 <th class="text-end">Total definitivo</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <tr>
-                                <td><span t-field="o.expedient_id.budget_position_id.code"/></td>
-                                <td><span t-field="o.expedient_id.budget_position_id.name"/></td>
+                            <t t-foreach="analytic_accounts.sorted(key=lambda a: (a.code or '', a.name or ''))" t-as="acc">
+                                <t t-set="group_lines" t-value="detail_lines.filtered(lambda l: l.analytic_account_id == acc)"/>
+                                <tr>
+                                    <td><span t-esc="acc.code or ''"/></td>
+                                    <td><span t-esc="acc.name or ''"/></td>
+                                    <td class="text-end">
+                                        <span t-esc="sum(group_lines.mapped('amount_estimated_line'))"
+                                              t-options='{"widget": "monetary", "display_currency": o.currency_id}'/>
+                                    </td>
+                                    <td class="text-end">
+                                        <span t-esc="sum(group_lines.mapped('amount_final_line'))"
+                                              t-options='{"widget": "monetary", "display_currency": o.currency_id}'/>
+                                    </td>
+                                </tr>
+                            </t>
+                            <!-- Líneas sin cuenta analítica asignada -->
+                            <t t-set="no_acc_lines" t-value="detail_lines.filtered(lambda l: not l.analytic_account_id)"/>
+                            <tr t-if="no_acc_lines">
+                                <td/>
+                                <td><em>Sin cuenta analítica</em></td>
                                 <td class="text-end">
-                                    <span t-esc="sum(o.line_ids.filtered(lambda l: not l.display_type).mapped('amount_estimated_line'))"
+                                    <span t-esc="sum(no_acc_lines.mapped('amount_estimated_line'))"
                                           t-options='{"widget": "monetary", "display_currency": o.currency_id}'/>
                                 </td>
                                 <td class="text-end">
-                                    <span t-esc="sum(o.line_ids.filtered(lambda l: not l.display_type).mapped('amount_final_line'))"
+                                    <span t-esc="sum(no_acc_lines.mapped('amount_final_line'))"
                                           t-options='{"widget": "monetary", "display_currency": o.currency_id}'/>
                                 </td>
                             </tr>
@@ -202,11 +220,11 @@
                             <tr>
                                 <th colspan="2" class="text-end">Totales</th>
                                 <th class="text-end">
-                                    <span t-field="o.amount_preventiva"
+                                    <span t-esc="sum(detail_lines.mapped('amount_estimated_line'))"
                                           t-options='{"widget": "monetary", "display_currency": o.currency_id}'/>
                                 </th>
                                 <th class="text-end">
-                                    <span t-field="o.amount_definitiva"
+                                    <span t-esc="sum(detail_lines.mapped('amount_final_line'))"
                                           t-options='{"widget": "monetary", "display_currency": o.currency_id}'/>
                                 </th>
                             </tr>
