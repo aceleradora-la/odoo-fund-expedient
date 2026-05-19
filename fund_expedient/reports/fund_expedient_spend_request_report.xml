@@ -255,47 +255,6 @@
                 </t>
 
                 <!--
-                    Grilla de aprobaciones (tier validation). Sólo se renderiza
-                    si el módulo `expedient_tier_validation` está instalado y la
-                    SG tiene revisiones. Mostramos exclusivamente las validadas/rechazadas
-                    para que el reporte refleje historial real de aprobaciones.
-                -->
-                <t t-if="'review_ids' in o._fields">
-                    <t t-set="done_reviews" t-value="o.review_ids.filtered(lambda r: r.status in ('approved', 'rejected'))"/>
-                    <t t-if="done_reviews">
-                        <h4 class="mt-3" style="font-size: 13px;">Aprobaciones</h4>
-                        <table class="table table-sm">
-                            <thead>
-                                <tr>
-                                    <th>Fase</th>
-                                    <th>Nivel</th>
-                                    <th>Estado</th>
-                                    <th>Fecha de validación</th>
-                                    <th>Aprobado por</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr t-foreach="done_reviews.sorted(key=lambda r: (r.spend_phase or '', r.sequence or 0, r.id))" t-as="rev">
-                                    <td>
-                                        <span t-if="rev.spend_phase == 'preventiva'">Preventiva</span>
-                                        <span t-elif="rev.spend_phase == 'definitiva'">Definitiva</span>
-                                        <span t-else=""/>
-                                    </td>
-                                    <td><span t-field="rev.sequence"/></td>
-                                    <td>
-                                        <span t-if="rev.status == 'approved'" class="text-success">Aprobada</span>
-                                        <span t-elif="rev.status == 'rejected'" class="text-danger">Rechazada</span>
-                                        <span t-else="" t-field="rev.status"/>
-                                    </td>
-                                    <td><span t-field="rev.reviewed_date"/></td>
-                                    <td><span t-field="rev.done_by"/></td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </t>
-                </t>
-
-                <!--
                     Grilla de proveedores sugeridos.
                     Se consolidan los proveedores recomendados de la cabecera
                     del expediente y los de cada línea, sin duplicados. Para
@@ -331,6 +290,56 @@
                             </tr>
                         </tbody>
                     </table>
+                </t>
+
+                <!--
+                    Grilla de aprobaciones (tier validation). Sólo se renderiza
+                    si el módulo `expedient_tier_validation` está instalado y la
+                    SG tiene revisiones. Mostramos exclusivamente las validadas/rechazadas
+                    para que el reporte refleje historial real de aprobaciones.
+                    Va siempre al final del documento: las aprobaciones cierran
+                    el flujo y deben quedar como "firma" del reporte.
+                -->
+                <t t-if="'review_ids' in o._fields">
+                    <t t-set="done_reviews" t-value="o.review_ids.filtered(lambda r: r.status in ('approved', 'rejected'))"/>
+                    <t t-if="done_reviews">
+                        <h4 class="mt-3" style="font-size: 13px;">Aprobaciones</h4>
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Fase</th>
+                                    <th>Validación</th>
+                                    <th>Nivel</th>
+                                    <th>Estado</th>
+                                    <th>Fecha de validación</th>
+                                    <th>Aprobado por</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="done_reviews.sorted(key=lambda r: (r.spend_phase or '', r.sequence or 0, r.id))" t-as="rev">
+                                    <td>
+                                        <span t-if="rev.spend_phase == 'preventiva'">Preventiva</span>
+                                        <span t-elif="rev.spend_phase == 'definitiva'">Definitiva</span>
+                                        <span t-else=""/>
+                                    </td>
+                                    <!--
+                                        Nombre del tier que originó la revisión.
+                                        Permite identificar qué regla disparó la
+                                        aprobación (p.ej. "Gerencia &gt; 100k").
+                                    -->
+                                    <td><span t-field="rev.definition_id"/></td>
+                                    <td><span t-field="rev.sequence"/></td>
+                                    <td>
+                                        <span t-if="rev.status == 'approved'" class="text-success">Aprobada</span>
+                                        <span t-elif="rev.status == 'rejected'" class="text-danger">Rechazada</span>
+                                        <span t-else="" t-field="rev.status"/>
+                                    </td>
+                                    <td><span t-field="rev.reviewed_date"/></td>
+                                    <td><span t-field="rev.done_by"/></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </t>
                 </t>
             </div>
         </t>
