@@ -4,7 +4,7 @@
 {
     "name": "Fundación - Expedientes",
     "summary": "Gestión de expedientes con etapas, cuentas analíticas y relaciones con compras y proyectos",
-    "version": "18.0.3.8",
+    "version": "18.0.3.9",
     "category": "Administration",
     "website": "",
     "author": "",

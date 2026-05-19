@@ -64,8 +64,13 @@
                     Solicitud de Gasto
                     <span t-if="o.number and o.number != '/'" t-esc="o.number"/>
                 </h2>
+                <!--
+                    Subtítulo: dejamos solo la fase (Preventiva / Definitiva).
+                    El número de expediente y de SG ya están en el cuerpo del
+                    reporte; repetirlos en el display_name era ruido visual.
+                -->
                 <div class="text-muted mb-3">
-                    <span t-field="o.display_name"/>
+                    <span t-field="o.spend_state"/>
                 </div>
 
                 <div class="row mt-2">
@@ -335,7 +340,14 @@
                         <table class="table table-sm">
                             <thead>
                                 <tr>
-                                    <th>Fase</th>
+                                    <!--
+                                        Renombramos "Fase" → "Etapa": en este
+                                        contexto la columna refiere a la etapa
+                                        de la SG (preventiva/definitiva), que
+                                        suena más natural para usuarios de
+                                        negocio que el término "Fase".
+                                    -->
+                                    <th>Etapa</th>
                                     <th>Validación</th>
                                     <th>Nivel</th>
                                     <th>Estado</th>

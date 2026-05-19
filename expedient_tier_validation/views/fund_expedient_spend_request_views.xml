@@ -86,7 +86,12 @@
                 <group string="Aprobaciones" name="tier_reviews">
                     <field name="review_ids" nolabel="1">
                         <list create="0" delete="0">
-                            <field name="spend_phase" optional="show"/>
+                            <!--
+                                Usamos string="Etapa" en lugar del label por
+                                defecto del campo (que dice "Fase") para que
+                                la columna sea consistente con el reporte.
+                            -->
+                            <field name="spend_phase" string="Etapa" optional="show"/>
                             <!--
                                 Definition es el nivel/tier que originó la
                                 review. Mostrarlo ayuda a entender qué regla de
@@ -181,7 +186,7 @@
                 <group string="Aprobaciones" name="tier_reviews_embedded">
                     <field name="review_ids" nolabel="1">
                         <list create="0" delete="0">
-                            <field name="spend_phase"/>
+                            <field name="spend_phase" string="Etapa"/>
                             <!-- Nombre de la regla de tier que disparó la review. -->
                             <field name="definition_id" string="Validación"/>
                             <field name="status"/>
