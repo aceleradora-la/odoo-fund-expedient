@@ -347,6 +347,7 @@
                                                 <field name="file_name"/>
                                                 <field name="name"/>
                                                 <field name="delivered"/>
+                                                <field name="is_technical_spec" optional="show"/>
                                                 <button type="object"
                                                         name="action_open_document"
                                                         string="Abrir"
@@ -388,6 +389,7 @@
                                                 <field name="file_name"/>
                                                 <field name="name"/>
                                                 <field name="delivered"/>
+                                                <field name="is_technical_spec" optional="show"/>
                                                 <button type="object"
                                                         name="action_open_document"
                                                         string="Abrir"
@@ -417,6 +419,7 @@
                                     <field name="number" readonly="1"/>
                                     <field name="file_name" string="Archivo"/>
                                     <field name="delivered"/>
+                                    <field name="is_technical_spec" optional="show"/>
                                     <field name="notes"/>
                                     <field name="stage_id" optional="hide" readonly="1"/>
                                     <field name="disposition_id" optional="hide"/>
@@ -442,6 +445,7 @@
                                             <field name="disposition_id"/>
                                             <field name="resolution_id"/>
                                             <field name="delivered"/>
+                                            <field name="is_technical_spec"/>
                                         </group>
                                         <group>
                                             <field name="can_download_file" invisible="1"/>

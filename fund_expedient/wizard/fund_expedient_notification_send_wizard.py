@@ -60,10 +60,13 @@ class FundExpedientNotificationSendWizard(models.TransientModel):
         if exp_id and stage_id and "document_ids" in fields_list:
             exp = self.env["fund.expedient"].browse(exp_id).exists()
             if exp:
-                # Preseleccionar documentos vinculados a disposición y/o resolución de la etapa actual
+                # Preseleccionar:
+                #   1) documentos vinculados a disposición/resolución de la etapa actual.
+                #   2) documentos marcados como "Especificación técnica" en cualquier etapa
+                #      del expediente (sirven a todas las notificaciones a oferentes).
                 dispo_ids = exp.disposition_ids.filtered(lambda d: d.stage_id.id == stage_id).ids
                 reso_ids = exp.resolution_ids.filtered(lambda r: r.stage_id.id == stage_id).ids
-                docs = exp.document_ids.filtered(
+                stage_docs = exp.document_ids.filtered(
                     lambda doc: doc.stage_id.id == stage_id
                     and (
                         (doc.disposition_id and doc.disposition_id.id in dispo_ids)
@@ -71,6 +74,10 @@ class FundExpedientNotificationSendWizard(models.TransientModel):
                     )
                     and bool(doc.file_data)
                 )
+                spec_docs = exp.document_ids.filtered(
+                    lambda doc: doc.is_technical_spec and bool(doc.file_data)
+                )
+                docs = stage_docs | spec_docs
                 if docs:
                     res["document_ids"] = [(6, 0, docs.ids)]
         return res

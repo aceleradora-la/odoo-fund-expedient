@@ -33,6 +33,16 @@ class FundExpedientDocument(models.Model):
     )
     name = fields.Char(string="Documento")
     delivered = fields.Boolean(string="Entregado")
+    # Marca para identificar documentos que forman parte del pliego/especificación técnica
+    # del expediente. El wizard de notificación a oferentes los preselecciona como adjuntos.
+    is_technical_spec = fields.Boolean(
+        string="Especificación técnica",
+        index=True,
+        help=(
+            "Marcar si este documento integra la especificación técnica del expediente. "
+            "Al notificar a oferentes, estos documentos se adjuntan automáticamente al correo."
+        ),
+    )
     notes = fields.Html(string="Observaciones")
     stage_id = fields.Many2one(
         "fund.expedient.stage",
