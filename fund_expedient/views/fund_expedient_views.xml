@@ -469,8 +469,13 @@
                             </field>
                         </page>
                         <page string="Expedientes relacionados" name="children">
-                            <field name="parent_id"/>
-                            <field name="child_ids" nolabel="1" readonly="1">
+                            <!-- El readonly viene del <sheet readonly="not can_edit_in_stage">,
+                                 por eso aquí no fijamos readonly explícito: el usuario puede
+                                 agregar/editar relacionados sólo en las etapas con permiso.
+                                 Excluimos el propio expediente del dominio del padre. -->
+                            <field name="parent_id" domain="[('id', '!=', id)]"/>
+                            <field name="child_ids" nolabel="1"
+                                   context="{'default_parent_id': id}">
                                 <list create="1" delete="1" edit="1">
                                     <field name="number"/>
                                     <field name="request_date"/>
