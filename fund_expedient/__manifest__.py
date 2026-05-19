@@ -4,7 +4,7 @@
 {
     "name": "Fundación - Expedientes",
     "summary": "Gestión de expedientes con etapas, cuentas analíticas y relaciones con compras y proyectos",
-    "version": "18.0.3.1",
+    "version": "18.0.3.2",
     "category": "Administration",
     "website": "",
     "author": "",
@@ -31,6 +31,7 @@
     "data": [
         "security/fund_expedient_security.xml",
         "security/ir.model.access.csv",
+        "data/legacy_cleanup.xml",
         "data/sequence_data.xml",
         "data/expedient_stage_data.xml",
         "data/expedient_encuadre_data.xml",

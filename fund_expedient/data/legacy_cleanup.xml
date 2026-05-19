@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!--
+        Limpieza de vistas legacy eliminadas del código.
+
+        Al borrar `views/account_move_line_views.xml`, Odoo no elimina
+        automáticamente el registro `ir.ui.view` ya existente en la base.
+        Esa vista seguía intentando inyectar `budget_position_id` en
+        `account.move.line`, campo que ya no existe, y bloqueaba el upgrade.
+
+        Usamos búsqueda por name/model para que sea idempotente: si la vista
+        ya no existe, no hace nada.
+    -->
+    <delete model="ir.ui.view"
+            search="[('name', '=', 'account.move.form.budget.position'), ('model', '=', 'account.move')]"/>
+</odoo>
