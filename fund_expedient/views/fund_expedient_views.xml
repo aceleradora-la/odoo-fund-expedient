@@ -152,6 +152,9 @@
                             <field name="encuadre_id" invisible="not show_encuadre or hide_encuadre_id_stage"/>
                             <field name="estimated_need_date" invisible="hide_estimated_need_date_stage"/>
                             <field name="requestor_id"/>
+                            <field name="requestor_department_id" readonly="1"/>
+                            <field name="requestor_department_manager_id" readonly="1"
+                                   invisible="not requestor_department_manager_id"/>
                             <field name="recommended_supplier_ids" widget="many2many_tags" invisible="hide_recommended_supplier_ids_stage"
                                    options="{'no_create': True, 'search_view_ref': 'fund_expedient.view_res_partner_recommended_supplier_search'}"
                                    context="{'search_view_ref': 'fund_expedient.view_res_partner_recommended_supplier_search'}"/>
@@ -542,6 +545,8 @@
                 <field name="number"/>
                 <field name="description_plain" string="Descripción/Memo"/>
                 <field name="requestor_id"/>
+                <field name="requestor_department_id"/>
+                <field name="requestor_department_manager_id"/>
                 <field name="recommended_supplier_ids"/>
                 <field name="encuadre_id"/>
                 <field name="type_id"/>
@@ -557,6 +562,10 @@
                 <group expand="0" string="Agrupar por">
                     <filter string="Etapa" name="group_stage" context="{'group_by': 'stage_id'}"/>
                     <filter string="Solicitante" name="group_requestor" context="{'group_by': 'requestor_id'}"/>
+                    <filter string="Sector requirente" name="group_department"
+                            context="{'group_by': 'requestor_department_id'}"/>
+                    <filter string="Responsable del sector" name="group_department_manager"
+                            context="{'group_by': 'requestor_department_manager_id'}"/>
                 </group>
             </search>
         </field>

@@ -11,6 +11,9 @@
                 <field name="expedient_type_id" optional="show"/>
                 <field name="expedient_type_number" optional="show"/>
                 <field name="number"/>
+                <field name="requestor_id" optional="show"/>
+                <field name="requestor_department_id" optional="show"/>
+                <field name="requestor_department_manager_id" optional="hide"/>
                 <field name="spend_state"/>
                 <field name="preventiva_state"/>
                 <field name="definitiva_state"/>
@@ -31,6 +34,9 @@
                 <field name="expedient_type_id"/>
                 <field name="expedient_type_number"/>
                 <field name="number"/>
+                <field name="requestor_id"/>
+                <field name="requestor_department_id" string="Sector requirente"/>
+                <field name="requestor_department_manager_id" string="Responsable del sector"/>
                 <separator/>
                 <filter string="Preventiva" name="phase_preventiva"
                         domain="[('spend_state', '=', 'preventiva')]"/>
@@ -44,6 +50,9 @@
                         domain="[('definitiva_state', '=', 'generated')]"/>
                 <filter string="Definitiva aprobada" name="definitiva_approved"
                         domain="[('definitiva_state', '=', 'approved')]"/>
+                <separator/>
+                <filter string="De mi sector" name="my_department"
+                        domain="[('requestor_department_id.member_ids.user_id', '=', uid)]"/>
                 <group expand="0" string="Agrupar por">
                     <filter string="Expediente" name="group_expedient"
                             context="{'group_by': 'expedient_id'}"/>
@@ -53,6 +62,12 @@
                             context="{'group_by': 'preventiva_state'}"/>
                     <filter string="Estado definitiva" name="group_definitiva_state"
                             context="{'group_by': 'definitiva_state'}"/>
+                    <filter string="Solicitante" name="group_requestor"
+                            context="{'group_by': 'requestor_id'}"/>
+                    <filter string="Sector requirente" name="group_department"
+                            context="{'group_by': 'requestor_department_id'}"/>
+                    <filter string="Responsable del sector" name="group_department_manager"
+                            context="{'group_by': 'requestor_department_manager_id'}"/>
                 </group>
             </search>
         </field>
@@ -64,6 +79,11 @@
         <field name="type">form</field>
         <field name="arch" type="xml">
             <form string="Solicitud de Gasto" create="0" delete="0">
+                <header>
+                    <button name="action_print_report" type="object"
+                            string="Imprimir SG" class="btn-secondary"
+                            invisible="not number or number == '/'"/>
+                </header>
                 <sheet>
                     <group>
                         <field name="expedient_id" readonly="1"/>
@@ -80,6 +100,10 @@
                             <field name="final_number" readonly="1" optional="hide"/>
                         </group>
                         <group>
+                            <field name="requestor_id" readonly="1"/>
+                            <field name="requestor_department_id" readonly="1"/>
+                            <field name="requestor_department_manager_id" readonly="1"
+                                   invisible="not requestor_department_manager_id"/>
                             <field name="currency_id" invisible="1"/>
                             <field name="approval_currency_id" invisible="1"/>
                         </group>

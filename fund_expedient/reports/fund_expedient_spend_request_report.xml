@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!--
+        Acción de reporte QWeb-PDF para la Solicitud de Gasto.
+        Se enlaza al modelo (binding_model_id) para que aparezca en el
+        menú "Imprimir / Reportes" del formulario y desde la lista.
+    -->
+    <record id="action_report_fund_expedient_spend_request" model="ir.actions.report">
+        <field name="name">Solicitud de Gasto</field>
+        <field name="model">fund.expedient.spend.request</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">fund_expedient.report_fund_expedient_spend_request</field>
+        <field name="report_file">fund_expedient.report_fund_expedient_spend_request</field>
+        <field name="print_report_name">'SG-%s' % (object.number or object.id)</field>
+        <field name="binding_model_id" ref="model_fund_expedient_spend_request"/>
+        <field name="binding_type">report</field>
+    </record>
+
+    <!--
+        Template QWeb del reporte. Diseñado para ser legible en una sola pasada:
+        cabecera con datos clave (expediente, tipo, sector), bloque de
+        importes preventivo/definitivo, listado de líneas y firmas.
+    -->
+    <template id="report_fund_expedient_spend_request_document">
+        <t t-call="web.external_layout">
+            <t t-set="o" t-value="o.with_context(lang=o.expedient_id.company_id.partner_id.lang or env.lang)"/>
+            <div class="page">
+                <h2 class="mb-1">
+                    Solicitud de Gasto
+                    <span t-if="o.number and o.number != '/'" t-esc="o.number"/>
+                </h2>
+                <div class="text-muted mb-3">
+                    <span t-field="o.display_name"/>
+                </div>
+
+                <div class="row mt-2">
+                    <div class="col-6">
+                        <strong>Expediente:</strong>
+                        <span t-field="o.expedient_id.number"/>
+                        <br/>
+                        <strong>Tipo de expediente:</strong>
+                        <span t-field="o.expedient_type_id"/>
+                        <span t-if="o.expedient_type_number">
+                            (<span t-field="o.expedient_type_number"/>)
+                        </span>
+                        <br/>
+                        <strong>Fase:</strong>
+                        <span t-field="o.spend_state"/>
+                        <br/>
+                        <strong>Estado preventiva:</strong>
+                        <span t-field="o.preventiva_state"/>
+                        <t t-if="o.date_preventiva">
+                            (<span t-field="o.date_preventiva"/>)
+                        </t>
+                        <br/>
+                        <strong>Estado definitiva:</strong>
+                        <span t-field="o.definitiva_state"/>
+                        <t t-if="o.date_definitiva">
+                            (<span t-field="o.date_definitiva"/>)
+                        </t>
+                    </div>
+                    <div class="col-6">
+                        <strong>Solicitante:</strong>
+                        <span t-field="o.requestor_id"/>
+                        <br/>
+                        <strong>Sector requirente:</strong>
+                        <span t-field="o.requestor_department_id"/>
+                        <br/>
+                        <strong>Responsable del sector:</strong>
+                        <span t-field="o.requestor_department_manager_id"/>
+                        <br/>
+                        <strong>Empresa:</strong>
+                        <span t-field="o.company_id"/>
+                    </div>
+                </div>
+
+                <h4 class="mt-4">Importes</h4>
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Concepto</th>
+                            <th class="text-end">Importe (moneda compañía)</th>
+                            <th class="text-end">Importe (moneda tipo)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Preventivo</td>
+                            <td class="text-end">
+                                <span t-field="o.amount_preventiva"
+                                      t-options='{"widget": "monetary", "display_currency": o.currency_id}'/>
+                            </td>
+                            <td class="text-end">
+                                <span t-field="o.amount_preventiva_unit"
+                                      t-options='{"widget": "monetary", "display_currency": o.approval_currency_id}'/>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Definitivo</td>
+                            <td class="text-end">
+                                <span t-field="o.amount_definitiva"
+                                      t-options='{"widget": "monetary", "display_currency": o.currency_id}'/>
+                            </td>
+                            <td class="text-end">
+                                <span t-field="o.amount_definitiva_unit"
+                                      t-options='{"widget": "monetary", "display_currency": o.approval_currency_id}'/>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h4 class="mt-3">Detalle</h4>
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Producto / Servicio</th>
+                            <th>Descripción</th>
+                            <th class="text-end">Cantidad</th>
+                            <th>UoM</th>
+                            <th>Cuenta analítica</th>
+                            <th class="text-end">Estimado</th>
+                            <th class="text-end">Definitivo</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <t t-foreach="o.line_ids.sorted(key=lambda l: (l.sequence, l.id))" t-as="line">
+                            <tr t-if="line.display_type == 'line_section'">
+                                <td colspan="8">
+                                    <strong t-field="line.name"/>
+                                </td>
+                            </tr>
+                            <tr t-elif="line.display_type == 'line_note'">
+                                <td colspan="8">
+                                    <em t-field="line.name"/>
+                                </td>
+                            </tr>
+                            <tr t-else="">
+                                <td t-esc="line_index + 1"/>
+                                <td><span t-field="line.product_id"/></td>
+                                <td><span t-field="line.name"/></td>
+                                <td class="text-end"><span t-field="line.product_qty"/></td>
+                                <td><span t-field="line.product_uom_id"/></td>
+                                <td><span t-field="line.analytic_account_id"/></td>
+                                <td class="text-end">
+                                    <span t-field="line.amount_estimated_line"
+                                          t-options='{"widget": "monetary", "display_currency": o.currency_id}'/>
+                                </td>
+                                <td class="text-end">
+                                    <span t-field="line.amount_final_line"
+                                          t-options='{"widget": "monetary", "display_currency": o.currency_id}'/>
+                                </td>
+                            </tr>
+                        </t>
+                    </tbody>
+                </table>
+
+                <!-- Firmas: bloque simple para autorizaciones manuales. -->
+                <div class="row mt-5">
+                    <div class="col-4 text-center">
+                        <div style="border-top: 1px solid #000; padding-top: 4px;">
+                            <strong>Solicitante</strong><br/>
+                            <span t-field="o.requestor_id"/>
+                        </div>
+                    </div>
+                    <div class="col-4 text-center">
+                        <div style="border-top: 1px solid #000; padding-top: 4px;">
+                            <strong>Responsable del sector</strong><br/>
+                            <span t-field="o.requestor_department_manager_id"/>
+                        </div>
+                    </div>
+                    <div class="col-4 text-center">
+                        <div style="border-top: 1px solid #000; padding-top: 4px;">
+                            <strong>Sector requirente</strong><br/>
+                            <span t-field="o.requestor_department_id"/>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
+
+    <!--
+        Template "wrapper" requerido por Odoo: itera sobre los registros y
+        llama al template del documento para cada uno.
+    -->
+    <template id="report_fund_expedient_spend_request">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="o">
+                <t t-call="fund_expedient.report_fund_expedient_spend_request_document"/>
+            </t>
+        </t>
+    </template>
+
+</odoo>

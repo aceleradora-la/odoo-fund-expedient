@@ -86,6 +86,27 @@ class FundExpedient(models.Model):
         readonly=True,
         help="Campo técnico para Tier Validation (reviewer field → usuario del solicitante).",
     )
+    # Sector / departamento del empleado solicitante.
+    # Almacenado (store=True) para poder usarlo en filtros, agrupaciones y reportes.
+    requestor_department_id = fields.Many2one(
+        "hr.department",
+        string="Sector requirente",
+        related="requestor_id.department_id",
+        store=True,
+        readonly=True,
+        index=True,
+        help="Departamento del empleado solicitante. Sirve para identificar el sector requirente del expediente.",
+    )
+    # Responsable del sector (manager del departamento del solicitante).
+    requestor_department_manager_id = fields.Many2one(
+        "hr.employee",
+        string="Responsable del sector",
+        related="requestor_id.department_id.manager_id",
+        store=True,
+        readonly=True,
+        index=True,
+        help="Manager del departamento del solicitante.",
+    )
     type_unit_mode = fields.Selection(
         related="type_id.unit_mode",
         string="Unidad de aprobación (tipo)",

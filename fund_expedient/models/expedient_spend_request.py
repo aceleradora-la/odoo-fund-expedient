@@ -40,6 +40,34 @@ class FundExpedientSpendRequest(models.Model):
         search="_search_expedient_type_id",
     )
 
+    # Datos del solicitante y su sector traídos desde el expediente.
+    # Se almacenan (store=True) para permitir filtros, agrupaciones y reportes
+    # eficientes en la Solicitud de Gasto sin re-leer el expediente.
+    requestor_id = fields.Many2one(
+        "hr.employee",
+        string="Solicitante",
+        related="expedient_id.requestor_id",
+        store=True,
+        readonly=True,
+        index=True,
+    )
+    requestor_department_id = fields.Many2one(
+        "hr.department",
+        string="Sector requirente",
+        related="expedient_id.requestor_department_id",
+        store=True,
+        readonly=True,
+        index=True,
+    )
+    requestor_department_manager_id = fields.Many2one(
+        "hr.employee",
+        string="Responsable del sector",
+        related="expedient_id.requestor_department_manager_id",
+        store=True,
+        readonly=True,
+        index=True,
+    )
+
     number = fields.Char(
         string="Número",
         readonly=True,
@@ -273,6 +301,13 @@ class FundExpedientSpendRequest(models.Model):
         if phase == "definitiva":
             return self.definitiva_state in ("generated", "approved")
         return False
+
+    def action_print_report(self):
+        """Imprime el reporte QWeb de la Solicitud de Gasto."""
+        self.ensure_one()
+        return self.env.ref(
+            "fund_expedient.action_report_fund_expedient_spend_request"
+        ).report_action(self)
 
 
 class FundExpedientSpendRequestLine(models.Model):
