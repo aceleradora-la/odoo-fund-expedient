@@ -25,8 +25,14 @@
     <template id="report_fund_expedient_spend_request_document">
         <t t-call="web.external_layout">
             <t t-set="o" t-value="o.with_context(lang=o.expedient_id.company_id.partner_id.lang or env.lang)"/>
-            <div class="page">
-                <h2 class="mb-1">
+            <!--
+                Reducimos el tamaño base del reporte para que la tabla de
+                detalle (10 columnas) entre en el ancho de página A4 sin
+                desbordar. El layout externo (encabezado/footer) no se ve
+                afectado porque su CSS está en otra escala.
+            -->
+            <div class="page" style="font-size: 10px;">
+                <h2 class="mb-1" style="font-size: 20px;">
                     Solicitud de Gasto
                     <span t-if="o.number and o.number != '/'" t-esc="o.number"/>
                 </h2>
@@ -69,9 +75,16 @@
                         <br/>
                         <strong>Responsable del sector:</strong>
                         <span t-field="o.requestor_department_manager_id"/>
-                        <br/>
-                        <strong>Empresa:</strong>
-                        <span t-field="o.company_id"/>
+                        <t t-if="o.contract_object">
+                            <br/>
+                            <strong>Objeto de la contratación:</strong>
+                            <span t-field="o.contract_object"/>
+                        </t>
+                        <t t-if="o.delivery_location">
+                            <br/>
+                            <strong>Lugar de entrega:</strong>
+                            <span t-field="o.delivery_location"/>
+                        </t>
                     </div>
                 </div>
 
@@ -110,8 +123,12 @@
                     </tbody>
                 </table>
 
-                <h4 class="mt-3">Detalle</h4>
-                <table class="table table-sm">
+                <h4 class="mt-3" style="font-size: 13px;">Detalle</h4>
+                <!--
+                    Tabla con muchas columnas: bajamos un punto la fuente y
+                    apretamos el padding para evitar que se vaya de la página.
+                -->
+                <table class="table table-sm" style="font-size: 9px;">
                     <thead>
                         <tr>
                             <th>#</th>
@@ -273,27 +290,43 @@
                     </t>
                 </t>
 
-                <!-- Firmas: bloque simple para autorizaciones manuales. -->
-                <div class="row mt-5">
-                    <div class="col-4 text-center">
-                        <div style="border-top: 1px solid #000; padding-top: 4px;">
-                            <strong>Solicitante</strong><br/>
-                            <span t-field="o.requestor_id"/>
-                        </div>
-                    </div>
-                    <div class="col-4 text-center">
-                        <div style="border-top: 1px solid #000; padding-top: 4px;">
-                            <strong>Responsable del sector</strong><br/>
-                            <span t-field="o.requestor_department_manager_id"/>
-                        </div>
-                    </div>
-                    <div class="col-4 text-center">
-                        <div style="border-top: 1px solid #000; padding-top: 4px;">
-                            <strong>Sector requirente</strong><br/>
-                            <span t-field="o.requestor_department_id"/>
-                        </div>
-                    </div>
-                </div>
+                <!--
+                    Grilla de proveedores sugeridos.
+                    Se consolidan los proveedores recomendados de la cabecera
+                    del expediente y los de cada línea, sin duplicados. Para
+                    el "Contacto" tomamos el primer hijo del partner que sea
+                    de tipo `contact`; si no hay, se omite y se muestran los
+                    datos del propio partner.
+                -->
+                <t t-set="header_suppliers" t-value="o.expedient_id.recommended_supplier_ids"/>
+                <t t-set="line_suppliers" t-value="o.expedient_id.line_ids.mapped('recommended_supplier_ids')"/>
+                <t t-set="all_suppliers" t-value="(header_suppliers | line_suppliers).sorted(key=lambda p: (p.display_name or '').lower())"/>
+                <t t-if="all_suppliers">
+                    <h4 class="mt-3" style="font-size: 13px;">Proveedores sugeridos</h4>
+                    <table class="table table-bordered table-sm">
+                        <thead class="text-center">
+                            <tr>
+                                <th>Nombre / Razón social</th>
+                                <th>Contacto</th>
+                                <th>Email</th>
+                                <th>Teléfono</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr t-foreach="all_suppliers" t-as="sup" class="text-center">
+                                <t t-set="contact" t-value="sup.child_ids.filtered(lambda c: c.type == 'contact')[:1]"/>
+                                <td><span t-esc="sup.display_name or ''"/></td>
+                                <td><span t-esc="(contact.name if contact else '') or ''"/></td>
+                                <td>
+                                    <span t-esc="(contact.email if contact and contact.email else sup.email) or ''"/>
+                                </td>
+                                <td>
+                                    <span t-esc="(contact.phone if contact and (contact.phone or contact.mobile) else (sup.phone or sup.mobile)) or ''"/>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </t>
             </div>
         </t>
     </template>
