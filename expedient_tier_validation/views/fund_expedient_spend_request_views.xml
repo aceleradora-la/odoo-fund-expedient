@@ -108,50 +108,52 @@
         <field name="inherit_id" ref="fund_expedient.view_fund_expedient_form"/>
         <field name="arch" type="xml">
             <!--
-                En el form embebido no existe <header> ni <sheet>; insertamos un <header>
-                completo antes del primer grupo. Odoo lo renderiza igual que en el form
-                principal del expediente.
+                El form embebido ya define <header> con el botón "Imprimir SG".
+                Inyectamos los botones/statusbars del tier DENTRO de ese header
+                (position="inside") para que queden en una sola fila junto al
+                botón de impresión, en lugar de crear un segundo <header>.
             -->
+            <xpath expr="//field[@name='spend_request_ids']/form/header" position="inside">
+                <field name="preventiva_state" widget="statusbar"
+                       statusbar_visible="draft,generated,approved"
+                       invisible="spend_state == 'definitiva'"/>
+                <field name="definitiva_state" widget="statusbar"
+                       statusbar_visible="draft,generated,approved"
+                       invisible="spend_state != 'definitiva'"/>
+
+                <field name="spend_state" invisible="1"/>
+                <field name="need_validation" invisible="1"/>
+                <field name="validation_status" invisible="1"/>
+                <field name="can_review" invisible="1"/>
+                <field name="hide_reviews" invisible="1"/>
+                <field name="has_comment" invisible="1"/>
+                <field name="next_review" invisible="1"/>
+                <field name="tier_stage_locked" invisible="1"/>
+                <field name="can_restart_validation_stage" invisible="1"/>
+                <field name="stage_validation_status" invisible="1"/>
+                <field name="has_stage_reviews" invisible="1"/>
+
+                <button name="request_validation" type="object"
+                        string="Solicitar aprobación"
+                        class="btn-primary"
+                        invisible="not need_validation or stage_validation_status == 'rejected' or hide_reviews"/>
+                <button name="validate_tier" type="object"
+                        string="Aprobar"
+                        class="btn-success"
+                        invisible="not can_review"/>
+                <button name="reject_tier" type="object"
+                        string="Rechazar"
+                        class="btn-danger"
+                        invisible="not can_review"/>
+                <button name="restart_validation" type="object"
+                        string="Reiniciar validación"
+                        class="btn-secondary"
+                        invisible="not can_restart_validation_stage or hide_reviews"
+                        confirm="¿Reiniciar la validación de la fase actual?"/>
+            </xpath>
+
+            <!-- Banners de estado: justo antes del grupo de identificación. -->
             <xpath expr="//field[@name='spend_request_ids']/form/group[@name='sg_identification']" position="before">
-                <header>
-                    <field name="preventiva_state" widget="statusbar"
-                           statusbar_visible="draft,generated,approved"
-                           invisible="spend_state == 'definitiva'"/>
-                    <field name="definitiva_state" widget="statusbar"
-                           statusbar_visible="draft,generated,approved"
-                           invisible="spend_state != 'definitiva'"/>
-
-                    <field name="spend_state" invisible="1"/>
-                    <field name="need_validation" invisible="1"/>
-                    <field name="validation_status" invisible="1"/>
-                    <field name="can_review" invisible="1"/>
-                    <field name="hide_reviews" invisible="1"/>
-                    <field name="has_comment" invisible="1"/>
-                    <field name="next_review" invisible="1"/>
-                    <field name="tier_stage_locked" invisible="1"/>
-                    <field name="can_restart_validation_stage" invisible="1"/>
-                    <field name="stage_validation_status" invisible="1"/>
-                    <field name="has_stage_reviews" invisible="1"/>
-
-                    <button name="request_validation" type="object"
-                            string="Solicitar aprobación"
-                            class="btn-primary"
-                            invisible="not need_validation or stage_validation_status == 'rejected' or hide_reviews"/>
-                    <button name="validate_tier" type="object"
-                            string="Aprobar"
-                            class="btn-success"
-                            invisible="not can_review"/>
-                    <button name="reject_tier" type="object"
-                            string="Rechazar"
-                            class="btn-danger"
-                            invisible="not can_review"/>
-                    <button name="restart_validation" type="object"
-                            string="Reiniciar validación"
-                            class="btn-secondary"
-                            invisible="not can_restart_validation_stage or hide_reviews"
-                            confirm="¿Reiniciar la validación de la fase actual?"/>
-                </header>
-
                 <div class="alert alert-warning mb-0" role="alert"
                      invisible="stage_validation_status == 'validated' or hide_reviews or stage_validation_status == 'rejected' or not has_stage_reviews">
                     <i class="fa fa-info-circle"/>

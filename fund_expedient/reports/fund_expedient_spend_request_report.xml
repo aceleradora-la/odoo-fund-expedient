@@ -67,6 +67,21 @@
                         </t>
                     </div>
                     <div class="col-6">
+                        <!--
+                            Datos de la contratación primero (objeto y lugar de
+                            entrega), luego responsables. Mejor lectura: queda
+                            arriba el QUÉ se solicita y abajo QUIÉN lo solicita.
+                        -->
+                        <t t-if="o.contract_object">
+                            <strong>Objeto de la contratación:</strong>
+                            <span t-field="o.contract_object"/>
+                            <br/>
+                        </t>
+                        <t t-if="o.delivery_location">
+                            <strong>Lugar de entrega:</strong>
+                            <span t-field="o.delivery_location"/>
+                            <br/>
+                        </t>
                         <strong>Solicitante:</strong>
                         <span t-field="o.requestor_id"/>
                         <br/>
@@ -75,20 +90,10 @@
                         <br/>
                         <strong>Responsable del sector:</strong>
                         <span t-field="o.requestor_department_manager_id"/>
-                        <t t-if="o.contract_object">
-                            <br/>
-                            <strong>Objeto de la contratación:</strong>
-                            <span t-field="o.contract_object"/>
-                        </t>
-                        <t t-if="o.delivery_location">
-                            <br/>
-                            <strong>Lugar de entrega:</strong>
-                            <span t-field="o.delivery_location"/>
-                        </t>
                     </div>
                 </div>
 
-                <h4 class="mt-4">Importes</h4>
+                <h4 class="mt-4" style="font-size: 13px;">Totales</h4>
                 <table class="table table-sm">
                     <thead>
                         <tr>
@@ -123,7 +128,7 @@
                     </tbody>
                 </table>
 
-                <h4 class="mt-3" style="font-size: 13px;">Detalle</h4>
+                <h4 class="mt-3" style="font-size: 13px;">Bienes y/o servicios requeridos</h4>
                 <!--
                     Tabla con muchas columnas: bajamos un punto la fuente y
                     apretamos el padding para evitar que se vaya de la página.
@@ -192,7 +197,7 @@
                 <t t-set="detail_lines" t-value="o.line_ids.filtered(lambda l: not l.display_type)"/>
                 <t t-if="detail_lines">
                     <t t-set="analytic_accounts" t-value="detail_lines.mapped('analytic_account_id')"/>
-                    <h4 class="mt-3">Totalizador por cuenta analítica</h4>
+                    <h4 class="mt-3" style="font-size: 13px;">Total por Cuenta Analítica</h4>
                     <table class="table table-sm">
                         <thead>
                             <tr>
@@ -258,7 +263,7 @@
                 <t t-if="'review_ids' in o._fields">
                     <t t-set="done_reviews" t-value="o.review_ids.filtered(lambda r: r.status in ('approved', 'rejected'))"/>
                     <t t-if="done_reviews">
-                        <h4 class="mt-3">Aprobaciones</h4>
+                        <h4 class="mt-3" style="font-size: 13px;">Aprobaciones</h4>
                         <table class="table table-sm">
                             <thead>
                                 <tr>

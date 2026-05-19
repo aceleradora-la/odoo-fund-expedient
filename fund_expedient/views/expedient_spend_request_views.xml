@@ -92,6 +92,14 @@
                     <group>
                         <field name="expedient_id" readonly="1"/>
                     </group>
+                    <!--
+                        Identificación: dos columnas. A la izquierda los datos
+                        de identificación y estado de la SG; a la derecha los
+                        datos de la contratación y responsables del sector.
+                        El objeto y lugar de entrega van ANTES del solicitante
+                        para que la lectura describa primero el "qué" y luego
+                        el "quién".
+                    -->
                     <group string="Identificación">
                         <group>
                             <field name="number" readonly="1"/>
@@ -104,6 +112,10 @@
                             <field name="final_number" readonly="1" optional="hide"/>
                         </group>
                         <group>
+                            <field name="contract_object" readonly="1"
+                                   invisible="not contract_object"/>
+                            <field name="delivery_location" readonly="1"
+                                   invisible="not delivery_location"/>
                             <field name="requestor_id" readonly="1"/>
                             <field name="requestor_department_id" readonly="1"/>
                             <field name="requestor_department_manager_id" readonly="1"
@@ -111,12 +123,6 @@
                             <field name="currency_id" invisible="1"/>
                             <field name="approval_currency_id" invisible="1"/>
                         </group>
-                    </group>
-                    <group string="Datos de la contratación">
-                        <field name="contract_object" readonly="1"
-                               invisible="not contract_object"/>
-                        <field name="delivery_location" readonly="1"
-                               invisible="not delivery_location"/>
                     </group>
                     <group string="Preventiva">
                         <group>

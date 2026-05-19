@@ -264,6 +264,26 @@
                                     <field name="date_definitiva"/>
                                 </list>
                                 <form string="Solicitud de Gasto">
+                                    <!--
+                                        Header propio del form embebido para
+                                        exponer el botón "Imprimir SG". Si el
+                                        módulo expedient_tier_validation está
+                                        instalado, sus botones se inyectan
+                                        DENTRO de este header (position
+                                        inside), quedando en una sola fila.
+                                    -->
+                                    <header>
+                                        <button name="action_print_report" type="object"
+                                                string="Imprimir SG" class="btn-secondary"
+                                                invisible="not number or number == '/'"/>
+                                    </header>
+                                    <!--
+                                        Dos columnas: izquierda identificación y
+                                        estado; derecha datos de la contratación
+                                        + responsables. Objeto/Lugar antes del
+                                        solicitante para describir primero el
+                                        "qué" se solicita.
+                                    -->
                                     <group string="Solicitud de gasto" name="sg_identification">
                                         <group>
                                             <field name="number" readonly="1"/>
@@ -276,6 +296,14 @@
                                             <field name="final_number" readonly="1" optional="hide"/>
                                         </group>
                                         <group>
+                                            <field name="contract_object" readonly="1"
+                                                   invisible="not contract_object"/>
+                                            <field name="delivery_location" readonly="1"
+                                                   invisible="not delivery_location"/>
+                                            <field name="requestor_id" readonly="1"/>
+                                            <field name="requestor_department_id" readonly="1"/>
+                                            <field name="requestor_department_manager_id" readonly="1"
+                                                   invisible="not requestor_department_manager_id"/>
                                             <field name="currency_id" invisible="1"/>
                                             <field name="approval_currency_id" invisible="1"/>
                                         </group>
