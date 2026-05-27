@@ -6,6 +6,8 @@
     "summary": "Aprobaciones tier validation desde el portal web",
     "version": "18.0.1.0.0",
     "category": "Administration",
+    "website": "https://aceleradora.la",
+    "author": "aceleradora.la",
     "license": "AGPL-3",
     "application": False,
     "installable": True,

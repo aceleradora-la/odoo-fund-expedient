@@ -6,6 +6,8 @@
     "summary": "Acceso portal a expedientes: listado, detalle y avance de etapas",
     "version": "18.0.1.0.1",
     "category": "Administration",
+    "website": "https://aceleradora.la",
+    "author": "aceleradora.la",
     "license": "AGPL-3",
     "application": False,
     "installable": True,
