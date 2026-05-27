@@ -20,7 +20,8 @@ TIER_PORTAL_MODELS = {
 class ExpedientTierPortalMixin:
     def _prepare_home_portal_values(self, counters):
         values = super()._prepare_home_portal_values(counters)
-        values["pending_tier_count"] = len(self._portal_pending_tier_records())
+        if "pending_tier_count" in counters:
+            values["pending_tier_count"] = len(self._portal_pending_tier_records())
         return values
 
     def _portal_pending_tier_records(self):
@@ -52,9 +53,14 @@ class ExpedientTierPortalMixin:
         status = getattr(record, "stage_validation_status", None) or getattr(
             record, "validation_status", "no"
         )
+        user = request.env.user
+        my_pending_reviews = reviews.filtered(
+            lambda r: user in r.reviewer_ids and r.status == "pending"
+        )
         return {
             "record": record,
             "tier_reviews": reviews,
+            "tier_my_pending_reviews": my_pending_reviews,
             "tier_status": status,
             "tier_need_validation": bool(getattr(record, "need_validation", False)),
             "tier_can_review": bool(getattr(record, "can_review", False)),
@@ -171,14 +177,22 @@ class ExpedientTierPortalMixin:
             redirect_url = self._tier_redirect_url(record)
             if action == "validate":
                 record.portal_action_validate_tier(comment)
+                msg = _("Aprobación registrada correctamente.")
             elif action == "reject":
                 record.portal_action_reject_tier(comment)
+                msg = _("Rechazo registrado correctamente.")
             elif action == "request":
                 record.portal_action_request_validation()
+                msg = _("Validación solicitada. Los aprobadores asignados podrán aprobar desde este expediente o desde Aprobaciones pendientes.")
             elif action == "restart":
                 record.portal_action_restart_validation()
+                msg = _("Validación reiniciada.")
             else:
                 raise UserError(_("Acción no válida."))
+            request.session["portal_expedient_flash"] = {
+                "message": msg,
+                "type": "success",
+            }
         except (UserError, ValidationError, AccessError) as exc:
             request.session["portal_expedient_flash"] = {
                 "message": str(exc),

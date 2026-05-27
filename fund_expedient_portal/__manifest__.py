@@ -22,6 +22,7 @@
     "assets": {
         "web.assets_frontend": [
             "fund_expedient_portal/static/src/scss/portal_expedient.scss",
+            "fund_expedient_portal/static/src/js/portal_counters.js",
         ],
     },
     "post_init_hook": "post_init_hook",

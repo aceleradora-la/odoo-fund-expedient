@@ -10,6 +10,7 @@
                 <t t-set="url" t-value="'/my/expedients'"/>
                 <t t-set="text">Consulte y gestione sus expedientes</t>
                 <t t-set="placeholder_count" t-value="'expedient_count'"/>
+                <t t-set="config_card" t-value="True"/>
             </t>
         </xpath>
     </template>

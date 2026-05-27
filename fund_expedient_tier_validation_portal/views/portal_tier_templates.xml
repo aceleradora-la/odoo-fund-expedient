@@ -5,10 +5,12 @@
     <template id="portal_my_home_pending_tier" name="Portal My Home: Aprobaciones tier" inherit_id="portal.portal_my_home" priority="31">
         <xpath expr="//div[hasclass('o_portal_docs')]" position="inside">
             <t t-call="portal.portal_docs_entry">
+                <t t-set="icon" t-value="'/fund_expedient_portal/static/src/img/expedient.svg'"/>
                 <t t-set="title">Aprobaciones pendientes</t>
                 <t t-set="url" t-value="'/my/expedients/pending_reviews'"/>
                 <t t-set="text">Expedientes y documentos que requieren su aprobación</t>
                 <t t-set="placeholder_count" t-value="'pending_tier_count'"/>
+                <t t-set="config_card" t-value="True"/>
             </t>
         </xpath>
     </template>
@@ -27,7 +29,29 @@
                 }" t-esc="tier.get('tier_status') or 'no'"/>
             </div>
             <div class="card-body">
-                <t t-if="tier.get('tier_reviews')">
+                <t t-if="tier.get('tier_can_review')">
+                    <div class="alert alert-warning mb-3" role="alert">
+                        <strong>Tiene una aprobación pendiente.</strong>
+                        Use los botones <em>Aprobar</em> o <em>Rechazar</em> más abajo
+                        <t t-if="tier.get('tier_has_comment')"> (comentario obligatorio)</t>.
+                    </div>
+                </t>
+                <t t-elif="tier.get('tier_need_validation') and not tier.get('tier_reviews')">
+                    <div class="alert alert-info mb-3" role="alert">
+                        Aún no se solicitó la validación para este registro.
+                    </div>
+                </t>
+
+                <t t-if="tier.get('tier_my_pending_reviews')">
+                    <p class="fw-semibold mb-2">Su revisión asignada</p>
+                    <ul class="list-group list-group-flush mb-3">
+                        <li t-foreach="tier['tier_my_pending_reviews']" t-as="review" class="list-group-item d-flex justify-content-between">
+                            <span t-esc="review.name or review.display_name"/>
+                            <span class="badge text-bg-warning" t-esc="review.status"/>
+                        </li>
+                    </ul>
+                </t>
+                <t t-elif="tier.get('tier_reviews')">
                     <ul class="list-group list-group-flush mb-3">
                         <li t-foreach="tier['tier_reviews']" t-as="review" class="list-group-item d-flex justify-content-between">
                             <span t-esc="review.name or review.display_name"/>
@@ -41,21 +65,21 @@
                     <input type="hidden" name="model" t-att-value="tier.get('tier_model')"/>
                     <input type="hidden" name="res_id" t-att-value="tier.get('tier_res_id')"/>
 
-                    <t t-if="tier.get('tier_has_comment') and (tier.get('tier_can_review') or tier.get('tier_need_validation'))">
+                    <t t-if="tier.get('tier_has_comment') and tier.get('tier_can_review')">
                         <div class="mb-2">
                             <label class="form-label">Comentario</label>
-                            <textarea name="comment" class="form-control" rows="2" placeholder="Comentario de aprobación o rechazo"/>
+                            <textarea name="comment" class="form-control" rows="2" placeholder="Comentario de aprobación o rechazo" required="required"/>
                         </div>
                     </t>
 
                     <div class="d-flex flex-wrap gap-2">
-                        <button t-if="tier.get('tier_need_validation')" type="submit" name="action" value="request" class="btn btn-outline-primary btn-sm">
+                        <button t-if="tier.get('tier_need_validation') and not tier.get('tier_can_review')" type="submit" name="action" value="request" class="btn btn-outline-primary btn-sm">
                             Solicitar validación
                         </button>
-                        <button t-if="tier.get('tier_can_review')" type="submit" name="action" value="validate" class="btn btn-success btn-sm">
+                        <button t-if="tier.get('tier_can_review')" type="submit" name="action" value="validate" class="btn btn-success">
                             Aprobar
                         </button>
-                        <button t-if="tier.get('tier_can_review')" type="submit" name="action" value="reject" class="btn btn-danger btn-sm">
+                        <button t-if="tier.get('tier_can_review')" type="submit" name="action" value="reject" class="btn btn-danger">
                             Rechazar
                         </button>
                         <button t-if="tier.get('tier_can_restart')" type="submit" name="action" value="restart" class="btn btn-outline-secondary btn-sm">
@@ -70,7 +94,12 @@
     <!-- Inyectar panel tier en detalle del expediente -->
     <template id="portal_expedient_page_tier" name="Expediente portal: tier" inherit_id="fund_expedient_portal.portal_expedient_page">
         <xpath expr="//div[@id='portal_expedient_tier_panel']" position="inside">
-            <h4 class="mt-4 mb-3">Aprobaciones</h4>
+            <div class="d-flex flex-wrap justify-content-between align-items-center mt-4 mb-3 gap-2">
+                <h4 class="mb-0">Aprobaciones</h4>
+                <a href="/my/expedients/pending_reviews" class="btn btn-outline-primary btn-sm">
+                    Ver todas mis aprobaciones pendientes
+                </a>
+            </div>
 
             <t t-call="fund_expedient_tier_validation_portal.portal_tier_panel">
                 <t t-set="tier_data" t-value="expedient_tier"/>
@@ -78,7 +107,7 @@
             </t>
 
             <t t-foreach="expedient.spend_request_ids" t-as="sg">
-                <t t-call="fund_expedient_tier_validation_portal.portal_tier_panel">
+                <t t-if="sg_tier_map.get(sg.id)" t-call="fund_expedient_tier_validation_portal.portal_tier_panel">
                     <t t-set="tier_data" t-value="sg_tier_map.get(sg.id)"/>
                     <t t-set="title" t-value="'Solicitud de Gasto: %s' % (sg.display_name or sg.id)"/>
                     <t t-set="anchor_id" t-value="'sg_%s' % sg.id"/>
@@ -86,7 +115,7 @@
             </t>
 
             <t t-foreach="expedient.disposition_ids" t-as="disp">
-                <t t-call="fund_expedient_tier_validation_portal.portal_tier_panel">
+                <t t-if="disp_tier_map.get(disp.id)" t-call="fund_expedient_tier_validation_portal.portal_tier_panel">
                     <t t-set="tier_data" t-value="disp_tier_map.get(disp.id)"/>
                     <t t-set="title" t-value="'Disposición: %s' % (disp.name or disp.number or disp.id)"/>
                     <t t-set="anchor_id" t-value="'disp_%s' % disp.id"/>
@@ -94,7 +123,7 @@
             </t>
 
             <t t-foreach="expedient.resolution_ids" t-as="resol">
-                <t t-call="fund_expedient_tier_validation_portal.portal_tier_panel">
+                <t t-if="resol_tier_map.get(resol.id)" t-call="fund_expedient_tier_validation_portal.portal_tier_panel">
                     <t t-set="tier_data" t-value="resol_tier_map.get(resol.id)"/>
                     <t t-set="title" t-value="'Resolución: %s' % (resol.name or resol.number or resol.id)"/>
                     <t t-set="anchor_id" t-value="'resol_%s' % resol.id"/>

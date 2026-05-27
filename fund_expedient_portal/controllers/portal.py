@@ -17,12 +17,13 @@ class ExpedientCustomerPortal(CustomerPortal):
 
     def _prepare_home_portal_values(self, counters):
         values = super()._prepare_home_portal_values(counters)
-        Expedient = request.env["fund.expedient"]
-        if Expedient.has_access("read"):
-            domain = Expedient._portal_expedient_base_domain()
-            values["expedient_count"] = Expedient.search_count(domain)
-        else:
-            values["expedient_count"] = 0
+        if "expedient_count" in counters:
+            Expedient = request.env["fund.expedient"]
+            if Expedient.has_access("read"):
+                domain = Expedient._portal_expedient_base_domain()
+                values["expedient_count"] = Expedient.search_count(domain)
+            else:
+                values["expedient_count"] = 0
         return values
 
     def _expedient_get_page_view_values(self, expedient, access_token, **kwargs):
