@@ -8,8 +8,8 @@ from odoo.osv import expression
 class FundExpedient(models.Model):
     _inherit = ["fund.expedient", "portal.mixin"]
 
-    @api.depends("id")
     def _compute_access_url(self):
+        super()._compute_access_url()
         for rec in self:
             rec.access_url = f"/my/expedients/{rec.id}"
 
