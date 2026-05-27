@@ -16,12 +16,17 @@ class TierValidationPortalMixin(models.AbstractModel):
         if not getattr(self, "can_review", False):
             raise AccessError(_("No tiene permisos para revisar este registro."))
 
-    def _portal_tier_current_reviews_for_user(self):
+    def _portal_tier_current_reviews(self):
         self.ensure_one()
         if hasattr(self, "_current_context_reviews"):
-            reviews = self._current_context_reviews()
-        else:
-            reviews = self._current_stage_reviews()
+            return self._current_context_reviews()
+        if hasattr(self, "_current_stage_reviews"):
+            return self._current_stage_reviews()
+        return self.review_ids
+
+    def _portal_tier_current_reviews_for_user(self):
+        self.ensure_one()
+        reviews = self._portal_tier_current_reviews()
         sequences = self._get_sequences_to_approve(self.env.user)
         return reviews.filtered(
             lambda r: r.status == "pending"
@@ -30,7 +35,8 @@ class TierValidationPortalMixin(models.AbstractModel):
 
     def portal_action_request_validation(self):
         self.ensure_one()
-        return self.request_validation()
+        # sudo tras verificar acceso en el controlador (partners portal son read-only)
+        return self.sudo().request_validation()
 
     def portal_action_validate_tier(self, comment):
         self.ensure_one()
@@ -42,12 +48,13 @@ class TierValidationPortalMixin(models.AbstractModel):
             lambda r: self.env.user in r.reviewer_ids
         )
         if comment and user_reviews:
-            user_reviews.write({"comment": comment})
+            user_reviews.sudo().write({"comment": comment})
         if reviews:
-            self._validate_tier(reviews)
-            self._update_counter({"review_deleted": True})
-            if hasattr(self, "_on_context_tier_validated"):
-                self._on_context_tier_validated()
+            record = self.sudo()
+            record._validate_tier(reviews)
+            record._update_counter({"review_deleted": True})
+            if hasattr(record, "_on_context_tier_validated"):
+                record._on_context_tier_validated()
         return True
 
     def portal_action_reject_tier(self, comment):
@@ -60,14 +67,14 @@ class TierValidationPortalMixin(models.AbstractModel):
             lambda r: self.env.user in r.reviewer_ids
         )
         if comment and user_reviews:
-            user_reviews.write({"comment": comment})
+            user_reviews.sudo().write({"comment": comment})
         if reviews:
-            self._rejected_tier(reviews)
-            self._update_counter({"review_deleted": True})
+            self.sudo()._rejected_tier(reviews)
+            self.sudo()._update_counter({"review_deleted": True})
         return True
 
     def portal_action_restart_validation(self):
         self.ensure_one()
         if not getattr(self, "can_restart_validation_stage", False):
             raise AccessError(_("No puede reiniciar la validación en este contexto."))
-        return self.restart_validation()
+        return self.sudo().restart_validation()

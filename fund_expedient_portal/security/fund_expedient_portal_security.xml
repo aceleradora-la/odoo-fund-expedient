@@ -6,10 +6,9 @@
             <field name="name">Expediente portal: partner</field>
             <field name="model_id" ref="fund_expedient.model_fund_expedient"/>
             <field name="domain_force">[
-                '|', '|',
+                '|',
                 ('message_partner_ids', 'child_of', [user.partner_id.commercial_partner_id.id]),
-                ('recommended_supplier_ids', 'child_of', [user.partner_id.commercial_partner_id.id]),
-                ('review_ids.reviewer_ids', '=', user.id)
+                ('recommended_supplier_ids', 'child_of', [user.partner_id.commercial_partner_id.id])
             ]</field>
             <field name="groups" eval="[(4, ref('base.group_portal'))]"/>
         </record>

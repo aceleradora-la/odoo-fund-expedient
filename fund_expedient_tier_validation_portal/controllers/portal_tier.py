@@ -127,10 +127,23 @@ class ExpedientTierPortalMixin:
     def portal_pending_tier_reviews(self, page=1, **kw):
         values = self._prepare_portal_layout_values()
         pending = self._portal_pending_tier_records()
+        pending_items = [
+            {
+                "record": rec,
+                "url": self._tier_redirect_url(rec),
+                "expedient_label": (
+                    rec.number or rec.id
+                    if rec._name == "fund.expedient"
+                    else rec.expedient_id.number or rec.expedient_id.id
+                ),
+            }
+            for rec in pending
+        ]
         values.update(
             {
                 "page_name": "pending_tier",
                 "pending_records": pending,
+                "pending_items": pending_items,
                 "title": _("Aprobaciones pendientes"),
             }
         )

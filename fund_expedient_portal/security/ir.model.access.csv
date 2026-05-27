@@ -9,5 +9,3 @@ access_fund_expedient_spend_request_portal,fund.expedient.spend.request portal,m
 access_fund_expedient_spend_request_line_portal,fund.expedient.spend.request.line portal,model_fund_expedient_spend_request_line,base.group_portal,1,0,0,0
 access_hr_employee_portal,hr.employee portal read,hr.model_hr_employee,base.group_portal,1,0,0,0
 access_hr_department_portal,hr.department portal read,hr.model_hr_department,base.group_portal,1,0,0,0
-access_hr_employee_portal,hr.employee portal,hr.model_hr_employee,base.group_portal,1,0,0,0
-access_hr_department_portal,hr.department portal,hr.model_hr_department,base.group_portal,1,0,0,0

@@ -31,7 +31,6 @@ class ExpedientCustomerPortal(CustomerPortal):
             "can_advance_stage": expedient._portal_can_advance_stage(),
             "page_name": "expedient",
         }
-        history = request.session.get("my_expedients_history", [])
         values.update(
             self._get_page_view_values(
                 expedient,
@@ -100,10 +99,10 @@ class ExpedientCustomerPortal(CustomerPortal):
             },
         }
 
-        if not sortby:
+        if not sortby or sortby not in searchbar_sortings:
             sortby = "date"
         order = searchbar_sortings[sortby]["order"]
-        if not filterby:
+        if not filterby or filterby not in searchbar_filters:
             filterby = "all"
         domain += searchbar_filters[filterby]["domain"]
 

@@ -110,20 +110,20 @@
                 <h2>Aprobaciones pendientes</h2>
                 <p class="text-muted">Registros que requieren su revisión.</p>
 
-                <t t-if="not pending_records">
+                <t t-if="not pending_items">
                     <p class="alert alert-info" role="alert">No tiene aprobaciones pendientes.</p>
                 </t>
-                <t t-if="pending_records">
+                <t t-if="pending_items">
                     <div class="list-group">
-                        <t t-foreach="pending_records" t-as="rec">
-                            <a t-att-href="rec.expedient_id.get_portal_url() if rec._name != 'fund.expedient' else rec.get_portal_url()"
+                        <t t-foreach="pending_items" t-as="item">
+                            <a t-att-href="item['url']"
                                class="list-group-item list-group-item-action">
                                 <div class="d-flex w-100 justify-content-between">
-                                    <h5 class="mb-1" t-esc="rec.display_name"/>
+                                    <h5 class="mb-1" t-esc="item['record'].display_name"/>
                                     <small class="badge text-bg-warning">Pendiente</small>
                                 </div>
-                                <p class="mb-1 text-muted" t-if="rec._name != 'fund.expedient'">
-                                    Expediente: <t t-esc="rec.expedient_id.number or rec.expedient_id.id"/>
+                                <p class="mb-1 text-muted" t-if="item['record']._name != 'fund.expedient'">
+                                    Expediente: <t t-esc="item['expedient_label']"/>
                                 </p>
                             </a>
                         </t>
