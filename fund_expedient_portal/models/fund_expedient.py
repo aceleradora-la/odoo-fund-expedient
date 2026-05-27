@@ -6,6 +6,7 @@ from odoo.osv import expression
 
 
 class FundExpedient(models.Model):
+    _name = "fund.expedient"
     _inherit = ["fund.expedient", "portal.mixin"]
 
     def _compute_access_url(self):

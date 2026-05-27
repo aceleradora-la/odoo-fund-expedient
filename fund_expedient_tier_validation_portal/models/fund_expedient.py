@@ -6,6 +6,7 @@ from odoo.exceptions import AccessError
 
 
 class FundExpedient(models.Model):
+    _name = "fund.expedient"
     _inherit = ["fund.expedient", "tier.validation.portal.mixin"]
 
     def _portal_tier_check_access(self):
