@@ -1,17 +1,18 @@
-.o_portal_expedient_card .card-header {
-    font-weight: 600;
-}
-
-.o_portal_expedient_detail .badge-stage {
-    font-size: 0.95rem;
-}
-
 .o_portal_expedient_detail .expedient-meta dt {
     font-weight: 600;
 }
 
 .o_portal_expedient_detail .expedient-meta dd {
     margin-bottom: 0.5rem;
+}
+
+.o_portal_expedient_detail .o_portal_expedient_amounts th {
+    width: 50%;
+    font-weight: 600;
+}
+
+.o_portal_expedient_detail .table th {
+    white-space: nowrap;
 }
 
 .o_portal_expedient_flash {

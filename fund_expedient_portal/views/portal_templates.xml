@@ -65,44 +65,234 @@
                 </t>
             </t>
 
-            <div class="o_portal_expedient_detail container mt-3">
+            <div class="o_portal_expedient_detail container mt-3 mb-5">
                 <t t-if="portal_flash">
                     <div t-attf-class="alert alert-#{portal_flash.get('type', 'danger')} o_portal_expedient_flash" role="alert">
                         <t t-esc="portal_flash.get('message')"/>
                     </div>
                 </t>
 
-                <div class="row mb-4">
+                <div class="row mb-3">
                     <div class="col-12">
-                        <h2>
-                            Expediente
-                            <span t-esc="expedient.number or expedient.id"/>
+                        <h2 class="mb-2">
+                            Expediente <span t-esc="expedient.number or expedient.id"/>
                         </h2>
-                        <span class="badge text-bg-primary badge-stage" t-esc="expedient.stage_id.name or ''"/>
+                        <div class="d-flex flex-wrap gap-2">
+                            <span class="badge text-bg-primary" t-esc="expedient.stage_id.name or 'Sin etapa'"/>
+                            <span class="badge text-bg-secondary" t-esc="expedient.state or ''"/>
+                            <span class="badge text-bg-light" t-if="expedient.type_number" t-esc="expedient.type_number"/>
+                        </div>
                     </div>
                 </div>
 
-                <div class="row">
+                <div class="row mb-4">
                     <div class="col-lg-8">
-                        <dl class="row expedient-meta">
-                            <dt class="col-sm-4">Tipo</dt>
-                            <dd class="col-sm-8"><t t-esc="expedient.type_id.name or ''"/></dd>
+                        <div class="card mb-3">
+                            <div class="card-header">Datos generales</div>
+                            <div class="card-body">
+                                <dl class="row expedient-meta mb-0">
+                                    <dt class="col-sm-4">Tipo</dt>
+                                    <dd class="col-sm-8"><t t-esc="expedient.type_id.name or ''"/></dd>
 
-                            <dt class="col-sm-4">Solicitante</dt>
-                            <dd class="col-sm-8"><t t-esc="expedient.requestor_id.name or ''"/></dd>
+                                    <dt class="col-sm-4">Solicitante</dt>
+                                    <dd class="col-sm-8"><t t-esc="expedient.requestor_id.name or ''"/></dd>
 
-                            <dt class="col-sm-4">Fecha solicitud</dt>
-                            <dd class="col-sm-8"><t t-esc="expedient.request_date or ''"/></dd>
+                                    <dt class="col-sm-4" t-if="expedient.requestor_department_id">Sector</dt>
+                                    <dd class="col-sm-8" t-if="expedient.requestor_department_id">
+                                        <t t-esc="expedient.requestor_department_id.name"/>
+                                    </dd>
 
-                            <dt class="col-sm-4">Fecha estimada necesidad</dt>
-                            <dd class="col-sm-8"><t t-esc="expedient.estimated_need_date or ''"/></dd>
+                                    <dt class="col-sm-4" t-if="expedient.company_id">Compañía</dt>
+                                    <dd class="col-sm-8" t-if="expedient.company_id">
+                                        <t t-esc="expedient.company_id.name"/>
+                                    </dd>
 
-                            <dt class="col-sm-4">Estado</dt>
-                            <dd class="col-sm-8"><t t-esc="expedient.state or ''"/></dd>
-                        </dl>
+                                    <dt class="col-sm-4">Fecha solicitud</dt>
+                                    <dd class="col-sm-8"><t t-esc="expedient.request_date or ''"/></dd>
+
+                                    <dt class="col-sm-4">Fecha estimada necesidad</dt>
+                                    <dd class="col-sm-8"><t t-esc="expedient.estimated_need_date or '—'"/></dd>
+
+                                    <dt class="col-sm-4" t-if="expedient.encuadre_id">Encuadre</dt>
+                                    <dd class="col-sm-8" t-if="expedient.encuadre_id">
+                                        <t t-esc="expedient.encuadre_id.name"/>
+                                    </dd>
+
+                                    <dt class="col-sm-4" t-if="expedient.analytic_account_id">Cuenta analítica</dt>
+                                    <dd class="col-sm-8" t-if="expedient.analytic_account_id">
+                                        <t t-esc="expedient.analytic_account_id.display_name"/>
+                                    </dd>
+
+                                    <dt class="col-sm-4" t-if="expedient.recommended_supplier_ids">Proveedores recomendados</dt>
+                                    <dd class="col-sm-8" t-if="expedient.recommended_supplier_ids">
+                                        <t t-foreach="expedient.recommended_supplier_ids" t-as="supplier">
+                                            <span class="badge text-bg-light me-1 mb-1" t-esc="supplier.name"/>
+                                        </t>
+                                    </dd>
+
+                                    <dt class="col-sm-4" t-if="expedient.contract_object">Objeto</dt>
+                                    <dd class="col-sm-8" t-if="expedient.contract_object">
+                                        <t t-esc="expedient.contract_object"/>
+                                    </dd>
+
+                                    <dt class="col-sm-4" t-if="expedient.delivery_location">Lugar de entrega</dt>
+                                    <dd class="col-sm-8" t-if="expedient.delivery_location">
+                                        <t t-esc="expedient.delivery_location"/>
+                                    </dd>
+                                </dl>
+                            </div>
+                        </div>
+
+                        <div class="card mb-3" t-if="expedient.description or expedient.description_plain">
+                            <div class="card-header">Descripción</div>
+                            <div class="card-body">
+                                <div t-if="expedient.description" t-field="expedient.description"/>
+                                <p t-else="" class="mb-0 text-muted" t-esc="expedient.description_plain"/>
+                            </div>
+                        </div>
+
+                        <div class="card mb-3">
+                            <div class="card-header">Importes</div>
+                            <div class="card-body p-0">
+                                <table class="table table-sm mb-0 o_portal_expedient_amounts">
+                                    <tbody>
+                                        <tr>
+                                            <th>Estimado</th>
+                                            <td class="text-end">
+                                                <span t-field="expedient.amount_estimated" t-options="{'widget': 'monetary', 'display_currency': expedient.currency_id}"/>
+                                            </td>
+                                        </tr>
+                                        <tr t-if="expedient.amount_estimated_confirmed">
+                                            <th>Estimado confirmado</th>
+                                            <td class="text-end">
+                                                <span t-field="expedient.amount_estimated_confirmed" t-options="{'widget': 'monetary', 'display_currency': expedient.currency_id}"/>
+                                            </td>
+                                        </tr>
+                                        <tr t-if="expedient.amount_committed">
+                                            <th>Comprometido</th>
+                                            <td class="text-end">
+                                                <span t-field="expedient.amount_committed" t-options="{'widget': 'monetary', 'display_currency': expedient.currency_id}"/>
+                                            </td>
+                                        </tr>
+                                        <tr t-if="expedient.amount_real">
+                                            <th>Real</th>
+                                            <td class="text-end">
+                                                <span t-field="expedient.amount_real" t-options="{'widget': 'monetary', 'display_currency': expedient.currency_id}"/>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="card mb-3" t-if="expedient.line_ids">
+                            <div class="card-header">Líneas del expediente</div>
+                            <div class="card-body p-0 table-responsive">
+                                <table class="table table-sm table-striped mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th>Descripción</th>
+                                            <th class="text-end">Cant.</th>
+                                            <th class="text-end">Importe est.</th>
+                                            <th class="text-end">Importe def.</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr t-foreach="expedient.line_ids" t-as="line">
+                                            <td>
+                                                <t t-if="line.display_type == 'line_section'">
+                                                    <strong t-esc="line.name"/>
+                                                </t>
+                                                <t t-elif="line.display_type == 'line_note'">
+                                                    <em t-esc="line.name"/>
+                                                </t>
+                                                <t t-else="">
+                                                    <t t-esc="line.name or line.product_id.display_name"/>
+                                                </t>
+                                            </td>
+                                            <td class="text-end">
+                                                <t t-if="not line.display_type" t-esc="line.product_qty"/>
+                                            </td>
+                                            <td class="text-end">
+                                                <t t-if="not line.display_type">
+                                                    <span t-field="line.amount_estimated_line" t-options="{'widget': 'monetary', 'display_currency': line.currency_id}"/>
+                                                </t>
+                                            </td>
+                                            <td class="text-end">
+                                                <t t-if="not line.display_type and line.amount_final_line">
+                                                    <span t-field="line.amount_final_line" t-options="{'widget': 'monetary', 'display_currency': line.currency_id}"/>
+                                                </t>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="card mb-3" t-if="expedient.spend_request_ids">
+                            <div class="card-header">Solicitudes de gasto</div>
+                            <div class="card-body p-0 table-responsive">
+                                <table class="table table-sm mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th>SG</th>
+                                            <th>Preventiva</th>
+                                            <th>Definitiva</th>
+                                            <th class="text-end">Monto prev.</th>
+                                            <th class="text-end">Monto def.</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr t-foreach="expedient.spend_request_ids" t-as="sg">
+                                            <td>
+                                                <a t-att-href="'#sg_%s' % sg.id" t-esc="sg.display_name"/>
+                                            </td>
+                                            <td><span t-field="sg.preventiva_state"/></td>
+                                            <td><span t-field="sg.definitiva_state"/></td>
+                                            <td class="text-end">
+                                                <span t-field="sg.amount_preventiva" t-options="{'widget': 'monetary', 'display_currency': sg.currency_id}"/>
+                                            </td>
+                                            <td class="text-end">
+                                                <span t-field="sg.amount_definitiva" t-options="{'widget': 'monetary', 'display_currency': sg.currency_id}"/>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="row" t-if="expedient.disposition_ids or expedient.resolution_ids">
+                            <div class="col-md-6 mb-3" t-if="expedient.disposition_ids">
+                                <div class="card h-100">
+                                    <div class="card-header">Disposiciones</div>
+                                    <ul class="list-group list-group-flush">
+                                        <li t-foreach="expedient.disposition_ids" t-as="disp" class="list-group-item">
+                                            <a t-att-href="'#disp_%s' % disp.id">
+                                                <t t-esc="disp.number or disp.name or disp.id"/>
+                                            </a>
+                                            <small class="text-muted d-block" t-esc="disp.stage_id.name"/>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3" t-if="expedient.resolution_ids">
+                                <div class="card h-100">
+                                    <div class="card-header">Resoluciones</div>
+                                    <ul class="list-group list-group-flush">
+                                        <li t-foreach="expedient.resolution_ids" t-as="resol" class="list-group-item">
+                                            <a t-att-href="'#resol_%s' % resol.id">
+                                                <t t-esc="resol.number or resol.name or resol.id"/>
+                                            </a>
+                                            <small class="text-muted d-block" t-esc="resol.stage_id.name"/>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="col-lg-4" t-if="can_advance_stage">
-                        <div class="card">
+
+                    <div class="col-lg-4">
+                        <div class="card mb-3" t-if="can_advance_stage">
                             <div class="card-header">Etapa</div>
                             <div class="card-body d-grid gap-2">
                                 <form t-att-action="'/my/expedients/%s/previous_stage' % expedient.id" method="POST">
@@ -119,10 +309,21 @@
                                 </form>
                             </div>
                         </div>
+                        <div class="card mb-3">
+                            <div class="card-header">Accesos rápidos</div>
+                            <div class="card-body d-grid gap-2">
+                                <a href="/my/expedients/pending_reviews" class="btn btn-outline-primary btn-sm">
+                                    Mis aprobaciones pendientes
+                                </a>
+                                <a href="/my/expedients" class="btn btn-outline-secondary btn-sm">
+                                    Volver al listado
+                                </a>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Panel tier: lo inyecta fund_expedient_tier_validation_portal -->
+                <!-- Panel tier: fund_expedient_tier_validation_portal -->
                 <div id="portal_expedient_tier_panel"/>
             </div>
         </t>

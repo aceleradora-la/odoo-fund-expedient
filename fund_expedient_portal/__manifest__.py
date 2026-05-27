@@ -4,7 +4,7 @@
 {
     "name": "Fundación - Expedientes (Portal)",
     "summary": "Acceso portal a expedientes: listado, detalle y avance de etapas",
-    "version": "18.0.1.0.0",
+    "version": "18.0.1.0.1",
     "category": "Administration",
     "license": "AGPL-3",
     "application": False,
@@ -13,6 +13,7 @@
         "fund_expedient",
         "portal",
         "website",
+        "account",
     ],
     "data": [
         "security/fund_expedient_portal_security.xml",
