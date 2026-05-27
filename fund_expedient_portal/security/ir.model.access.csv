@@ -1,0 +1,13 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_fund_expedient_portal,fund.expedient portal,model_fund_expedient,base.group_portal,1,0,0,0
+access_fund_expedient_stage_portal,fund.expedient.stage portal,model_fund_expedient_stage,base.group_portal,1,0,0,0
+access_fund_expedient_type_portal,fund.expedient.type portal,model_fund_expedient_type,base.group_portal,1,0,0,0
+access_fund_expedient_line_portal,fund.expedient.line portal,model_fund_expedient_line,base.group_portal,1,0,0,0
+access_fund_expedient_disposition_portal,fund.expedient.disposition portal,model_fund_expedient_disposition,base.group_portal,1,0,0,0
+access_fund_expedient_resolution_portal,fund.expedient.resolution portal,model_fund_expedient_resolution,base.group_portal,1,0,0,0
+access_fund_expedient_spend_request_portal,fund.expedient.spend.request portal,model_fund_expedient_spend_request,base.group_portal,1,0,0,0
+access_fund_expedient_spend_request_line_portal,fund.expedient.spend.request.line portal,model_fund_expedient_spend_request_line,base.group_portal,1,0,0,0
+access_hr_employee_portal,hr.employee portal read,hr.model_hr_employee,base.group_portal,1,0,0,0
+access_hr_department_portal,hr.department portal read,hr.model_hr_department,base.group_portal,1,0,0,0
+access_hr_employee_portal,hr.employee portal,hr.model_hr_employee,base.group_portal,1,0,0,0
+access_hr_department_portal,hr.department portal,hr.model_hr_department,base.group_portal,1,0,0,0

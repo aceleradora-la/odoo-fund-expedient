@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Tarjeta en /my -->
+    <template id="portal_my_home_expedient" name="Portal My Home: Expedientes" inherit_id="portal.portal_my_home" priority="30">
+        <xpath expr="//div[hasclass('o_portal_docs')]" position="inside">
+            <t t-call="portal.portal_docs_entry">
+                <t t-set="icon" t-value="'/fund_expedient_portal/static/src/img/expedient.svg'"/>
+                <t t-set="title">Expedientes</t>
+                <t t-set="url" t-value="'/my/expedients'"/>
+                <t t-set="text">Consulte y gestione sus expedientes</t>
+                <t t-set="placeholder_count" t-value="'expedient_count'"/>
+            </t>
+        </xpath>
+    </template>
+
+    <!-- Listado -->
+    <template id="portal_my_expedients" name="Mis expedientes">
+        <t t-call="portal.portal_layout">
+            <t t-set="breadcrumbs_searchbar" t-value="True"/>
+
+            <t t-call="portal.portal_searchbar">
+                <t t-set="title">Expedientes</t>
+            </t>
+
+            <t t-if="not expedients">
+                <p class="alert alert-warning mt-3" role="alert">
+                    No hay expedientes que mostrar.
+                </p>
+            </t>
+            <t t-if="expedients" t-call="portal.portal_table">
+                <thead>
+                    <tr class="active">
+                        <th>Número</th>
+                        <th>Tipo</th>
+                        <th>Etapa</th>
+                        <th>Fecha solicitud</th>
+                        <th>Solicitante</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr t-foreach="expedients" t-as="exp">
+                        <td>
+                            <a t-att-href="exp.get_portal_url()">
+                                <t t-esc="exp.number or exp.id"/>
+                            </a>
+                        </td>
+                        <td><t t-esc="exp.type_id.name or ''"/></td>
+                        <td><span class="badge text-bg-secondary" t-esc="exp.stage_id.name or ''"/></td>
+                        <td><t t-esc="exp.request_date or ''"/></td>
+                        <td><t t-esc="exp.requestor_id.name or ''"/></td>
+                    </tr>
+                </tbody>
+            </t>
+        </t>
+    </template>
+
+    <!-- Detalle -->
+    <template id="portal_expedient_page" name="Expediente portal">
+        <t t-call="portal.portal_layout">
+            <t t-set="o_portal_fullwidth_alert" groups="base.group_user">
+                <t t-call="portal.portal_back_in_edit_mode">
+                    <t t-set="backend_url" t-value="'/web#model=fund.expedient&amp;id=%s&amp;view_type=form' % expedient.id"/>
+                </t>
+            </t>
+
+            <div class="o_portal_expedient_detail container mt-3">
+                <t t-if="portal_flash">
+                    <div t-attf-class="alert alert-#{portal_flash.get('type', 'danger')} o_portal_expedient_flash" role="alert">
+                        <t t-esc="portal_flash.get('message')"/>
+                    </div>
+                </t>
+
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h2>
+                            Expediente
+                            <span t-esc="expedient.number or expedient.id"/>
+                        </h2>
+                        <span class="badge text-bg-primary badge-stage" t-esc="expedient.stage_id.name or ''"/>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-lg-8">
+                        <dl class="row expedient-meta">
+                            <dt class="col-sm-4">Tipo</dt>
+                            <dd class="col-sm-8"><t t-esc="expedient.type_id.name or ''"/></dd>
+
+                            <dt class="col-sm-4">Solicitante</dt>
+                            <dd class="col-sm-8"><t t-esc="expedient.requestor_id.name or ''"/></dd>
+
+                            <dt class="col-sm-4">Fecha solicitud</dt>
+                            <dd class="col-sm-8"><t t-esc="expedient.request_date or ''"/></dd>
+
+                            <dt class="col-sm-4">Fecha estimada necesidad</dt>
+                            <dd class="col-sm-8"><t t-esc="expedient.estimated_need_date or ''"/></dd>
+
+                            <dt class="col-sm-4">Estado</dt>
+                            <dd class="col-sm-8"><t t-esc="expedient.state or ''"/></dd>
+                        </dl>
+                    </div>
+                    <div class="col-lg-4" t-if="can_advance_stage">
+                        <div class="card">
+                            <div class="card-header">Etapa</div>
+                            <div class="card-body d-grid gap-2">
+                                <form t-att-action="'/my/expedients/%s/previous_stage' % expedient.id" method="POST">
+                                    <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                    <button type="submit" class="btn btn-outline-secondary w-100">
+                                        Etapa anterior
+                                    </button>
+                                </form>
+                                <form t-att-action="'/my/expedients/%s/next_stage' % expedient.id" method="POST">
+                                    <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                    <button type="submit" class="btn btn-primary w-100">
+                                        Siguiente etapa
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Panel tier: lo inyecta fund_expedient_tier_validation_portal -->
+                <div id="portal_expedient_tier_panel"/>
+            </div>
+        </t>
+    </template>
+
+</odoo>

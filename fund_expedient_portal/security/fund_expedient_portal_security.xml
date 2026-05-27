@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <!-- Solo partners portal: no afecta usuarios internos del backend -->
+        <record id="fund_expedient_portal_partner_rule" model="ir.rule">
+            <field name="name">Expediente portal: partner</field>
+            <field name="model_id" ref="fund_expedient.model_fund_expedient"/>
+            <field name="domain_force">[
+                '|', '|',
+                ('message_partner_ids', 'child_of', [user.partner_id.commercial_partner_id.id]),
+                ('recommended_supplier_ids', 'child_of', [user.partner_id.commercial_partner_id.id]),
+                ('review_ids.reviewer_ids', '=', user.id)
+            ]</field>
+            <field name="groups" eval="[(4, ref('base.group_portal'))]"/>
+        </record>
+    </data>
+</odoo>
