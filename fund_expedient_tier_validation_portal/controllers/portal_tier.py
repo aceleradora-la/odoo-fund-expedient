@@ -24,10 +24,10 @@ class ExpedientTierPortalMixin:
         return values
 
     def _portal_pending_tier_records(self):
-        """Registros en los que el usuario actual puede aprobar/rechazar."""
+        """Lista de registros (modelos distintos) con can_review=True."""
         Expedient = request.env["fund.expedient"]
         expedient_ids = Expedient.search(Expedient._portal_expedient_base_domain()).ids
-        pending = request.env["fund.expedient"].browse()
+        pending = []
         for model_name in TIER_PORTAL_MODELS:
             Model = request.env[model_name]
             if not Model.has_access("read"):
@@ -36,8 +36,8 @@ class ExpedientTierPortalMixin:
                 domain = [("id", "in", expedient_ids)]
             else:
                 domain = [("expedient_id", "in", expedient_ids)]
-            records = Model.search(domain)
-            pending |= records.filtered(lambda r: r.can_review)
+            records = Model.search(domain).filtered(lambda r: r.can_review)
+            pending.extend(records)
         return pending
 
     def _prepare_tier_portal_values(self, record):
