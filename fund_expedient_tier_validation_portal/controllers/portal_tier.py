@@ -133,24 +133,28 @@ class ExpedientTierPortalMixin:
     def portal_pending_tier_reviews(self, page=1, **kw):
         values = self._prepare_portal_layout_values()
         pending = self._portal_pending_tier_records()
-        pending_items = [
-            {
-                "record": rec,
-                "url": self._tier_redirect_url(rec),
-                "expedient_label": (
-                    rec.number or rec.id
-                    if rec._name == "fund.expedient"
-                    else rec.expedient_id.number or rec.expedient_id.id
-                ),
-            }
-            for rec in pending
-        ]
+        pending_items = []
+        for rec in pending:
+            pending_items.append(
+                {
+                    "record": rec,
+                    "url": self._tier_redirect_url(rec),
+                    "tier_data": self._prepare_tier_portal_values(rec),
+                    "expedient_label": (
+                        rec.number or rec.id
+                        if rec._name == "fund.expedient"
+                        else rec.expedient_id.number or rec.expedient_id.id
+                    ),
+                }
+            )
+        flash = request.session.pop("portal_expedient_flash", None)
         values.update(
             {
                 "page_name": "pending_tier",
                 "pending_records": pending,
                 "pending_items": pending_items,
                 "title": _("Aprobaciones pendientes"),
+                "portal_flash": flash,
             }
         )
         return request.render(
@@ -174,7 +178,11 @@ class ExpedientTierPortalMixin:
         redirect_url = "/my/expedients/pending_reviews"
         try:
             record = self._get_tier_record(model, res_id)
-            redirect_url = self._tier_redirect_url(record)
+            referrer = request.httprequest.referrer or ""
+            if "/my/expedients/pending_reviews" in referrer:
+                redirect_url = "/my/expedients/pending_reviews"
+            else:
+                redirect_url = self._tier_redirect_url(record)
             if action == "validate":
                 record.portal_action_validate_tier(comment)
                 msg = _("Aprobación registrada correctamente.")

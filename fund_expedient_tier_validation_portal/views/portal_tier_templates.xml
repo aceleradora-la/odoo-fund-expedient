@@ -88,6 +88,13 @@
                     </div>
                 </form>
             </div>
+            <t t-if="panel_footer_link">
+                <div class="card-footer text-end">
+                    <a t-att-href="panel_footer_link" class="btn btn-link btn-sm">
+                        <t t-esc="panel_footer_label or 'Ver detalle'"/>
+                    </a>
+                </div>
+            </t>
         </div>
     </template>
 
@@ -137,26 +144,24 @@
         <t t-call="portal.portal_layout">
             <div class="container mt-3">
                 <h2>Aprobaciones pendientes</h2>
-                <p class="text-muted">Registros que requieren su revisión.</p>
+                <p class="text-muted">Apruebe o rechace directamente desde esta página.</p>
+
+                <t t-if="portal_flash">
+                    <div t-attf-class="alert alert-#{portal_flash.get('type', 'danger')}" role="alert">
+                        <t t-esc="portal_flash.get('message')"/>
+                    </div>
+                </t>
 
                 <t t-if="not pending_items">
                     <p class="alert alert-info" role="alert">No tiene aprobaciones pendientes.</p>
                 </t>
-                <t t-if="pending_items">
-                    <div class="list-group">
-                        <t t-foreach="pending_items" t-as="item">
-                            <a t-att-href="item['url']"
-                               class="list-group-item list-group-item-action">
-                                <div class="d-flex w-100 justify-content-between">
-                                    <h5 class="mb-1" t-esc="item['record'].display_name"/>
-                                    <small class="badge text-bg-warning">Pendiente</small>
-                                </div>
-                                <p class="mb-1 text-muted" t-if="item['record']._name != 'fund.expedient'">
-                                    Expediente: <t t-esc="item['expedient_label']"/>
-                                </p>
-                            </a>
-                        </t>
-                    </div>
+                <t t-foreach="pending_items" t-as="item">
+                    <t t-call="fund_expedient_tier_validation_portal.portal_tier_panel">
+                        <t t-set="tier_data" t-value="item['tier_data']"/>
+                        <t t-set="title" t-value="item['record'].display_name"/>
+                        <t t-set="panel_footer_link" t-value="item['url']"/>
+                        <t t-set="panel_footer_label" t-value="'Abrir expediente'"/>
+                    </t>
                 </t>
             </div>
         </t>
