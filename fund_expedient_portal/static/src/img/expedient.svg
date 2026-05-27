@@ -1,3 +1,20 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
-    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 2l5 5h-5V4zM8 12h8v2H8v-2zm0 4h8v2H8v-2z"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Expedientes">
+  <defs>
+    <linearGradient id="exp-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#dbeafe"/>
+      <stop offset="100%" stop-color="#eff6ff"/>
+    </linearGradient>
+    <linearGradient id="exp-doc" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#1d4ed8"/>
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="56" height="56" rx="14" fill="url(#exp-bg)"/>
+  <path fill="url(#exp-doc)" d="M20 16h16l10 10v26a2 2 0 0 1-2 2H20a2 2 0 0 1-2-2V18a2 2 0 0 1 2-2z"/>
+  <path fill="#60a5fa" d="M36 16v10h10z"/>
+  <rect x="22" y="34" width="20" height="3" rx="1.5" fill="#fff" opacity=".95"/>
+  <rect x="22" y="41" width="16" height="3" rx="1.5" fill="#fff" opacity=".85"/>
+  <rect x="22" y="48" width="12" height="3" rx="1.5" fill="#fff" opacity=".75"/>
+  <circle cx="46" cy="46" r="10" fill="#10b981"/>
+  <path fill="#fff" d="M41.5 46.2l3.2 3.2 7-7.4 2.4 2.3-9.4 9.7-5.6-5.6z"/>
 </svg>

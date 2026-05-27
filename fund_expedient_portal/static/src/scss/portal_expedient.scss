@@ -1,3 +1,10 @@
+/* Iconos tarjetas /my (Expedientes y Aprobaciones) */
+.o_portal_icon img[src*="fund_expedient_portal/static/src/img/"] {
+    width: 3.25rem;
+    height: 3.25rem;
+    object-fit: contain;
+}
+
 .o_portal_expedient_detail .expedient-meta dt {
     font-weight: 600;
 }

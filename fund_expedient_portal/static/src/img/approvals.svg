@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Aprobaciones pendientes">
+  <defs>
+    <linearGradient id="ap-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fef3c7"/>
+      <stop offset="100%" stop-color="#fff7ed"/>
+    </linearGradient>
+    <linearGradient id="ap-clip" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#f59e0b"/>
+      <stop offset="100%" stop-color="#d97706"/>
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="56" height="56" rx="14" fill="url(#ap-bg)"/>
+  <rect x="22" y="14" width="20" height="6" rx="3" fill="#fbbf24"/>
+  <path fill="url(#ap-clip)" d="M18 22h28a3 3 0 0 1 3 3v24a3 3 0 0 1-3 3H18a3 3 0 0 1-3-3V25a3 3 0 0 1 3-3z"/>
+  <rect x="22" y="30" width="16" height="3" rx="1.5" fill="#fff" opacity=".9"/>
+  <rect x="22" y="37" width="12" height="3" rx="1.5" fill="#fff" opacity=".75"/>
+  <circle cx="44" cy="44" r="13" fill="#059669"/>
+  <path fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" d="M37 44.5l4.5 4.5 9-10"/>
+  <circle cx="48" cy="18" r="7" fill="#ef4444"/>
+  <text x="48" y="21.5" text-anchor="middle" font-size="9" font-weight="700" fill="#fff" font-family="Arial,sans-serif">!</text>
+</svg>
