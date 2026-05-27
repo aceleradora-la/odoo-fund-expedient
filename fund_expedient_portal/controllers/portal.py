@@ -29,9 +29,12 @@ class ExpedientCustomerPortal(CustomerPortal):
     def _expedient_get_page_view_values(self, expedient, access_token, **kwargs):
         values = {
             "expedient": expedient,
-            "can_advance_stage": expedient._portal_can_advance_stage(),
             "page_name": "expedient",
         }
+        values.update(expedient._portal_stage_nav_values())
+        values["can_advance_stage"] = (
+            values.get("portal_can_previous") or values.get("portal_can_next")
+        )
         values.update(
             self._get_page_view_values(
                 expedient,

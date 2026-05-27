@@ -4,7 +4,7 @@
 {
     "name": "Fundación - Expedientes (Portal)",
     "summary": "Acceso portal a expedientes: listado, detalle y avance de etapas",
-    "version": "18.0.1.0.2",
+    "version": "18.0.1.0.3",
     "category": "Administration",
     "website": "https://aceleradora.la",
     "author": "aceleradora.la",

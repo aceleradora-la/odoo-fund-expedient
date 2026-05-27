@@ -292,21 +292,38 @@
                     </div>
 
                     <div class="col-lg-4">
-                        <div class="card mb-3" t-if="can_advance_stage">
+                        <div class="card mb-3" t-if="portal_stage_show_panel">
                             <div class="card-header">Etapa</div>
                             <div class="card-body d-grid gap-2">
-                                <form t-att-action="'/my/expedients/%s/previous_stage' % expedient.id" method="POST">
-                                    <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
-                                    <button type="submit" class="btn btn-outline-secondary w-100">
+                                <t t-if="portal_can_previous">
+                                    <form t-att-action="'/my/expedients/%s/previous_stage' % expedient.id" method="POST">
+                                        <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                        <button type="submit" class="btn btn-outline-secondary w-100">
+                                            Etapa anterior
+                                        </button>
+                                    </form>
+                                </t>
+                                <t t-else="">
+                                    <button type="button" class="btn btn-outline-secondary w-100" disabled="disabled">
                                         Etapa anterior
                                     </button>
-                                </form>
-                                <form t-att-action="'/my/expedients/%s/next_stage' % expedient.id" method="POST">
-                                    <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
-                                    <button type="submit" class="btn btn-primary w-100">
+                                    <p t-if="portal_block_previous" class="small text-muted mb-0" t-esc="portal_block_previous"/>
+                                </t>
+
+                                <t t-if="portal_can_next">
+                                    <form t-att-action="'/my/expedients/%s/next_stage' % expedient.id" method="POST">
+                                        <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                        <button type="submit" class="btn btn-primary w-100">
+                                            Siguiente etapa
+                                        </button>
+                                    </form>
+                                </t>
+                                <t t-else="">
+                                    <button type="button" class="btn btn-primary w-100" disabled="disabled">
                                         Siguiente etapa
                                     </button>
-                                </form>
+                                    <p t-if="portal_block_next" class="small text-muted mb-0" t-esc="portal_block_next"/>
+                                </t>
                             </div>
                         </div>
                         <div class="card mb-3">

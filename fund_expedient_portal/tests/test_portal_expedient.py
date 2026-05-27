@@ -31,3 +31,22 @@ class TestPortalExpedient(TransactionCase):
         """Evita regresión: extensión debe declarar _name explícito."""
         cls = type(self.env["fund.expedient"])
         self.assertEqual(cls._name, "fund.expedient")
+
+    def test_portal_stage_nav_structure(self):
+        expedient = self.env["fund.expedient"].new({})
+        nav = expedient._portal_stage_nav_values()
+        self.assertIn("portal_stage_show_panel", nav)
+        self.assertIn("portal_can_previous", nav)
+        self.assertIn("portal_can_next", nav)
+        self.assertIn("portal_block_previous", nav)
+        self.assertIn("portal_block_next", nav)
+
+    def test_portal_stage_nav_cancelled(self):
+        Expedient = self.env["fund.expedient"]
+        expedient = Expedient.new({"state": "cancel"})
+        nav = expedient._portal_stage_nav_values()
+        if expedient._portal_is_internal_user():
+            self.assertTrue(nav["portal_stage_show_panel"])
+            self.assertFalse(nav["portal_can_previous"])
+            self.assertFalse(nav["portal_can_next"])
+            self.assertTrue(nav["portal_block_next"])
