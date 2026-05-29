@@ -218,6 +218,12 @@ class FundExpedient(models.Model):
             values["portal_block_next"] = tier_msg
             return values
 
+        doc_block = self._portal_required_documents_block_reason_leave()
+        if doc_block:
+            values["portal_block_previous"] = doc_block
+            values["portal_block_next"] = doc_block
+            return values
+
         if index <= 0:
             values["portal_block_previous"] = _("Ya está en la primera etapa.")
         else:
@@ -259,6 +265,31 @@ class FundExpedient(models.Model):
 
         values["portal_can_next"] = True
         return values
+
+    def _portal_required_documents_block_reason_leave(self):
+        self.ensure_one()
+        assign = self._current_stage_assign()
+        if not assign:
+            return ""
+        if assign.require_technical_spec_document:
+            tech_docs = self.document_ids.filtered(
+                lambda doc: doc.is_technical_spec and doc.file_data
+            )
+            if not tech_docs:
+                return _(
+                    "Debe adjuntar al menos un documento de Especificación técnica "
+                    "con archivo antes de cambiar de etapa."
+                )
+        if assign.require_particular_conditions_document:
+            cond_docs = self.document_ids.filtered(
+                lambda doc: doc.is_particular_conditions and doc.file_data
+            )
+            if not cond_docs:
+                return _(
+                    "Debe adjuntar al menos un documento de Condiciones particulares "
+                    "con archivo antes de cambiar de etapa."
+                )
+        return ""
 
     def _portal_can_advance_stage(self):
         """Compat: True si puede usar al menos una acción de etapa."""

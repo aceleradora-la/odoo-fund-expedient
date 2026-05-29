@@ -286,11 +286,12 @@ class FundExpedient(models.Model):
     # ficha del expediente como en la Solicitud de Gasto y reportes.
     contract_object = fields.Text(
         string="Objeto de la contratación",
+        required=True,
         tracking=True,
         help="Descripción del objeto/alcance de la contratación.",
     )
     delivery_location = fields.Char(
-        string="Lugar de entrega",
+        string="Lugar de Entrega/Ejecución",
         tracking=True,
         help="Lugar físico de entrega de los bienes o ejecución del servicio.",
     )
@@ -904,6 +905,8 @@ class FundExpedient(models.Model):
                         "Solo los usuarios asignados a la etapa actual pueden pasar a la siguiente."
                     )
                 )
+            if not self.env.context.get("skip_document_check"):
+                rec._check_required_documents_before_leave_stage()
         for rec, stages in self._get_allowed_stages():
             if not rec.stage_id or not stages:
                 continue
@@ -1000,6 +1003,8 @@ class FundExpedient(models.Model):
                         "Solo los usuarios asignados a la etapa actual pueden volver a la etapa anterior."
                     )
                 )
+            if not self.env.context.get("skip_document_check"):
+                rec._check_required_documents_before_leave_stage()
         for rec, stages in self._get_allowed_stages():
             if not rec.stage_id or not stages:
                 continue
@@ -1299,6 +1304,14 @@ class FundExpedient(models.Model):
             ):
                 rec._check_spend_request_before_leave_stage()
 
+            if (
+                stage_will_change
+                and rec.type_id
+                and rec.stage_id
+                and not self.env.context.get("skip_document_check")
+            ):
+                rec._check_required_documents_before_leave_stage()
+
             # Reglas de disposición: al salir de la etapa actual, validar requisitos configurados.
             if stage_will_change and rec.type_id and rec.stage_id and not self.env.context.get(
                 "skip_disposition_check"
@@ -1519,6 +1532,37 @@ class FundExpedient(models.Model):
         raise UserError(
             _("No existe Solicitud de Gasto para este expediente. Genérela desde la etapa correspondiente.")
         )
+
+    def _check_required_documents_before_leave_stage(self):
+        """Valida documentos de pliego obligatorios configurados en la etapa."""
+        self.ensure_one()
+        assign = self._current_stage_assign()
+        if not assign:
+            return
+        if assign.require_technical_spec_document:
+            tech_docs = self.document_ids.filtered(
+                lambda doc: doc.is_technical_spec and doc.file_data
+            )
+            if not tech_docs:
+                raise UserError(
+                    _(
+                        "Para salir de la etapa «%s» debe adjuntar al menos un "
+                        "documento marcado como Especificación técnica con archivo."
+                    )
+                    % (self.stage_id.name or "")
+                )
+        if assign.require_particular_conditions_document:
+            cond_docs = self.document_ids.filtered(
+                lambda doc: doc.is_particular_conditions and doc.file_data
+            )
+            if not cond_docs:
+                raise UserError(
+                    _(
+                        "Para salir de la etapa «%s» debe adjuntar al menos un "
+                        "documento marcado como Condiciones particulares con archivo."
+                    )
+                    % (self.stage_id.name or "")
+                )
 
     def _check_spend_request_before_leave_stage(self):
         """Valida SG al salir de etapa preventiva o definitiva."""

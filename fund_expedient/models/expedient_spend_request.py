@@ -76,7 +76,7 @@ class FundExpedientSpendRequest(models.Model):
         readonly=True,
     )
     delivery_location = fields.Char(
-        string="Lugar de entrega",
+        string="Lugar de Entrega/Ejecución",
         related="expedient_id.delivery_location",
         store=True,
         readonly=True,

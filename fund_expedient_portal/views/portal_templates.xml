@@ -135,7 +135,7 @@
                                         <t t-esc="expedient.contract_object"/>
                                     </dd>
 
-                                    <dt class="col-sm-4" t-if="expedient.delivery_location">Lugar de entrega</dt>
+                                    <dt class="col-sm-4" t-if="expedient.delivery_location">Lugar de Entrega/Ejecución</dt>
                                     <dd class="col-sm-8" t-if="expedient.delivery_location">
                                         <t t-esc="expedient.delivery_location"/>
                                     </dd>

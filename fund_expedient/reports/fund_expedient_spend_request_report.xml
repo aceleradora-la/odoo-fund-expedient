@@ -128,7 +128,7 @@
                         <strong>Objeto de la contratación:</strong>
                         <span t-field="o.contract_object"/>
                         <br/>
-                        <strong>Lugar de entrega:</strong>
+                        <strong>Lugar de Entrega/Ejecución:</strong>
                         <span t-field="o.delivery_location"/>
                         <br/>
                         <strong>Solicitante:</strong>

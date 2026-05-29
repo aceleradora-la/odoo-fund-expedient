@@ -41,7 +41,7 @@
                 <field name="requestor_department_id" string="Sector requirente"/>
                 <field name="requestor_department_manager_id" string="Responsable del sector"/>
                 <field name="contract_object" string="Objeto de la contratación"/>
-                <field name="delivery_location" string="Lugar de entrega"/>
+                <field name="delivery_location" string="Lugar de Entrega/Ejecución"/>
                 <separator/>
                 <filter string="Preventiva" name="phase_preventiva"
                         domain="[('spend_state', '=', 'preventiva')]"/>

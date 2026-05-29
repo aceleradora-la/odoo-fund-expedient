@@ -257,3 +257,14 @@ def post_init_hook(cr_or_env, registry=None):
            )
         """
     )
+
+    # Objeto de la contratación pasa a ser obligatorio: rellenar históricos vacíos.
+    if _table_exists(cr, "fund_expedient") and _column_exists(cr, "fund_expedient", "contract_object"):
+        cr.execute(
+            """
+            UPDATE fund_expedient
+               SET contract_object = '(Completar objeto de la contratación)'
+             WHERE contract_object IS NULL
+                OR BTRIM(contract_object) = ''
+            """
+        )

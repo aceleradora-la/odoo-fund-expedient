@@ -93,6 +93,20 @@ class ExpedientTypeStageAssign(models.Model):
         string="Archivo obligatorio en resolución",
         help="Si está activo, la resolución requerida debe tener un archivo subido.",
     )
+    require_technical_spec_document = fields.Boolean(
+        string="Especificación técnica obligatoria",
+        help=(
+            "Si está activo, al salir de esta etapa el expediente debe tener al menos "
+            "un documento marcado como Especificación técnica con archivo subido."
+        ),
+    )
+    require_particular_conditions_document = fields.Boolean(
+        string="Condiciones particulares obligatorias",
+        help=(
+            "Si está activo, al salir de esta etapa el expediente debe tener al menos "
+            "un documento marcado como Condiciones particulares con archivo subido."
+        ),
+    )
     default_resolution_notes = fields.Html(
         string="Observaciones por defecto (Resolución)",
         help="Texto predeterminado (HTML) que se copiará en Observaciones al crear una Resolución de esta etapa.",

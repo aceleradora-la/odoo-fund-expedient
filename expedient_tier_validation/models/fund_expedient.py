@@ -462,6 +462,8 @@ class FundExpedient(models.Model):
                     )
                 )
             rec._check_spend_request_before_leave_stage()
+            if not self.env.context.get("skip_document_check"):
+                rec._check_required_documents_before_leave_stage()
             stage_reviews = rec._current_stage_reviews()
             if any(r.status in ("waiting", "pending", "rejected") for r in stage_reviews):
                 raise UserError(
@@ -515,6 +517,8 @@ class FundExpedient(models.Model):
                         "Solo los usuarios asignados a la etapa actual pueden volver a la etapa anterior."
                     )
                 )
+            if not self.env.context.get("skip_document_check"):
+                rec._check_required_documents_before_leave_stage()
             stage_reviews = rec._current_stage_reviews()
             if any(r.status in ("waiting", "pending", "rejected") for r in stage_reviews):
                 raise UserError(
