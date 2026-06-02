@@ -109,9 +109,13 @@
                             confirm="¿Está seguro de que desea cancelar este expediente?"/>
                 </header>
                 <sheet readonly="not can_edit_in_stage">
+                    <field name="can_view_purchase_orders" invisible="1"/>
+                    <field name="can_view_invoices" invisible="1"/>
+                    <field name="can_view_payments" invisible="1"/>
                     <div class="oe_button_box" name="button_box">
                         <button name="action_view_purchase_orders" type="object"
-                                class="oe_stat_button" icon="fa-shopping-cart">
+                                class="oe_stat_button" icon="fa-shopping-cart"
+                                invisible="not can_view_purchase_orders">
                             <div class="o_field_widget o_stat_info">
                                 <span class="o_stat_value"><field name="purchase_order_count"/></span>
                                 <span class="o_stat_text">Solicitudes</span>
@@ -125,14 +129,16 @@
                             </div>
                         </button>
                         <button name="action_view_invoices" type="object"
-                                class="oe_stat_button" icon="fa-file-text-o">
+                                class="oe_stat_button" icon="fa-file-text-o"
+                                invisible="not can_view_invoices">
                             <div class="o_field_widget o_stat_info">
                                 <span class="o_stat_value"><field name="invoice_count"/></span>
                                 <span class="o_stat_text">Facturas</span>
                             </div>
                         </button>
                         <button name="action_view_payments" type="object"
-                                class="oe_stat_button" icon="fa-credit-card">
+                                class="oe_stat_button" icon="fa-credit-card"
+                                invisible="not can_view_payments">
                             <div class="o_field_widget o_stat_info">
                                 <span class="o_stat_value"><field name="payment_count"/></span>
                                 <span class="o_stat_text">Pagos</span>
@@ -212,7 +218,7 @@
                             <button name="action_wizard_create_purchase" type="object"
                                     string="Crear solicitud desde líneas"
                                     class="btn-primary mb-2"
-                                    invisible="not can_create_purchase or not line_ids"/>
+                                    invisible="not can_create_purchase or not line_ids or not can_view_purchase_orders"/>
                             <field name="line_ids" nolabel="1">
                                 <list create="1" delete="1" edit="1">
                                     <field name="sequence" widget="handle" column_invisible="1"/>
@@ -574,7 +580,8 @@
                                 </list>
                             </field>
                         </page>
-                        <page string="Solicitudes de cotización" name="purchases">
+                        <page string="Solicitudes de cotización" name="purchases"
+                              invisible="not can_view_purchase_orders">
                             <field name="can_create_purchase" invisible="1"/>
                             <field name="purchase_order_ids" nolabel="1">
                                 <list create="can_create_purchase" delete="0" open="0">
@@ -585,7 +592,8 @@
                                 </list>
                             </field>
                         </page>
-                        <page string="Facturas" name="invoices">
+                        <page string="Facturas" name="invoices"
+                              invisible="not can_view_invoices">
                             <field name="direct_invoice_ids" nolabel="1"
                                    context="{'default_move_type': 'in_invoice'}">
                                 <list create="1" delete="1" open="1">
@@ -598,7 +606,8 @@
                                 </list>
                             </field>
                         </page>
-                        <page string="Pagos" name="payments">
+                        <page string="Pagos" name="payments"
+                              invisible="not can_view_payments">
                             <field name="payment_ids" nolabel="1">
                                 <list create="0" delete="0" open="1">
                                     <field name="name"/>

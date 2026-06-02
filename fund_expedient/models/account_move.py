@@ -57,12 +57,5 @@ class AccountMove(models.Model):
                         if po.expedient_ids:
                             expedients |= po.expedient_ids
             if expedients:
-                expedients.invalidate_recordset(
-                    [
-                        "amount_committed",
-                        "amount_real",
-                        "amount_committed_unit",
-                        "amount_real_unit",
-                    ]
-                )
+                expedients._invalidate_commercial_computes()
         return res

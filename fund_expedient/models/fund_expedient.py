@@ -363,6 +363,7 @@ class FundExpedient(models.Model):
         "order_id",
         string="Solicitudes de cotización",
         copy=False,
+        groups="purchase.group_purchase_user",
     )
     purchase_order_count = fields.Integer(
         compute="_compute_purchase_order_count",
@@ -417,6 +418,7 @@ class FundExpedient(models.Model):
         string="Facturas directas",
         copy=False,
         domain="[('move_type', 'in', ('in_invoice', 'in_refund'))]",
+        groups="account.group_account_readonly",
         help="Facturas de proveedor sin orden de compra. "
         "Las facturas desde OC se vinculan automáticamente.",
     )
@@ -430,6 +432,18 @@ class FundExpedient(models.Model):
     invoice_count = fields.Integer(
         compute="_compute_invoice_ids",
         string="Nº Facturas",
+    )
+    can_view_purchase_orders = fields.Boolean(
+        compute="_compute_access_views",
+        string="Puede ver compras",
+    )
+    can_view_invoices = fields.Boolean(
+        compute="_compute_access_views",
+        string="Puede ver facturas",
+    )
+    can_view_payments = fields.Boolean(
+        compute="_compute_access_views",
+        string="Puede ver pagos",
     )
 
     # Totales (moneda compañía y UR)
@@ -785,15 +799,100 @@ class FundExpedient(models.Model):
             return rec.allowed_stage_ids.sorted(key=lambda s: (s.sequence, s.id))
         return stages.sorted(key=lambda s: (s.sequence, s.id))
 
-    @api.depends("purchase_order_ids")
+    @api.model
+    def _user_can_read_purchase_orders(self):
+        return self.env["purchase.order"].has_access("read")
+
+    @api.model
+    def _user_can_read_account_moves(self):
+        return self.env["account.move"].has_access("read")
+
+    @api.model
+    def _user_can_read_account_payments(self):
+        return self.env["account.payment"].has_access("read")
+
+    @api.depends_context("uid")
+    def _compute_access_views(self):
+        can_po = self._user_can_read_purchase_orders()
+        can_inv = self._user_can_read_account_moves()
+        can_pay = self._user_can_read_account_payments()
+        for rec in self:
+            rec.can_view_purchase_orders = can_po
+            rec.can_view_invoices = can_inv
+            rec.can_view_payments = can_pay
+
+    def _purchase_order_ids_sql(self):
+        if not self.id:
+            return []
+        self.env.cr.execute(
+            """
+            SELECT order_id
+              FROM fund_expedient_purchase_order_rel
+             WHERE expedient_id = %s
+            """,
+            [self.id],
+        )
+        return [row[0] for row in self.env.cr.fetchall()]
+
+    def _direct_invoice_ids_sql(self):
+        if not self.id:
+            return []
+        self.env.cr.execute(
+            """
+            SELECT move_id
+              FROM fund_expedient_account_move_rel
+             WHERE expedient_id = %s
+            """,
+            [self.id],
+        )
+        return [row[0] for row in self.env.cr.fetchall()]
+
+    def _purchase_orders_data(self):
+        """OC vinculadas: respeta ACL; sin permiso de compras usa sudo solo para agregados."""
+        self.ensure_one()
+        PurchaseOrder = self.env["purchase.order"]
+        if self._user_can_read_purchase_orders():
+            return self.purchase_order_ids
+        return PurchaseOrder.sudo().browse(self._purchase_order_ids_sql())
+
+    def _direct_invoices_data(self):
+        """Facturas directas vinculadas (misma regla de ACL que compras/contabilidad)."""
+        self.ensure_one()
+        AccountMove = self.env["account.move"]
+        if self._user_can_read_account_moves():
+            return self.direct_invoice_ids
+        return AccountMove.sudo().browse(self._direct_invoice_ids_sql())
+
+    def _invalidate_commercial_computes(self):
+        """Recalcula totales y contadores al cambiar OC/facturas/pagos vinculados."""
+        self.modified(
+            [
+                "purchase_order_count",
+                "invoice_ids",
+                "payment_ids",
+                "amount_committed",
+                "amount_real",
+                "amount_committed_unit",
+                "amount_real_unit",
+            ]
+        )
+
+    @api.depends_context("uid")
     def _compute_purchase_order_count(self):
         for rec in self:
-            rec.purchase_order_count = len(rec.purchase_order_ids)
+            if not rec._user_can_read_purchase_orders():
+                rec.purchase_order_count = 0
+                continue
+            rec.purchase_order_count = len(rec._purchase_orders_data())
 
     @api.depends("stage_id", "stage_id.state_type")
+    @api.depends_context("uid")
     def _compute_can_create_purchase(self):
         for rec in self:
-            rec.can_create_purchase = rec.stage_id.state_type == "purchases"
+            rec.can_create_purchase = (
+                rec.stage_id.state_type == "purchases"
+                and rec._user_can_read_purchase_orders()
+            )
 
     @api.depends("project_ids")
     def _compute_project_count(self):
@@ -841,7 +940,7 @@ class FundExpedient(models.Model):
 
     def _purchase_orders_with_response(self):
         self.ensure_one()
-        pos = self.purchase_order_ids.filtered(lambda p: p.state != "cancel")
+        pos = self._purchase_orders_data().filtered(lambda p: p.state != "cancel")
         return pos.filtered(lambda p: self._purchase_order_has_quote_response(p))
 
     def _get_responded_rfq_partners(self):
@@ -1015,25 +1114,35 @@ class FundExpedient(models.Model):
             rec.stage_id = target
         return True
 
+    @api.depends_context("uid")
     def _compute_payment_ids(self):
+        Payment = self.env["account.payment"]
         for rec in self:
-            # 1. Pagos con vinculación directa
-            payments_direct = self.env["account.payment"].search(
-                [("expedient_ids", "in", rec.ids)]
-            )
-            # 2. Facturas del expediente (OC + directas)
-            all_invoices = rec.purchase_order_ids.mapped("invoice_ids") | rec.direct_invoice_ids
-            # 3. Pagos reconciliados con esas facturas
-            payments_via_invoice = all_invoices.mapped("reconciled_payment_ids")
+            if not rec._user_can_read_account_payments():
+                rec.payment_ids = Payment
+                rec.payment_count = 0
+                continue
+            payments_direct = Payment.search([("expedient_ids", "in", rec.ids)])
+            invoices = rec._invoices_data()
+            payments_via_invoice = invoices.mapped("reconciled_payment_ids")
             all_payments = payments_direct | payments_via_invoice
             rec.payment_ids = all_payments
             rec.payment_count = len(all_payments)
 
-    @api.depends("purchase_order_ids", "purchase_order_ids.invoice_ids", "direct_invoice_ids")
+    def _invoices_data(self):
+        """Facturas (OC + directas) para cómputos y smart buttons."""
+        self.ensure_one()
+        invoices_po = self._purchase_orders_data().mapped("invoice_ids")
+        return invoices_po | self._direct_invoices_data()
+
+    @api.depends_context("uid")
     def _compute_invoice_ids(self):
         for rec in self:
-            invoices_po = rec.purchase_order_ids.mapped("invoice_ids")
-            all_invoices = invoices_po | rec.direct_invoice_ids
+            if not rec._user_can_read_account_moves():
+                rec.invoice_ids = self.env["account.move"]
+                rec.invoice_count = 0
+                continue
+            all_invoices = rec._invoices_data()
             rec.invoice_ids = all_invoices
             rec.invoice_count = len(all_invoices)
 
@@ -1043,19 +1152,8 @@ class FundExpedient(models.Model):
         "company_id",
         "currency_id",
         "approval_currency_id",
-        "purchase_order_ids",
-        "purchase_order_ids.state",
-        "purchase_order_ids.invoice_status",
-        "purchase_order_ids.amount_total",
-        "purchase_order_ids.date_order",
-        "purchase_order_ids.currency_id",
-        "purchase_order_ids.invoice_ids",
-        "purchase_order_ids.invoice_ids.state",
-        "purchase_order_ids.invoice_ids.amount_total_signed",
-        "direct_invoice_ids",
-        "direct_invoice_ids.state",
-        "direct_invoice_ids.amount_total_signed",
     )
+    @api.depends_context("uid")
     def _compute_amounts_unit(self):
         for rec in self:
             unit_currency = rec.approval_currency_id
@@ -1077,7 +1175,7 @@ class FundExpedient(models.Model):
                 rec.amount_estimated_unit = 0.0
 
             # Comprometido: mismo criterio del compute actual, pero convertido a moneda del tipo.
-            pos_committed = rec.purchase_order_ids.filtered(
+            pos_committed = rec._purchase_orders_data().filtered(
                 lambda po: po.state in ("purchase", "done") and po.invoice_status != "invoiced"
             )
             committed_unit = 0.0
@@ -1094,9 +1192,7 @@ class FundExpedient(models.Model):
             rec.amount_committed_unit = committed_unit
 
             # Real: facturas posteadas (desde OC o directas) convertido a moneda del tipo por fecha de factura.
-            invoices_po = rec.purchase_order_ids.mapped("invoice_ids").filtered(lambda m: m.state == "posted")
-            invoices_direct = rec.direct_invoice_ids.filtered(lambda m: m.state == "posted")
-            all_invoices = invoices_po | invoices_direct
+            all_invoices = rec._invoices_data().filtered(lambda m: m.state == "posted")
             real_unit = 0.0
             for inv in all_invoices:
                 inv_date = inv.invoice_date or inv.date
@@ -1124,26 +1220,8 @@ class FundExpedient(models.Model):
                 rec.amount_estimated_confirmed, unit_currency, company, rec.request_date
             )
 
-    @api.depends(
-        "purchase_order_ids",
-        "purchase_order_ids.state",
-        "purchase_order_ids.invoice_status",
-        "purchase_order_ids.amount_total",
-        "purchase_order_ids.amount_total_cc",
-        "purchase_order_ids.date_order",
-        "purchase_order_ids.currency_id",
-        "purchase_order_ids.order_line",
-        "purchase_order_ids.order_line.qty_to_invoice",
-        "purchase_order_ids.order_line.product_qty",
-        "purchase_order_ids.order_line.price_total",
-        "purchase_order_ids.invoice_ids",
-        "purchase_order_ids.invoice_ids.state",
-        "purchase_order_ids.invoice_ids.amount_total_signed",
-        "direct_invoice_ids",
-        "direct_invoice_ids.state",
-        "direct_invoice_ids.amount_total_signed",
-        "company_id",
-    )
+    @api.depends("company_id")
+    @api.depends_context("uid")
     def _compute_amounts(self):
         for rec in self:
             company_currency = rec.company_id.currency_id
@@ -1151,7 +1229,7 @@ class FundExpedient(models.Model):
             # Total Comprometido: OC confirmadas menos facturado (posteado).
             # Nota: con "facturación al recibir", qty_to_invoice puede ser 0 hasta recibir, pero el
             # compromiso debería reflejar el total ordenado desde la confirmación.
-            pos_committed = rec.purchase_order_ids.filtered(
+            pos_committed = rec._purchase_orders_data().filtered(
                 lambda po: po.state in ("purchase", "done")
                 and po.invoice_status != "invoiced"
             )
@@ -1173,13 +1251,7 @@ class FundExpedient(models.Model):
             rec.amount_committed = amount_committed
 
             # Total Real: facturas posteadas (desde OC o directas)
-            invoices_po = rec.purchase_order_ids.mapped("invoice_ids").filtered(
-                lambda m: m.state == "posted"
-            )
-            invoices_direct = rec.direct_invoice_ids.filtered(
-                lambda m: m.state == "posted"
-            )
-            all_invoices = invoices_po | invoices_direct
+            all_invoices = rec._invoices_data().filtered(lambda m: m.state == "posted")
             amount_real = 0.0
             for inv in all_invoices:
                 inv_date = inv.invoice_date or inv.date
@@ -1644,12 +1716,16 @@ class FundExpedient(models.Model):
 
     def action_view_purchase_orders(self):
         self.ensure_one()
+        if not self._user_can_read_purchase_orders():
+            raise UserError(
+                _("No tiene permisos de Compras para ver las solicitudes de cotización.")
+            )
         action = {
             "type": "ir.actions.act_window",
             "name": "Solicitudes de cotización",
             "res_model": "purchase.order",
             "view_mode": "list,form",
-            "domain": [("id", "in", self.purchase_order_ids.ids)],
+            "domain": [("id", "in", self._purchase_orders_data().ids)],
             "context": {"default_expedient_ids": [(4, self.id)]},
         }
         if not self.can_create_purchase:
@@ -1677,6 +1753,8 @@ class FundExpedient(models.Model):
 
     def action_view_invoices(self):
         self.ensure_one()
+        if not self._user_can_read_account_moves():
+            raise UserError(_("No tiene permisos de Contabilidad para ver las facturas."))
         return {
             "type": "ir.actions.act_window",
             "name": "Facturas",
@@ -1691,6 +1769,10 @@ class FundExpedient(models.Model):
 
     def action_wizard_create_purchase(self):
         self.ensure_one()
+        if not self._user_can_read_purchase_orders():
+            raise UserError(
+                _("No tiene permisos de Compras para crear solicitudes de cotización.")
+            )
         return {
             "type": "ir.actions.act_window",
             "name": "Crear solicitudes desde líneas",
@@ -1702,6 +1784,8 @@ class FundExpedient(models.Model):
 
     def action_view_payments(self):
         self.ensure_one()
+        if not self._user_can_read_account_payments():
+            raise UserError(_("No tiene permisos de Contabilidad para ver los pagos."))
         return {
             "type": "ir.actions.act_window",
             "name": "Pagos",

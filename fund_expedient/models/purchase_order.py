@@ -19,6 +19,27 @@ class PurchaseOrder(models.Model):
         help="Solo se pueden asociar expedientes que estén en etapa de tipo Compras.",
     )
 
+    def _touch_linked_expedient_commercial_fields(self):
+        self.mapped("expedient_ids")._invalidate_commercial_computes()
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        orders = super().create(vals_list)
+        orders._touch_linked_expedient_commercial_fields()
+        return orders
+
+    def write(self, vals):
+        before = self.mapped("expedient_ids")
+        res = super().write(vals)
+        (before | self.mapped("expedient_ids"))._invalidate_commercial_computes()
+        return res
+
+    def unlink(self):
+        expedients = self.mapped("expedient_ids")
+        res = super().unlink()
+        expedients._invalidate_commercial_computes()
+        return res
+
     @api.constrains("expedient_ids")
     def _check_expedient_ids_stage_purchases(self):
         for order in self:
