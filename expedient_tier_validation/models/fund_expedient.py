@@ -279,6 +279,131 @@ class FundExpedient(models.Model):
             for review in reviews_to_notify:
                 rec = self.env[review.model].browse(review.res_id)
                 rec._notify_accepted_reviews()
+        self._try_auto_advance_stage_after_tier()
+
+    def _tier_auto_advance_enabled(self):
+        self.ensure_one()
+        assign = self._current_stage_assign()
+        return bool(assign and assign.auto_advance_on_tier_validated)
+
+    def _try_auto_advance_stage_after_tier(self):
+        """Avanza de etapa si la configuración del tipo/etapa lo permite y tier está completo."""
+        if self.env.context.get("skip_auto_advance_stage"):
+            return
+        for rec in self:
+            if not rec._tier_auto_advance_enabled():
+                continue
+            if not rec._get_applicable_tier_definitions():
+                continue
+            if not rec._is_current_stage_tier_complete():
+                continue
+            try:
+                if rec.with_context(skip_auto_advance_stage=True)._auto_advance_to_next_stage():
+                    continue
+            except UserError as err:
+                rec.message_post(
+                    body=_(
+                        "Validación de etapa completada. No se avanzó automáticamente "
+                        "a la siguiente etapa: %s",
+                        err,
+                    ),
+                    subtype_xmlid="mail.mt_note",
+                )
+
+    def _get_next_stage_target(self, *, require_can_edit=True):
+        """Resuelve la etapa destino tras validar requisitos. False si no puede avanzar."""
+        self.ensure_one()
+        if require_can_edit and not self.can_edit_in_stage:
+            raise UserError(
+                _(
+                    "Solo los usuarios asignados a la etapa actual pueden pasar a la siguiente."
+                )
+            )
+        self._check_spend_request_before_leave_stage()
+        if not self.env.context.get("skip_document_check"):
+            self._check_required_documents_before_leave_stage()
+        stage_reviews = self._current_stage_reviews()
+        if any(r.status in ("waiting", "pending", "rejected") for r in stage_reviews):
+            raise UserError(
+                _(
+                    "No puede pasar a la siguiente etapa hasta que la validación "
+                    "de la etapa actual esté finalizada."
+                )
+            )
+        applicable = self._get_applicable_tier_definitions()
+        if applicable and not self._is_current_stage_tier_complete():
+            if self._missing_tier_reviews_for_current_stage():
+                self.request_validation()
+            raise UserError(
+                _(
+                    "No puede pasar a la siguiente etapa hasta que la validación "
+                    "esté finalizada. Solicite la validación y espere su aprobación."
+                )
+            )
+        for rec, stages in self._get_allowed_stages():
+            if rec.id != self.id or not rec.stage_id or not stages:
+                continue
+            current_index = (
+                stages.ids.index(rec.stage_id.id) if rec.stage_id.id in stages.ids else -1
+            )
+            if current_index == -1 or current_index + 1 >= len(stages):
+                return False
+            assign = rec._current_stage_assign()
+            if assign and assign.is_final_stage:
+                raise UserError(
+                    _(
+                        "Este expediente está en una etapa final del flujo. "
+                        "No puede avanzar; solo cancelar el expediente si corresponde."
+                    )
+                )
+            if assign and assign.require_notification:
+                if not rec._notification_stage_satisfied():
+                    if not rec._get_responded_rfq_partners():
+                        raise UserError(
+                            _(
+                                "No hay oferentes con cotización respondida; "
+                                "no se puede completar el requisito de notificación para salir de esta etapa."
+                            )
+                        )
+                    raise UserError(
+                        _(
+                            "Debe notificar a todos los oferentes (correo registrado) antes de pasar de etapa. "
+                            "Use el asistente 'Notificar oferentes'."
+                        )
+                    )
+            if current_index == 0 and not (rec.amount_estimated and rec.amount_estimated > 0):
+                raise UserError(
+                    _(
+                        "Debe cargar un monto estimado mayor a cero antes de "
+                        "pasar de la primera etapa. Cárguelo manualmente en "
+                        "«Total estimado» o detallándolo en las líneas."
+                    )
+                )
+            return stages[current_index + 1]
+        return False
+
+    def _apply_next_stage(self, target):
+        self.ensure_one()
+        self.with_context(skip_validation_check=True).write({"stage_id": target.id})
+
+    def _auto_advance_to_next_stage(self):
+        """Avanza a la siguiente etapa tras tier validado (sin exigir can_edit_in_stage)."""
+        self.ensure_one()
+        target = self._get_next_stage_target(require_can_edit=False)
+        if not target:
+            return False
+        old_stage = self.stage_id
+        self._apply_next_stage(target)
+        self.message_post(
+            body=_(
+                "Tras completar la validación de la etapa <b>%s</b>, el expediente "
+                "avanzó automáticamente a <b>%s</b>.",
+                old_stage.name,
+                target.name,
+            ),
+            subtype_xmlid="mail.mt_note",
+        )
+        return True
 
     def _rejected_tier(self, tiers=False):
         """Igual que base_tier_validation pero notificaciones solo sobre la etapa actual."""
@@ -455,57 +580,9 @@ class FundExpedient(models.Model):
     def action_next_stage(self):
         """No permitir pasar a la siguiente etapa hasta que la validación esté finalizada."""
         for rec in self:
-            if not rec.can_edit_in_stage:
-                raise UserError(
-                    _(
-                        "Solo los usuarios asignados a la etapa actual pueden pasar a la siguiente."
-                    )
-                )
-            rec._check_spend_request_before_leave_stage()
-            if not self.env.context.get("skip_document_check"):
-                rec._check_required_documents_before_leave_stage()
-            stage_reviews = rec._current_stage_reviews()
-            if any(r.status in ("waiting", "pending", "rejected") for r in stage_reviews):
-                raise UserError(
-                    _(
-                        "No puede pasar a la siguiente etapa hasta que la validación "
-                        "de la etapa actual esté finalizada."
-                    )
-                )
-            applicable = rec._get_applicable_tier_definitions()
-            if applicable and not rec._is_current_stage_tier_complete():
-                if rec._missing_tier_reviews_for_current_stage():
-                    rec.request_validation()
-                raise UserError(
-                    _(
-                        "No puede pasar a la siguiente etapa hasta que la validación "
-                        "esté finalizada. Solicite la validación y espere su aprobación."
-                    )
-                )
-        for rec, stages in self._get_allowed_stages():
-            if not rec.stage_id or not stages:
-                continue
-            current_index = stages.ids.index(rec.stage_id.id) if rec.stage_id.id in stages.ids else -1
-            if current_index == -1 or current_index + 1 >= len(stages):
-                continue
-            assign = rec._current_stage_assign()
-            if assign and assign.require_notification:
-                if not rec._notification_stage_satisfied():
-                    if not rec._get_responded_rfq_partners():
-                        raise UserError(
-                            _(
-                                "No hay oferentes con cotización respondida; "
-                                "no se puede completar el requisito de notificación para salir de esta etapa."
-                            )
-                        )
-                    raise UserError(
-                        _(
-                            "Debe notificar a todos los oferentes (correo registrado) antes de pasar de etapa. "
-                            "Use el asistente 'Notificar oferentes'."
-                        )
-                    )
-            target = stages[current_index + 1]
-            rec.with_context(skip_validation_check=True).write({"stage_id": target.id})
+            target = rec._get_next_stage_target(require_can_edit=True)
+            if target:
+                rec._apply_next_stage(target)
         return True
 
     def action_previous_stage(self):

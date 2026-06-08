@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_fund_expedient_type_form_tier_auto_advance" model="ir.ui.view">
+        <field name="name">fund.expedient.type.form.tier.auto.advance</field>
+        <field name="model">fund.expedient.type</field>
+        <field name="inherit_id" ref="fund_expedient.view_expedient_type_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='stage_assign_ids']//list//field[@name='is_final_stage']" position="after">
+                <field name="auto_advance_on_tier_validated" optional="show"/>
+            </xpath>
+            <xpath expr="//group[@string='Flujo']//field[@name='is_final_stage']" position="after">
+                <field name="auto_advance_on_tier_validated"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>
