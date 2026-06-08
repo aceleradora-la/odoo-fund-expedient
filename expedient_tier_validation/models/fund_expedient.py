@@ -527,8 +527,11 @@ class FundExpedient(models.Model):
         self.ensure_one()
         if not self.stage_id:
             return self.env["tier.review"]
-        # Comparar recordsets; si falta stage_id en líneas viejas, no coinciden con etapa actual
-        return self.review_ids.filtered(lambda r: r.stage_id == self.stage_id)
+        # Incluir reviews sin stage_id (p. ej. base_tier_validation_forward) en la etapa activa.
+        return self.review_ids.filtered(
+            lambda r: r.stage_id == self.stage_id
+            or (not r.stage_id and r.status in ("waiting", "pending"))
+        )
 
     def _prepare_tier_review_vals(self, definition, sequence):
         """Inyectar etapa actual en la review para auditoría por etapa."""

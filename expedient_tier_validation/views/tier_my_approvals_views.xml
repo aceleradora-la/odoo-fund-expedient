@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_fund_expedient_list_my_approvals" model="ir.ui.view">
+        <field name="name">fund.expedient.list.my.approvals</field>
+        <field name="model">fund.expedient</field>
+        <field name="inherit_id" ref="fund_expedient.view_fund_expedient_list"/>
+        <field name="mode">primary</field>
+        <field name="arch" type="xml">
+            <xpath expr="//list" position="attributes">
+                <attribute name="create">0</attribute>
+                <attribute name="string">Expedientes por aprobar</attribute>
+            </xpath>
+            <xpath expr="//field[@name='stage_id']" position="after">
+                <field name="validation_status" string="Validación" optional="show"/>
+                <field name="next_review" string="Pendiente" optional="show"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_fund_expedient_spend_request_list_my_approvals" model="ir.ui.view">
+        <field name="name">fund.expedient.spend.request.list.my.approvals</field>
+        <field name="model">fund.expedient.spend.request</field>
+        <field name="inherit_id" ref="fund_expedient.view_fund_expedient_spend_request_list"/>
+        <field name="mode">primary</field>
+        <field name="arch" type="xml">
+            <xpath expr="//list" position="attributes">
+                <attribute name="string">Solicitudes de Gasto por aprobar</attribute>
+            </xpath>
+            <xpath expr="//field[@name='spend_state']" position="after">
+                <field name="validation_status" string="Validación" optional="show"/>
+                <field name="next_review" string="Pendiente" optional="show"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="action_fund_expedient_my_approvals" model="ir.actions.act_window">
+        <field name="name">Expedientes por aprobar</field>
+        <field name="res_model">fund.expedient</field>
+        <field name="view_mode">list,form</field>
+        <field name="domain">[('can_review', '=', True)]</field>
+        <field name="view_ids" eval="[(5, 0, 0),
+            (0, 0, {'view_mode': 'list', 'view_id': ref('view_fund_expedient_list_my_approvals')}),
+            (0, 0, {'view_mode': 'form', 'view_id': ref('fund_expedient.view_fund_expedient_form')}),
+        ]"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No tiene expedientes pendientes de su aprobación.
+            </p>
+            <p>
+                Aquí aparecen los expedientes en los que usted es revisor y puede
+                validar o rechazar según el flujo de la etapa actual.
+            </p>
+        </field>
+    </record>
+
+    <record id="action_fund_expedient_spend_request_my_approvals" model="ir.actions.act_window">
+        <field name="name">Solicitudes de Gasto por aprobar</field>
+        <field name="res_model">fund.expedient.spend.request</field>
+        <field name="view_mode">list,form</field>
+        <field name="domain">[('can_review', '=', True)]</field>
+        <field name="view_ids" eval="[(5, 0, 0),
+            (0, 0, {'view_mode': 'list', 'view_id': ref('view_fund_expedient_spend_request_list_my_approvals')}),
+            (0, 0, {'view_mode': 'form', 'view_id': ref('fund_expedient.view_fund_expedient_spend_request_form')}),
+        ]"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No tiene solicitudes de gasto pendientes de su aprobación.
+            </p>
+            <p>
+                Aquí aparecen las SG en las que usted es revisor y puede validar
+                o rechazar la fase activa (preventiva o definitiva).
+            </p>
+        </field>
+    </record>
+
+</odoo>

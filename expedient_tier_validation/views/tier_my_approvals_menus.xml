@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <menuitem id="menu_fund_expedient_my_approvals"
+              name="Mis aprobaciones"
+              parent="fund_expedient.menu_fund_expedient_root"
+              sequence="5"/>
+
+    <menuitem id="menu_fund_expedient_my_approvals_expedients"
+              name="Expedientes"
+              parent="menu_fund_expedient_my_approvals"
+              action="action_fund_expedient_my_approvals"
+              sequence="10"/>
+
+    <menuitem id="menu_fund_expedient_my_approvals_spend_requests"
+              name="Solicitudes de Gasto"
+              parent="menu_fund_expedient_my_approvals"
+              action="action_fund_expedient_spend_request_my_approvals"
+              sequence="20"/>
+
+</odoo>

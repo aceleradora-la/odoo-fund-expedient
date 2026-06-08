@@ -58,9 +58,17 @@ class TierValidationFundMixin(models.AbstractModel):
         field = self._tier_review_context_field()
         if not field:
             return self.env["tier.review"]
-        if hasattr(ctx, "id"):
-            return self.review_ids.filtered(lambda r: getattr(r, field).id == ctx.id)
-        return self.review_ids.filtered(lambda r: getattr(r, field) == ctx)
+
+        def _matches_context(review):
+            value = getattr(review, field)
+            if hasattr(ctx, "id"):
+                return value and value.id == ctx.id
+            return value == ctx
+
+        return self.review_ids.filtered(
+            lambda r: _matches_context(r)
+            or (not getattr(r, field) and r.status in ("waiting", "pending"))
+        )
 
     def _get_applicable_tier_definitions(self):
         self.ensure_one()
