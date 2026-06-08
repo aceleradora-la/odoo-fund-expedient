@@ -8,7 +8,7 @@
             <xpath expr="//field[@name='stage_assign_ids']//list//field[@name='is_final_stage']" position="after">
                 <field name="auto_advance_on_tier_validated" optional="show"/>
             </xpath>
-            <xpath expr="//group[@string='Flujo']//field[@name='is_final_stage']" position="after">
+            <xpath expr="//field[@name='stage_assign_ids']//form//field[@name='is_final_stage']" position="after">
                 <field name="auto_advance_on_tier_validated"/>
             </xpath>
         </field>
