@@ -912,6 +912,19 @@ class FundExpedient(models.Model):
                 )
                 yield rec, all_stages
 
+    def _stage_change_is_forward(self, new_stage):
+        """True si la etapa destino está después de la actual en el flujo del tipo."""
+        self.ensure_one()
+        new_stage_id = new_stage.id if hasattr(new_stage, "id") else int(new_stage)
+        if not new_stage_id or not self.stage_id or new_stage_id == self.stage_id.id:
+            return False
+        for _rec, stages in self._get_allowed_stages():
+            ordered_ids = stages.ids
+            if self.stage_id.id not in ordered_ids or new_stage_id not in ordered_ids:
+                return True
+            return ordered_ids.index(new_stage_id) > ordered_ids.index(self.stage_id.id)
+        return True
+
     def _current_stage_assign(self):
         self.ensure_one()
         if not self.type_id or not self.stage_id:
@@ -1373,6 +1386,7 @@ class FundExpedient(models.Model):
                 stage_will_change
                 and rec.stage_id
                 and not self.env.context.get("skip_spend_request_check")
+                and rec._stage_change_is_forward(new_vals.get("stage_id"))
             ):
                 rec._check_spend_request_before_leave_stage()
 

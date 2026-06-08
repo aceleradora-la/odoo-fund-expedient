@@ -611,5 +611,8 @@ class FundExpedient(models.Model):
             if current_index <= 0:
                 continue
             target = stages[current_index - 1]
-            rec.with_context(skip_validation_check=True).write({"stage_id": target.id})
+            rec.with_context(
+                skip_validation_check=True,
+                skip_spend_request_check=True,
+            ).write({"stage_id": target.id})
         return True
