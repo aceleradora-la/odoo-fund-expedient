@@ -67,7 +67,10 @@ class TierValidationFundMixin(models.AbstractModel):
 
         return self.review_ids.filtered(
             lambda r: _matches_context(r)
-            or (not getattr(r, field) and r.status in ("waiting", "pending"))
+            or (
+                not getattr(r, field)
+                and r.status in ("waiting", "pending", "approved", "forwarded")
+            )
         )
 
     def _get_applicable_tier_definitions(self):
@@ -101,13 +104,12 @@ class TierValidationFundMixin(models.AbstractModel):
         applicable = self._get_applicable_tier_definitions()
         if not applicable:
             return True
-        for td in applicable:
-            ctx_rev = self._current_context_reviews().filtered(
-                lambda r, d=td: r.definition_id == d
-            )
-            if not ctx_rev or any(r.status != "approved" for r in ctx_rev):
-                return False
-        return True
+        context_reviews = self._current_context_reviews()
+        review_model = self.env["tier.review"]
+        return all(
+            review_model._definition_reviews_resolved(td, context_reviews)
+            for td in applicable
+        )
 
     @api.depends("has_stage_reviews", "stage_validation_status")
     def _compute_tier_stage_locked(self):

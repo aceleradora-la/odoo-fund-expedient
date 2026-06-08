@@ -113,3 +113,23 @@ class TierReview(models.Model):
         sequence = min(reviews.mapped("sequence"))
         return self.sequence == sequence
 
+    @api.model
+    def _definition_reviews_resolved(self, tier_definition, context_reviews):
+        """True si la definición está cubierta (aprobada o reenviada y aprobada por el destinatario)."""
+        def_reviews = context_reviews.filtered(
+            lambda r, d=tier_definition: r.definition_id == d
+        )
+        if not def_reviews:
+            return False
+        if any(r.status in ("pending", "waiting", "rejected") for r in def_reviews):
+            return False
+        if all(r.status == "approved" for r in def_reviews):
+            return True
+        if any(r.status == "forwarded" for r in def_reviews):
+            return bool(
+                context_reviews.filtered(
+                    lambda r: not r.definition_id and r.status == "approved"
+                )
+            )
+        return False
+

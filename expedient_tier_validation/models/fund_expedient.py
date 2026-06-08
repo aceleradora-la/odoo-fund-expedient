@@ -90,26 +90,25 @@ class FundExpedient(models.Model):
         applicable = self._get_applicable_tier_definitions()
         missing = self.env["tier.definition"]
         for td in applicable:
-            has_row = self.review_ids.filtered(
-                lambda r, d=td: r.definition_id == d and r.stage_id == self.stage_id
+            has_row = self._current_stage_reviews().filtered(
+                lambda r, d=td: r.definition_id == d
             )
             if not has_row:
                 missing |= td
         return missing
 
     def _is_current_stage_tier_complete(self):
-        """Todas las definiciones aplicables tienen review aprobada en la etapa actual."""
+        """Todas las definiciones aplicables están resueltas en la etapa actual."""
         self.ensure_one()
         applicable = self._get_applicable_tier_definitions()
         if not applicable:
             return True
-        for td in applicable:
-            stage_rev = self.review_ids.filtered(
-                lambda r, d=td: r.definition_id == d and r.stage_id == self.stage_id
-            )
-            if not stage_rev or any(r.status != "approved" for r in stage_rev):
-                return False
-        return True
+        context_reviews = self._current_stage_reviews()
+        review_model = self.env["tier.review"]
+        return all(
+            review_model._definition_reviews_resolved(td, context_reviews)
+            for td in applicable
+        )
 
     @api.depends(
         "review_ids",
@@ -489,7 +488,7 @@ class FundExpedient(models.Model):
     @api.depends("review_ids.status", "review_ids.stage_id", "stage_id")
     def _compute_can_restart_validation_stage(self):
         for rec in self:
-            stage_reviews = rec.review_ids.filtered(lambda r: r.stage_id == rec.stage_id)
+            stage_reviews = rec._current_stage_reviews()
             rec.can_restart_validation_stage = bool(
                 stage_reviews
                 and any(
@@ -505,7 +504,7 @@ class FundExpedient(models.Model):
     )
     def _compute_stage_validation(self):
         for rec in self:
-            stage_reviews = rec.review_ids.filtered(lambda r: r.stage_id == rec.stage_id)
+            stage_reviews = rec._current_stage_reviews()
             rec.has_stage_reviews = bool(stage_reviews)
             if not stage_reviews:
                 rec.stage_validation_status = "no"
@@ -530,7 +529,10 @@ class FundExpedient(models.Model):
         # Incluir reviews sin stage_id (p. ej. base_tier_validation_forward) en la etapa activa.
         return self.review_ids.filtered(
             lambda r: r.stage_id == self.stage_id
-            or (not r.stage_id and r.status in ("waiting", "pending"))
+            or (
+                not r.stage_id
+                and r.status in ("waiting", "pending", "approved", "forwarded")
+            )
         )
 
     def _prepare_tier_review_vals(self, definition, sequence):
