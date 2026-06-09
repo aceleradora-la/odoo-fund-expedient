@@ -31,6 +31,23 @@
         </field>
     </record>
 
+    <record id="view_tier_review_pivot_my_approvals" model="ir.ui.view">
+        <field name="name">tier.review.pivot.my.approvals</field>
+        <field name="model">tier.review</field>
+        <field name="arch" type="xml">
+            <pivot string="Validaciones - Análisis">
+                <field name="status" type="row"/>
+                <field name="done_by" type="row"/>
+                <field name="stage_id" type="row"/>
+                <field name="fund_record_type" type="row"/>
+                <field name="fund_expedient_id" type="row"/>
+                <field name="create_date" interval="month" type="col"/>
+                <field name="reviewed_date" interval="month" type="col"/>
+                <field name="id" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
     <record id="view_tier_review_search_my_approvals" model="ir.ui.view">
         <field name="name">tier.review.search.my.approvals</field>
         <field name="model">tier.review</field>
