@@ -6,6 +6,7 @@
         <field name="model">tier.review</field>
         <field name="arch" type="xml">
             <list string="Validaciones" create="0" delete="0" edit="0"
+                  default_order="create_date desc, id desc"
                   decoration-info="status in ('waiting', 'pending')"
                   decoration-success="status == 'approved'"
                   decoration-muted="status in ('forwarded', 'cancel')">
@@ -126,7 +127,6 @@
         <field name="context">{'search_default_tier_pending_mine': 1}</field>
         <field name="view_id" ref="view_tier_review_list_my_approvals"/>
         <field name="search_view_id" ref="view_tier_review_search_my_approvals"/>
-        <field name="order">create_date desc, id desc</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">
                 No hay validaciones con el filtro seleccionado.
