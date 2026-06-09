@@ -47,21 +47,20 @@ class FundTierApprovalSearchMixin(models.AbstractModel):
 
     @api.model
     def _res_ids_closed_by_users(self, user_ids=None, *, any_user=False):
-        """IDs de registros con tier.review cerrada; consulta directa a tier_review."""
-        clauses = ["model = %s", "status IN %s", "res_id IS NOT NULL"]
-        params = [self._name, list(_TIER_DONE_STATUSES)]
+        """IDs de registros con tier.review cerrada (cualquier etapa/fase)."""
+        domain = [
+            ("model", "=", self._name),
+            ("status", "in", list(_TIER_DONE_STATUSES)),
+            ("res_id", "!=", False),
+        ]
         if any_user:
-            clauses.append("done_by IS NOT NULL")
+            domain.append(("done_by", "!=", False))
         elif user_ids:
-            clauses.append("done_by IN %s")
-            params.append(list(user_ids))
+            domain.append(("done_by", "in", list(user_ids)))
         else:
             return []
-        self.env.cr.execute(
-            f"SELECT DISTINCT res_id FROM tier_review WHERE {' AND '.join(clauses)}",
-            tuple(params),
-        )
-        return [row[0] for row in self.env.cr.fetchall() if row[0]]
+        reviews = self.env["tier.review"].sudo().search(domain)
+        return list(set(reviews.mapped("res_id")))
 
     @api.depends("review_ids.done_by", "review_ids.status")
     def _compute_tier_done_by_user_ids(self):
