@@ -41,6 +41,29 @@ class FundTierApprovalSearchMixin(models.AbstractModel):
         return res_ids
 
     @api.model
+    def _res_ids_from_my_completed_reviews(self):
+        """Expedientes/SG donde el usuario aprobó o reenvió en cualquier etapa/fase."""
+        user = self.env.user
+        Review = self.env["tier.review"]
+        closed_by_me = Review.search(
+            [
+                ("model", "=", self._name),
+                ("done_by", "=", user.id),
+                ("status", "in", list(_TIER_DONE_STATUSES)),
+            ]
+        )
+        # Respaldo: aprobación sin done_by pero el usuario figuraba como revisor.
+        approved_as_reviewer = Review.search(
+            [
+                ("model", "=", self._name),
+                ("reviewer_ids", "in", user.id),
+                ("status", "=", "approved"),
+                ("done_by", "=", False),
+            ]
+        )
+        return list(set(closed_by_me.mapped("res_id") + approved_as_reviewer.mapped("res_id")))
+
+    @api.model
     def _search_tier_approval_pending_mine(self, operator, value):
         if operator != "=" or not value:
             return [("id", "=", False)]
@@ -50,14 +73,7 @@ class FundTierApprovalSearchMixin(models.AbstractModel):
     def _search_tier_approval_done_mine(self, operator, value):
         if operator != "=" or not value:
             return [("id", "=", False)]
-        reviews = self.env["tier.review"].search(
-            [
-                ("model", "=", self._name),
-                ("done_by", "=", self.env.user.id),
-                ("status", "in", list(_TIER_DONE_STATUSES)),
-            ]
-        )
-        return [("id", "in", self._res_ids_from_context_reviews(reviews))]
+        return [("id", "in", self._res_ids_from_my_completed_reviews())]
 
     @api.model
     def _search_tier_approval_pending_all(self, operator, value):
@@ -82,4 +98,4 @@ class FundTierApprovalSearchMixin(models.AbstractModel):
                 ("done_by", "!=", False),
             ]
         )
-        return [("id", "in", self._res_ids_from_context_reviews(reviews))]
+        return [("id", "in", reviews.mapped("res_id"))]

@@ -11,7 +11,8 @@
                 <filter string="Pendientes de mi aprobación" name="tier_pending_mine"
                         domain="[('tier_approval_pending_mine', '=', True)]"/>
                 <filter string="Aprobados por mí" name="tier_done_mine"
-                        domain="[('tier_approval_done_mine', '=', True)]"/>
+                        domain="[('tier_approval_done_mine', '=', True)]"
+                        help="Expedientes en los que usted aprobó o reenvió una validación en cualquier etapa."/>
                 <filter string="Todos los míos" name="tier_all_mine"
                         domain="['|', ('tier_approval_pending_mine', '=', True), ('tier_approval_done_mine', '=', True)]"/>
                 <filter string="Pendientes (todos)" name="tier_pending_all"
@@ -37,7 +38,8 @@
                 <filter string="Pendientes de mi aprobación" name="tier_pending_mine"
                         domain="[('tier_approval_pending_mine', '=', True)]"/>
                 <filter string="Aprobados por mí" name="tier_done_mine"
-                        domain="[('tier_approval_done_mine', '=', True)]"/>
+                        domain="[('tier_approval_done_mine', '=', True)]"
+                        help="Expedientes en los que usted aprobó o reenvió una validación en cualquier etapa."/>
                 <filter string="Todos los míos" name="tier_all_mine"
                         domain="['|', ('tier_approval_pending_mine', '=', True), ('tier_approval_done_mine', '=', True)]"/>
                 <filter string="Pendientes (todos)" name="tier_pending_all"
@@ -102,9 +104,9 @@
                 No hay expedientes con el filtro seleccionado.
             </p>
             <p>
-                Use los filtros de búsqueda para ver pendientes de su aprobación,
-                lo que ya aprobó, o —si es administrador— las validaciones de todos
-                los usuarios en la etapa actual.
+                Use los filtros de búsqueda para ver pendientes de su aprobación
+                (etapa actual), el historial de lo que ya aprobó en cualquier etapa,
+                o —si es administrador— las validaciones de todos los usuarios.
             </p>
         </field>
     </record>
@@ -125,9 +127,9 @@
                 No hay solicitudes de gasto con el filtro seleccionado.
             </p>
             <p>
-                Use los filtros de búsqueda para ver pendientes de su aprobación,
-                lo que ya aprobó, o —si es administrador— las validaciones de todos
-                los usuarios en la fase activa.
+                Use los filtros de búsqueda para ver pendientes de su aprobación
+                (fase activa), el historial de lo que ya aprobó en cualquier fase,
+                o —si es administrador— las validaciones de todos los usuarios.
             </p>
         </field>
     </record>
