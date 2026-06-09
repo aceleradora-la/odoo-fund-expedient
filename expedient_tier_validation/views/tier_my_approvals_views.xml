@@ -1,135 +1,139 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
-    <record id="view_fund_expedient_search_my_approvals" model="ir.ui.view">
-        <field name="name">fund.expedient.search.my.approvals</field>
-        <field name="model">fund.expedient</field>
-        <field name="inherit_id" ref="fund_expedient.view_fund_expedient_search"/>
+    <record id="view_tier_review_list_my_approvals" model="ir.ui.view">
+        <field name="name">tier.review.list.my.approvals</field>
+        <field name="model">tier.review</field>
         <field name="arch" type="xml">
-            <xpath expr="//search" position="inside">
+            <list string="Validaciones" create="0" delete="0" edit="0"
+                  decoration-info="status in ('waiting', 'pending')"
+                  decoration-success="status == 'approved'"
+                  decoration-muted="status in ('forwarded', 'cancel')">
+                <field name="model" column_invisible="1"/>
+                <field name="fund_record_type" string="Tipo" optional="show"/>
+                <field name="fund_expedient_id" string="Expediente"/>
+                <field name="fund_spend_request_id" string="Solicitud de Gasto" optional="show"/>
+                <field name="stage_id" string="Etapa" optional="show"/>
+                <field name="spend_phase" string="Fase SG" optional="hide"/>
+                <field name="name" string="Nivel"/>
+                <field name="sequence" string="Secuencia" optional="hide"/>
+                <field name="display_status" string="Estado"/>
+                <field name="todo_by" string="Por hacer por"/>
+                <field name="done_by" string="Hecho por"/>
+                <field name="create_date" string="Solicitado el"/>
+                <field name="reviewed_date" string="Validado el"/>
+                <field name="comment" string="Comentario" optional="hide"/>
+                <button name="action_open_fund_record" type="object"
+                        string="Abrir registro" icon="fa-external-link"
+                        invisible="model not in ('fund.expedient', 'fund.expedient.spend.request')"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_tier_review_search_my_approvals" model="ir.ui.view">
+        <field name="name">tier.review.search.my.approvals</field>
+        <field name="model">tier.review</field>
+        <field name="arch" type="xml">
+            <search string="Buscar validaciones">
+                <field name="name" string="Nivel"/>
+                <field name="fund_expedient_id"/>
+                <field name="fund_spend_request_id"/>
+                <field name="stage_id"/>
+                <field name="done_by"/>
+                <field name="reviewer_ids"/>
                 <separator/>
                 <filter string="Pendientes de mi aprobación" name="tier_pending_mine"
-                        domain="[('tier_approval_pending_mine', '=', True)]"/>
+                        domain="[('reviewer_ids', 'in', uid), ('status', 'in', ('pending', 'waiting')), ('can_review', '=', True)]"/>
                 <filter string="Aprobados por mí" name="tier_done_mine"
-                        domain="[('tier_done_by_user_ids', '=', uid)]"
-                        help="Expedientes donde usted figura en done_by de tier.review (aprobado o reenviado, cualquier etapa)."/>
+                        domain="[('done_by', '=', uid), ('status', 'in', ('approved', 'forwarded'))]"/>
                 <filter string="Todos los míos" name="tier_all_mine"
-                        domain="['|', ('tier_approval_pending_mine', '=', True), ('tier_done_by_user_ids', '=', uid)]"/>
-                <filter string="Pendientes (todos)" name="tier_pending_all"
-                        domain="[('tier_approval_pending_all', '=', True)]"
-                        groups="fund_expedient.group_fund_expedient_manager"/>
-                <filter string="Aprobados (todos)" name="tier_done_all"
-                        domain="[('tier_done_by_user_ids', '!=', False)]"
-                        groups="fund_expedient.group_fund_expedient_manager"/>
-                <filter string="Todos" name="tier_all"
-                        domain="['|', ('tier_approval_pending_all', '=', True), ('tier_done_by_user_ids', '!=', False)]"
-                        groups="fund_expedient.group_fund_expedient_manager"/>
-            </xpath>
-        </field>
-    </record>
-
-    <record id="view_fund_expedient_spend_request_search_my_approvals" model="ir.ui.view">
-        <field name="name">fund.expedient.spend.request.search.my.approvals</field>
-        <field name="model">fund.expedient.spend.request</field>
-        <field name="inherit_id" ref="fund_expedient.view_fund_expedient_spend_request_search"/>
-        <field name="arch" type="xml">
-            <xpath expr="//search" position="inside">
+                        domain="['|', '&amp;', ('reviewer_ids', 'in', uid), ('status', 'in', ('pending', 'waiting')), '&amp;', ('done_by', '=', uid), ('status', 'in', ('approved', 'forwarded'))]"/>
                 <separator/>
-                <filter string="Pendientes de mi aprobación" name="tier_pending_mine"
-                        domain="[('tier_approval_pending_mine', '=', True)]"/>
-                <filter string="Aprobados por mí" name="tier_done_mine"
-                        domain="[('tier_done_by_user_ids', '=', uid)]"
-                        help="Expedientes donde usted figura en done_by de tier.review (aprobado o reenviado, cualquier etapa)."/>
-                <filter string="Todos los míos" name="tier_all_mine"
-                        domain="['|', ('tier_approval_pending_mine', '=', True), ('tier_done_by_user_ids', '=', uid)]"/>
+                <filter string="Expedientes" name="tier_model_expedient"
+                        domain="[('model', '=', 'fund.expedient')]"/>
+                <filter string="Solicitudes de Gasto" name="tier_model_spend_request"
+                        domain="[('model', '=', 'fund.expedient.spend.request')]"/>
+                <separator/>
                 <filter string="Pendientes (todos)" name="tier_pending_all"
-                        domain="[('tier_approval_pending_all', '=', True)]"
+                        domain="[('status', 'in', ('pending', 'waiting'))]"
                         groups="fund_expedient.group_fund_expedient_manager"/>
                 <filter string="Aprobados (todos)" name="tier_done_all"
-                        domain="[('tier_done_by_user_ids', '!=', False)]"
+                        domain="[('status', 'in', ('approved', 'forwarded')), ('done_by', '!=', False)]"
                         groups="fund_expedient.group_fund_expedient_manager"/>
                 <filter string="Todos" name="tier_all"
-                        domain="['|', ('tier_approval_pending_all', '=', True), ('tier_done_by_user_ids', '!=', False)]"
+                        domain="[('status', 'in', ('pending', 'waiting', 'approved', 'forwarded'))]"
                         groups="fund_expedient.group_fund_expedient_manager"/>
-            </xpath>
+                <separator/>
+                <filter string="Solicitadas hoy" name="tier_requested_today"
+                        domain="[('create_date', '&gt;=', (context_today()).strftime('%Y-%m-%d 00:00:00'))]"/>
+                <filter string="Validadas hoy" name="tier_validated_today"
+                        domain="[('reviewed_date', '&gt;=', (context_today()).strftime('%Y-%m-%d 00:00:00'))]"/>
+                <group expand="0" string="Agrupar por">
+                    <filter string="Expediente" name="group_expedient"
+                            context="{'group_by': 'fund_expedient_id'}"/>
+                    <filter string="Estado" name="group_status"
+                            context="{'group_by': 'status'}"/>
+                    <filter string="Etapa" name="group_stage"
+                            context="{'group_by': 'stage_id'}"/>
+                    <filter string="Hecho por" name="group_done_by"
+                            context="{'group_by': 'done_by'}"/>
+                </group>
+            </search>
         </field>
     </record>
 
-    <record id="view_fund_expedient_list_my_approvals" model="ir.ui.view">
-        <field name="name">fund.expedient.list.my.approvals</field>
-        <field name="model">fund.expedient</field>
-        <field name="inherit_id" ref="fund_expedient.view_fund_expedient_list"/>
-        <field name="mode">primary</field>
+    <record id="view_tier_review_form_my_approvals" model="ir.ui.view">
+        <field name="name">tier.review.form.my.approvals</field>
+        <field name="model">tier.review</field>
         <field name="arch" type="xml">
-            <xpath expr="//list" position="attributes">
-                <attribute name="create">0</attribute>
-                <attribute name="string">Mis aprobaciones</attribute>
-            </xpath>
-            <xpath expr="//field[@name='stage_id']" position="after">
-                <field name="validation_status" string="Validación" optional="show"/>
-                <field name="next_review" string="Pendiente" optional="show"/>
-            </xpath>
+            <form string="Validación" create="0" delete="0" edit="0">
+                <header>
+                    <button name="action_open_fund_record" type="object"
+                            string="Abrir expediente / SG" class="btn-primary"
+                            invisible="model not in ('fund.expedient', 'fund.expedient.spend.request')"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="model" invisible="1"/>
+                            <field name="fund_record_type"/>
+                            <field name="fund_expedient_id"/>
+                            <field name="fund_spend_request_id"/>
+                            <field name="stage_id"/>
+                            <field name="spend_phase"/>
+                        </group>
+                        <group>
+                            <field name="name"/>
+                            <field name="sequence"/>
+                            <field name="display_status"/>
+                            <field name="todo_by"/>
+                            <field name="done_by"/>
+                            <field name="create_date" string="Solicitado el"/>
+                            <field name="reviewed_date" string="Validado el"/>
+                            <field name="comment"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
         </field>
     </record>
 
-    <record id="view_fund_expedient_spend_request_list_my_approvals" model="ir.ui.view">
-        <field name="name">fund.expedient.spend.request.list.my.approvals</field>
-        <field name="model">fund.expedient.spend.request</field>
-        <field name="inherit_id" ref="fund_expedient.view_fund_expedient_spend_request_list"/>
-        <field name="mode">primary</field>
-        <field name="arch" type="xml">
-            <xpath expr="//list" position="attributes">
-                <attribute name="string">Mis aprobaciones</attribute>
-            </xpath>
-            <xpath expr="//field[@name='spend_state']" position="after">
-                <field name="validation_status" string="Validación" optional="show"/>
-                <field name="next_review" string="Pendiente" optional="show"/>
-            </xpath>
-        </field>
-    </record>
-
-    <record id="action_fund_expedient_my_approvals" model="ir.actions.act_window">
-        <field name="name">Expedientes</field>
-        <field name="res_model">fund.expedient</field>
+    <record id="action_tier_review_my_approvals" model="ir.actions.act_window">
+        <field name="name">Validaciones</field>
+        <field name="res_model">tier.review</field>
         <field name="view_mode">list,form</field>
-        <field name="domain">[]</field>
+        <field name="domain">[('model', 'in', ('fund.expedient', 'fund.expedient.spend.request'))]</field>
         <field name="context">{'search_default_tier_pending_mine': 1}</field>
-        <field name="search_view_id" ref="view_fund_expedient_search_my_approvals"/>
-        <field name="view_ids" eval="[(5, 0, 0),
-            (0, 0, {'view_mode': 'list', 'view_id': ref('view_fund_expedient_list_my_approvals')}),
-            (0, 0, {'view_mode': 'form', 'view_id': ref('fund_expedient.view_fund_expedient_form')}),
-        ]"/>
+        <field name="view_id" ref="view_tier_review_list_my_approvals"/>
+        <field name="search_view_id" ref="view_tier_review_search_my_approvals"/>
+        <field name="order">create_date desc, id desc</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">
-                No hay expedientes con el filtro seleccionado.
+                No hay validaciones con el filtro seleccionado.
             </p>
             <p>
-                Use los filtros de búsqueda para ver pendientes de su aprobación
-                (etapa actual), el historial de lo que ya aprobó en cualquier etapa,
-                o —si es administrador— las validaciones de todos los usuarios.
-            </p>
-        </field>
-    </record>
-
-    <record id="action_fund_expedient_spend_request_my_approvals" model="ir.actions.act_window">
-        <field name="name">Solicitudes de Gasto</field>
-        <field name="res_model">fund.expedient.spend.request</field>
-        <field name="view_mode">list,form</field>
-        <field name="domain">[]</field>
-        <field name="context">{'search_default_tier_pending_mine': 1}</field>
-        <field name="search_view_id" ref="view_fund_expedient_spend_request_search_my_approvals"/>
-        <field name="view_ids" eval="[(5, 0, 0),
-            (0, 0, {'view_mode': 'list', 'view_id': ref('view_fund_expedient_spend_request_list_my_approvals')}),
-            (0, 0, {'view_mode': 'form', 'view_id': ref('fund_expedient.view_fund_expedient_spend_request_form')}),
-        ]"/>
-        <field name="help" type="html">
-            <p class="o_view_nocontent_smiling_face">
-                No hay solicitudes de gasto con el filtro seleccionado.
-            </p>
-            <p>
-                Use los filtros de búsqueda para ver pendientes de su aprobación
-                (fase activa), el historial de lo que ya aprobó en cualquier fase,
-                o —si es administrador— las validaciones de todos los usuarios.
+                Cada fila es una aprobación (tier). Desde aquí puede ver cuándo se
+                solicitó y cuándo se validó, y abrir el expediente o la solicitud de gasto.
             </p>
         </field>
     </record>

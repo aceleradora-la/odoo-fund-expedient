@@ -9,6 +9,10 @@ _FUND_EXPEDIENT_MODELS = (
     "fund.expedient.disposition",
     "fund.expedient.resolution",
 )
+_MY_APPROVALS_MODELS = (
+    "fund.expedient",
+    "fund.expedient.spend.request",
+)
 
 
 class TierReview(models.Model):
@@ -29,6 +33,81 @@ class TierReview(models.Model):
         index=True,
         help="Fase de la Solicitud de Gasto asociada a la revisión.",
     )
+    fund_expedient_id = fields.Many2one(
+        comodel_name="fund.expedient",
+        string="Expediente",
+        compute="_compute_fund_approval_links",
+        search="_search_fund_expedient_id",
+    )
+    fund_spend_request_id = fields.Many2one(
+        comodel_name="fund.expedient.spend.request",
+        string="Solicitud de Gasto",
+        compute="_compute_fund_approval_links",
+        search="_search_fund_spend_request_id",
+    )
+    fund_record_type = fields.Selection(
+        selection=[
+            ("expedient", "Expediente"),
+            ("spend_request", "Solicitud de Gasto"),
+        ],
+        string="Tipo de registro",
+        compute="_compute_fund_approval_links",
+        search="_search_fund_record_type",
+    )
+
+    @api.depends("model", "res_id")
+    def _compute_fund_approval_links(self):
+        SpendRequest = self.env["fund.expedient.spend.request"]
+        Expedient = self.env["fund.expedient"]
+        for rec in self:
+            rec.fund_expedient_id = False
+            rec.fund_spend_request_id = False
+            rec.fund_record_type = False
+            if not rec.res_id:
+                continue
+            if rec.model == "fund.expedient":
+                expedient = Expedient.browse(rec.res_id).exists()
+                if expedient:
+                    rec.fund_expedient_id = expedient.id
+                    rec.fund_record_type = "expedient"
+            elif rec.model == "fund.expedient.spend.request":
+                spend_request = SpendRequest.browse(rec.res_id).exists()
+                if spend_request:
+                    rec.fund_spend_request_id = spend_request.id
+                    rec.fund_expedient_id = spend_request.expedient_id
+                    rec.fund_record_type = "spend_request"
+
+    @api.model
+    def _search_fund_expedient_id(self, operator, value):
+        return [("model", "=", "fund.expedient"), ("res_id", operator, value)]
+
+    @api.model
+    def _search_fund_spend_request_id(self, operator, value):
+        return [("model", "=", "fund.expedient.spend.request"), ("res_id", operator, value)]
+
+    @api.model
+    def _search_fund_record_type(self, operator, value):
+        if operator != "=":
+            return [("id", "=", False)]
+        if value == "expedient":
+            return [("model", "=", "fund.expedient")]
+        if value == "spend_request":
+            return [("model", "=", "fund.expedient.spend.request")]
+        return [("id", "=", False)]
+
+    def action_open_fund_record(self):
+        """Abrir el expediente o la SG vinculada a esta validación."""
+        self.ensure_one()
+        if self.model not in _MY_APPROVALS_MODELS or not self.res_id:
+            return False
+        return {
+            "type": "ir.actions.act_window",
+            "name": self.env[self.model]._description,
+            "res_model": self.model,
+            "res_id": self.res_id,
+            "view_mode": "form",
+            "target": "current",
+        }
 
     def _fill_fund_context_vals(self, vals, review=None):
         """Completar etapa/fase en reviews creadas fuera de request_validation (p. ej. forward)."""
