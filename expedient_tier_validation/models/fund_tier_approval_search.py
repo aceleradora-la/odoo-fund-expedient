@@ -13,10 +13,15 @@ class FundTierApprovalSearchMixin(models.AbstractModel):
     _name = "fund.tier.approval.search.mixin"
     _description = "Búsquedas Mis aprobaciones (tier)"
 
+    tier_done_by_user_ids = fields.Many2many(
+        comodel_name="res.users",
+        string="Usuarios que cerraron validaciones",
+        compute="_compute_tier_done_by_user_ids",
+        search="_search_tier_done_by_user_ids",
+        help="Usuarios en done_by de tier.review aprobadas o reenviadas (cualquier etapa/fase).",
+    )
     tier_approval_pending_mine = fields.Boolean(search="_search_tier_approval_pending_mine")
-    tier_approval_done_mine = fields.Boolean(search="_search_tier_approval_done_mine")
     tier_approval_pending_all = fields.Boolean(search="_search_tier_approval_pending_all")
-    tier_approval_done_all = fields.Boolean(search="_search_tier_approval_done_all")
 
     def _approval_context_reviews(self):
         """Reviews del contexto activo (etapa o fase SG)."""
@@ -41,39 +46,53 @@ class FundTierApprovalSearchMixin(models.AbstractModel):
         return res_ids
 
     @api.model
-    def _res_ids_from_my_completed_reviews(self):
-        """Expedientes/SG donde el usuario aprobó o reenvió en cualquier etapa/fase."""
-        user = self.env.user
-        Review = self.env["tier.review"]
-        closed_by_me = Review.search(
-            [
-                ("model", "=", self._name),
-                ("done_by", "=", user.id),
-                ("status", "in", list(_TIER_DONE_STATUSES)),
-            ]
+    def _res_ids_closed_by_users(self, user_ids=None, *, any_user=False):
+        """IDs de registros con tier.review cerrada; consulta directa a tier_review."""
+        clauses = ["model = %s", "status IN %s", "res_id IS NOT NULL"]
+        params = [self._name, list(_TIER_DONE_STATUSES)]
+        if any_user:
+            clauses.append("done_by IS NOT NULL")
+        elif user_ids:
+            clauses.append("done_by IN %s")
+            params.append(list(user_ids))
+        else:
+            return []
+        self.env.cr.execute(
+            f"SELECT DISTINCT res_id FROM tier_review WHERE {' AND '.join(clauses)}",
+            tuple(params),
         )
-        # Respaldo: aprobación sin done_by pero el usuario figuraba como revisor.
-        approved_as_reviewer = Review.search(
-            [
-                ("model", "=", self._name),
-                ("reviewer_ids", "in", user.id),
-                ("status", "=", "approved"),
-                ("done_by", "=", False),
-            ]
-        )
-        return list(set(closed_by_me.mapped("res_id") + approved_as_reviewer.mapped("res_id")))
+        return [row[0] for row in self.env.cr.fetchall() if row[0]]
+
+    @api.depends("review_ids.done_by", "review_ids.status")
+    def _compute_tier_done_by_user_ids(self):
+        for rec in self:
+            rec.tier_done_by_user_ids = rec.review_ids.filtered(
+                lambda r: r.status in _TIER_DONE_STATUSES and r.done_by
+            ).mapped("done_by")
+
+    @api.model
+    def _search_tier_done_by_user_ids(self, operator, value):
+        if operator == "=":
+            user_ids = [value] if value else []
+        elif operator == "in":
+            user_ids = list(value) if value else []
+        elif operator == "!=":
+            if not value:
+                return [("id", "in", self._res_ids_closed_by_users(any_user=True))]
+            all_closed = set(self._res_ids_closed_by_users(any_user=True))
+            by_user = set(self._res_ids_closed_by_users([value]))
+            return [("id", "in", list(all_closed - by_user))]
+        else:
+            return [("id", "=", False)]
+        if not user_ids:
+            return [("id", "=", False)]
+        return [("id", "in", self._res_ids_closed_by_users(user_ids))]
 
     @api.model
     def _search_tier_approval_pending_mine(self, operator, value):
         if operator != "=" or not value:
             return [("id", "=", False)]
         return [("can_review", "=", True)]
-
-    @api.model
-    def _search_tier_approval_done_mine(self, operator, value):
-        if operator != "=" or not value:
-            return [("id", "=", False)]
-        return [("id", "in", self._res_ids_from_my_completed_reviews())]
 
     @api.model
     def _search_tier_approval_pending_all(self, operator, value):
@@ -86,16 +105,3 @@ class FundTierApprovalSearchMixin(models.AbstractModel):
             ]
         )
         return [("id", "in", self._res_ids_from_context_reviews(reviews))]
-
-    @api.model
-    def _search_tier_approval_done_all(self, operator, value):
-        if operator != "=" or not value:
-            return [("id", "=", False)]
-        reviews = self.env["tier.review"].search(
-            [
-                ("model", "=", self._name),
-                ("status", "in", list(_TIER_DONE_STATUSES)),
-                ("done_by", "!=", False),
-            ]
-        )
-        return [("id", "in", reviews.mapped("res_id"))]
