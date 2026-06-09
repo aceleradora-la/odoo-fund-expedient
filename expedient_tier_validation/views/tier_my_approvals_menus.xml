@@ -4,7 +4,7 @@
     <menuitem id="menu_fund_expedient_my_approvals"
               name="Mis aprobaciones"
               parent="fund_expedient.menu_fund_expedient_root"
-              sequence="5"/>
+              sequence="12"/>
 
     <menuitem id="menu_fund_expedient_my_approvals_validations"
               name="Validaciones"
