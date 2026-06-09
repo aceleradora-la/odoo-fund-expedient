@@ -43,7 +43,7 @@
                 <field name="fund_expedient_id" type="row"/>
                 <field name="spend_phase" type="row"/>
                 <field name="create_date" interval="month" type="col"/>
-                <field name="id" type="measure"/>
+                <field name="approval_qty" type="measure"/>
             </pivot>
         </field>
     </record>

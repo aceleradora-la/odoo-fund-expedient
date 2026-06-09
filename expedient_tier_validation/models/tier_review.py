@@ -60,6 +60,13 @@ class TierReview(models.Model):
         index=True,
         search="_search_fund_record_type",
     )
+    approval_qty = fields.Integer(
+        string="Cantidad",
+        default=1,
+        required=True,
+        aggregator="sum",
+        help="Medida fija para pivote/gráficos (1 por validación).",
+    )
 
     @api.depends("model", "res_id")
     def _compute_fund_approval_links(self):
