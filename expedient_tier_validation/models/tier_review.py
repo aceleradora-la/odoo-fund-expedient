@@ -37,12 +37,16 @@ class TierReview(models.Model):
         comodel_name="fund.expedient",
         string="Expediente",
         compute="_compute_fund_approval_links",
+        store=True,
+        index=True,
         search="_search_fund_expedient_id",
     )
     fund_spend_request_id = fields.Many2one(
         comodel_name="fund.expedient.spend.request",
         string="Solicitud de Gasto",
         compute="_compute_fund_approval_links",
+        store=True,
+        index=True,
         search="_search_fund_spend_request_id",
     )
     fund_record_type = fields.Selection(
@@ -52,6 +56,8 @@ class TierReview(models.Model):
         ],
         string="Tipo de registro",
         compute="_compute_fund_approval_links",
+        store=True,
+        index=True,
         search="_search_fund_record_type",
     )
 

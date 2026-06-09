@@ -35,14 +35,14 @@
         <field name="name">tier.review.pivot.my.approvals</field>
         <field name="model">tier.review</field>
         <field name="arch" type="xml">
-            <pivot string="Validaciones - Análisis">
+            <pivot string="Validaciones - Análisis" sample="1">
                 <field name="status" type="row"/>
                 <field name="done_by" type="row"/>
                 <field name="stage_id" type="row"/>
                 <field name="fund_record_type" type="row"/>
                 <field name="fund_expedient_id" type="row"/>
+                <field name="spend_phase" type="row"/>
                 <field name="create_date" interval="month" type="col"/>
-                <field name="reviewed_date" interval="month" type="col"/>
                 <field name="id" type="measure"/>
             </pivot>
         </field>
@@ -139,10 +139,14 @@
     <record id="action_tier_review_my_approvals" model="ir.actions.act_window">
         <field name="name">Validaciones</field>
         <field name="res_model">tier.review</field>
-        <field name="view_mode">list,form</field>
+        <field name="view_mode">list,pivot,form</field>
         <field name="domain">[('model', 'in', ('fund.expedient', 'fund.expedient.spend.request'))]</field>
         <field name="context">{'search_default_tier_pending_mine': 1}</field>
-        <field name="view_id" ref="view_tier_review_list_my_approvals"/>
+        <field name="view_ids" eval="[(5, 0, 0),
+            (0, 0, {'view_mode': 'list', 'view_id': ref('view_tier_review_list_my_approvals')}),
+            (0, 0, {'view_mode': 'pivot', 'view_id': ref('view_tier_review_pivot_my_approvals')}),
+            (0, 0, {'view_mode': 'form', 'view_id': ref('view_tier_review_form_my_approvals')}),
+        ]"/>
         <field name="search_view_id" ref="view_tier_review_search_my_approvals"/>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">
