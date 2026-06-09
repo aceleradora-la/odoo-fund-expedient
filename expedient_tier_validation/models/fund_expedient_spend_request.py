@@ -10,7 +10,13 @@ class FundExpedientSpendRequest(models.Model):
     # métodos del mixin (validate_tier, request_validation, restart_validation, etc.) ganan
     # sobre los del base OCA. Sin esto, el botón Aprobar marca la review pero NO ejecuta
     # _on_context_tier_validated y la fase nunca pasa a "approved".
-    _inherit = ["fund.expedient.spend.request", "mail.thread", "fund.tier.validation.mixin", "tier.validation"]
+    _inherit = [
+        "fund.expedient.spend.request",
+        "mail.thread",
+        "fund.tier.approval.search.mixin",
+        "fund.tier.validation.mixin",
+        "tier.validation",
+    ]
 
     # Manual: insertamos los botones/etiquetas tier explícitamente en el form (standalone y embebido),
     # porque el SG no tiene <header> nativo y el embedded view no pasa por get_view de SG.

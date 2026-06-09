@@ -1,5 +1,6 @@
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 
+from . import fund_tier_approval_search
 from . import tier_validation_fund_mixin
 from . import fund_expedient_type_stage_assign
 from . import fund_expedient

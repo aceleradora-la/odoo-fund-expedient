@@ -1,6 +1,58 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
+    <record id="view_fund_expedient_search_my_approvals" model="ir.ui.view">
+        <field name="name">fund.expedient.search.my.approvals</field>
+        <field name="model">fund.expedient</field>
+        <field name="inherit_id" ref="fund_expedient.view_fund_expedient_search"/>
+        <field name="arch" type="xml">
+            <xpath expr="//search" position="inside">
+                <separator/>
+                <filter string="Pendientes de mi aprobación" name="tier_pending_mine"
+                        domain="[('tier_approval_pending_mine', '=', True)]"/>
+                <filter string="Aprobados por mí" name="tier_done_mine"
+                        domain="[('tier_approval_done_mine', '=', True)]"/>
+                <filter string="Todos los míos" name="tier_all_mine"
+                        domain="['|', ('tier_approval_pending_mine', '=', True), ('tier_approval_done_mine', '=', True)]"/>
+                <filter string="Pendientes (todos)" name="tier_pending_all"
+                        domain="[('tier_approval_pending_all', '=', True)]"
+                        groups="fund_expedient.group_fund_expedient_manager"/>
+                <filter string="Aprobados (todos)" name="tier_done_all"
+                        domain="[('tier_approval_done_all', '=', True)]"
+                        groups="fund_expedient.group_fund_expedient_manager"/>
+                <filter string="Todos" name="tier_all"
+                        domain="['|', ('tier_approval_pending_all', '=', True), ('tier_approval_done_all', '=', True)]"
+                        groups="fund_expedient.group_fund_expedient_manager"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_fund_expedient_spend_request_search_my_approvals" model="ir.ui.view">
+        <field name="name">fund.expedient.spend.request.search.my.approvals</field>
+        <field name="model">fund.expedient.spend.request</field>
+        <field name="inherit_id" ref="fund_expedient.view_fund_expedient_spend_request_search"/>
+        <field name="arch" type="xml">
+            <xpath expr="//search" position="inside">
+                <separator/>
+                <filter string="Pendientes de mi aprobación" name="tier_pending_mine"
+                        domain="[('tier_approval_pending_mine', '=', True)]"/>
+                <filter string="Aprobados por mí" name="tier_done_mine"
+                        domain="[('tier_approval_done_mine', '=', True)]"/>
+                <filter string="Todos los míos" name="tier_all_mine"
+                        domain="['|', ('tier_approval_pending_mine', '=', True), ('tier_approval_done_mine', '=', True)]"/>
+                <filter string="Pendientes (todos)" name="tier_pending_all"
+                        domain="[('tier_approval_pending_all', '=', True)]"
+                        groups="fund_expedient.group_fund_expedient_manager"/>
+                <filter string="Aprobados (todos)" name="tier_done_all"
+                        domain="[('tier_approval_done_all', '=', True)]"
+                        groups="fund_expedient.group_fund_expedient_manager"/>
+                <filter string="Todos" name="tier_all"
+                        domain="['|', ('tier_approval_pending_all', '=', True), ('tier_approval_done_all', '=', True)]"
+                        groups="fund_expedient.group_fund_expedient_manager"/>
+            </xpath>
+        </field>
+    </record>
+
     <record id="view_fund_expedient_list_my_approvals" model="ir.ui.view">
         <field name="name">fund.expedient.list.my.approvals</field>
         <field name="model">fund.expedient</field>
@@ -9,7 +61,7 @@
         <field name="arch" type="xml">
             <xpath expr="//list" position="attributes">
                 <attribute name="create">0</attribute>
-                <attribute name="string">Expedientes por aprobar</attribute>
+                <attribute name="string">Mis aprobaciones</attribute>
             </xpath>
             <xpath expr="//field[@name='stage_id']" position="after">
                 <field name="validation_status" string="Validación" optional="show"/>
@@ -25,7 +77,7 @@
         <field name="mode">primary</field>
         <field name="arch" type="xml">
             <xpath expr="//list" position="attributes">
-                <attribute name="string">Solicitudes de Gasto por aprobar</attribute>
+                <attribute name="string">Mis aprobaciones</attribute>
             </xpath>
             <xpath expr="//field[@name='spend_state']" position="after">
                 <field name="validation_status" string="Validación" optional="show"/>
@@ -35,41 +87,47 @@
     </record>
 
     <record id="action_fund_expedient_my_approvals" model="ir.actions.act_window">
-        <field name="name">Expedientes por aprobar</field>
+        <field name="name">Expedientes</field>
         <field name="res_model">fund.expedient</field>
         <field name="view_mode">list,form</field>
-        <field name="domain">[('can_review', '=', True)]</field>
+        <field name="domain">[]</field>
+        <field name="context">{'search_default_tier_pending_mine': 1}</field>
+        <field name="search_view_id" ref="view_fund_expedient_search_my_approvals"/>
         <field name="view_ids" eval="[(5, 0, 0),
             (0, 0, {'view_mode': 'list', 'view_id': ref('view_fund_expedient_list_my_approvals')}),
             (0, 0, {'view_mode': 'form', 'view_id': ref('fund_expedient.view_fund_expedient_form')}),
         ]"/>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">
-                No tiene expedientes pendientes de su aprobación.
+                No hay expedientes con el filtro seleccionado.
             </p>
             <p>
-                Aquí aparecen los expedientes en los que usted es revisor y puede
-                validar o rechazar según el flujo de la etapa actual.
+                Use los filtros de búsqueda para ver pendientes de su aprobación,
+                lo que ya aprobó, o —si es administrador— las validaciones de todos
+                los usuarios en la etapa actual.
             </p>
         </field>
     </record>
 
     <record id="action_fund_expedient_spend_request_my_approvals" model="ir.actions.act_window">
-        <field name="name">Solicitudes de Gasto por aprobar</field>
+        <field name="name">Solicitudes de Gasto</field>
         <field name="res_model">fund.expedient.spend.request</field>
         <field name="view_mode">list,form</field>
-        <field name="domain">[('can_review', '=', True)]</field>
+        <field name="domain">[]</field>
+        <field name="context">{'search_default_tier_pending_mine': 1}</field>
+        <field name="search_view_id" ref="view_fund_expedient_spend_request_search_my_approvals"/>
         <field name="view_ids" eval="[(5, 0, 0),
             (0, 0, {'view_mode': 'list', 'view_id': ref('view_fund_expedient_spend_request_list_my_approvals')}),
             (0, 0, {'view_mode': 'form', 'view_id': ref('fund_expedient.view_fund_expedient_spend_request_form')}),
         ]"/>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">
-                No tiene solicitudes de gasto pendientes de su aprobación.
+                No hay solicitudes de gasto con el filtro seleccionado.
             </p>
             <p>
-                Aquí aparecen las SG en las que usted es revisor y puede validar
-                o rechazar la fase activa (preventiva o definitiva).
+                Use los filtros de búsqueda para ver pendientes de su aprobación,
+                lo que ya aprobó, o —si es administrador— las validaciones de todos
+                los usuarios en la fase activa.
             </p>
         </field>
     </record>
