@@ -67,25 +67,25 @@ class TierReview(models.Model):
         aggregator="sum",
         help="Medida fija para pivote/gráficos (1 por validación).",
     )
-    approval_duration_hours = fields.Float(
-        string="Horas hasta aprobación",
-        compute="_compute_approval_duration_hours",
+    approval_duration_days = fields.Float(
+        string="Días hasta aprobación",
+        compute="_compute_approval_duration_days",
         store=True,
         aggregator="avg",
-        help="Horas entre la creación de la revisión (solicitud) y su aprobación. "
+        help="Días entre la creación de la revisión (solicitud) y su aprobación. "
         "Solo se calcula para revisiones aprobadas; el resto queda en 0. "
         "Medida para promediar tiempos de aprobación en pivote/gráficos "
         "(filtrar status='approved' para evitar sesgo por los ceros).",
     )
 
     @api.depends("status", "reviewed_date", "create_date")
-    def _compute_approval_duration_hours(self):
+    def _compute_approval_duration_days(self):
         for rec in self:
             if rec.status == "approved" and rec.reviewed_date and rec.create_date:
                 delta = rec.reviewed_date - rec.create_date
-                rec.approval_duration_hours = delta.total_seconds() / 3600.0
+                rec.approval_duration_days = delta.total_seconds() / 86400.0
             else:
-                rec.approval_duration_hours = 0.0
+                rec.approval_duration_days = 0.0
 
     @api.depends("model", "res_id")
     def _compute_fund_approval_links(self):
