@@ -44,7 +44,7 @@ class FundExpedientResolution(models.Model):
         compute="_compute_name",
         store=True,
     )
-    notes = fields.Html(string="Observaciones")
+    notes = fields.Html(string="Observaciones", sanitize="email_outgoing")
 
     document_ids = fields.One2many(
         "fund.expedient.document",
@@ -112,12 +112,12 @@ class FundExpedientResolution(models.Model):
                 vals["number"] = seq_env.next_by_code("fund.expedient.resolution") or "/"
 
         records = super().create(vals_list)
-        # Resolver placeholders dinámicos ({{ object.campo }}) en Observaciones
-        # contra el expediente vinculado ('object' = el expediente).
+        # Resolver placeholders dinámicos (nodos qweb <t t-out="object.campo">)
+        # en Observaciones contra el expediente vinculado ('object' = el expediente).
         for rec in records:
             exp = rec.expedient_id
-            if exp and exp._html_has_inline_placeholders(rec.notes):
-                rendered = exp._render_inline_template_value(rec.notes)
+            if exp and exp._html_has_dynamic_placeholders(rec.notes):
+                rendered = exp._render_dynamic_template_value(rec.notes)
                 if rendered and rendered != rec.notes:
                     rec.notes = rendered
         return records

@@ -233,6 +233,7 @@ class FundExpedient(models.Model):
     )
     description = fields.Html(
         string="Descripción/Memo",
+        sanitize="email_outgoing",
     )
     description_plain = fields.Text(
         string="Descripción (texto)",
@@ -1296,7 +1297,7 @@ class FundExpedient(models.Model):
                         )
             res = super().write(vals)
             if "description" in vals:
-                self._apply_inline_placeholders_to_description()
+                self._apply_dynamic_placeholders_to_description()
             return res
 
         Type = self.env["fund.expedient.type"]
@@ -1528,7 +1529,7 @@ class FundExpedient(models.Model):
 
             super(FundExpedient, rec).write(new_vals)
             if "description" in new_vals:
-                rec._apply_inline_placeholders_to_description()
+                rec._apply_dynamic_placeholders_to_description()
             if stage_will_change:
                 rec._notify_stage_assignees()
         return True
@@ -1598,7 +1599,7 @@ class FundExpedient(models.Model):
         records = super().create(vals_list)
         # Resolver placeholders dinámicos ({{ object.campo }}) ahora que el
         # expediente ya tiene id y valores persistidos.
-        records._apply_inline_placeholders_to_description()
+        records._apply_dynamic_placeholders_to_description()
         return records
 
     @api.depends("description")
@@ -1618,19 +1619,27 @@ class FundExpedient(models.Model):
             return False
 
     @api.model
-    def _html_has_inline_placeholders(self, value):
-        """True si el texto contiene placeholders dinámicos del tipo {{ object.campo }}."""
+    def _html_has_dynamic_placeholders(self, value):
+        """True si el texto contiene placeholders dinámicos.
+
+        El selector del editor html inserta nodos qweb ``<t t-out="object.campo">``;
+        también admitimos la sintaxis inline ``{{ object.campo }}`` por si se tipea
+        a mano. Detectamos ambos para decidir si hay que renderizar.
+        """
         if not value:
             return False
-        text = str(value)
-        return "{{" in text and "}}" in text
+        text = str(value).lower()
+        if "{{" in text and "}}" in text:
+            return True
+        return any(d in text for d in ("t-out", "t-esc", "t-field", "t-if", "t-foreach"))
 
-    def _render_inline_template_value(self, template_src):
-        """Renderiza placeholders {{ object.campo }} contra este expediente.
+    def _render_dynamic_template_value(self, template_src):
+        """Renderiza placeholders dinámicos contra este expediente.
 
-        Usa el motor 'inline_template' de mail.render.mixin (Odoo 16+), donde
-        'object' es el propio expediente. Devuelve el texto original si algo falla,
-        para nunca bloquear la creación/edición por un placeholder mal escrito.
+        Usa el motor 'qweb' de mail.render.mixin, donde 'object' es el propio
+        expediente (los nodos ``<t t-out="object.campo">`` que inserta el editor
+        son qweb). Devuelve el texto original si algo falla, para nunca bloquear la
+        creación/edición por un placeholder mal escrito.
         """
         self.ensure_one()
         if not template_src:
@@ -1640,7 +1649,7 @@ class FundExpedient(models.Model):
                 template_src,
                 self._name,
                 self.ids,
-                engine="inline_template",
+                engine="qweb",
             )[self.id]
         except Exception as e:
             _logger.warning(
@@ -1652,7 +1661,7 @@ class FundExpedient(models.Model):
             )
             return template_src
 
-    def _apply_inline_placeholders_to_description(self):
+    def _apply_dynamic_placeholders_to_description(self):
         """Resuelve los placeholders dinámicos de Descripción/Memo en cada expediente.
 
         Se llama después de create/write (cuando el registro ya tiene id y valores
@@ -1660,9 +1669,9 @@ class FundExpedient(models.Model):
         de etapa ni en este mismo post-proceso.
         """
         for rec in self:
-            if not self._html_has_inline_placeholders(rec.description):
+            if not self._html_has_dynamic_placeholders(rec.description):
                 continue
-            rendered = rec._render_inline_template_value(rec.description)
+            rendered = rec._render_dynamic_template_value(rec.description)
             if rendered and rendered != rec.description:
                 super(FundExpedient, rec).write({"description": rendered})
 

@@ -83,7 +83,9 @@ class ExpedientTypeStageAssign(models.Model):
     )
     default_disposition_notes = fields.Html(
         string="Observaciones por defecto (Disposición)",
-        help="Texto predeterminado (HTML) que se copiará en Observaciones al crear una Disposición de esta etapa.",
+        sanitize="email_outgoing",
+        help="Texto predeterminado (HTML) que se copiará en Observaciones al crear una Disposición de esta etapa. "
+        "Admite campos dinámicos del expediente insertados con el selector del editor (/ Marcador de posición dinámico).",
     )
     require_resolution = fields.Boolean(
         string="Requiere resolución",
@@ -109,7 +111,9 @@ class ExpedientTypeStageAssign(models.Model):
     )
     default_resolution_notes = fields.Html(
         string="Observaciones por defecto (Resolución)",
-        help="Texto predeterminado (HTML) que se copiará en Observaciones al crear una Resolución de esta etapa.",
+        sanitize="email_outgoing",
+        help="Texto predeterminado (HTML) que se copiará en Observaciones al crear una Resolución de esta etapa. "
+        "Admite campos dinámicos del expediente insertados con el selector del editor (/ Marcador de posición dinámico).",
     )
     is_final_stage = fields.Boolean(
         string="Etapa final del flujo",
@@ -265,10 +269,11 @@ class ExpedientType(models.Model):
     )
     default_description = fields.Html(
         string="Descripción/Memo por defecto",
+        sanitize="email_outgoing",
         help="Texto predeterminado que se copiará al campo Descripción/Memo al crear un expediente de este tipo. "
         "No sobrescribe una descripción ingresada manualmente. "
-        "Admite campos dinámicos del expediente con la sintaxis {{ object.campo }} "
-        "(p. ej. {{ object.requestor_id.name }}); se completan al crear/cambiar el tipo.",
+        "Admite campos dinámicos del expediente insertados con el selector del editor "
+        "(/ Marcador de posición dinámico); se completan al crear/cambiar el tipo.",
     )
     dynamic_placeholder_model = fields.Char(
         compute="_compute_dynamic_placeholder_model",
