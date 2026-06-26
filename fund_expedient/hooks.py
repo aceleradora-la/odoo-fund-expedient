@@ -1,10 +1,20 @@
 # Copyright 2026
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 
+from odoo import SUPERUSER_ID, api
+
 
 def _cursor_from_hook_arg(cr_or_env):
     """Odoo 18: `pre_init_hook` recibe `Environment`; en versiones anteriores recibía `cr`."""
     return cr_or_env.cr if hasattr(cr_or_env, "cr") else cr_or_env
+
+
+def _env_from_hook_arg(cr_or_env):
+    """Devuelve un `Environment` tanto si el hook recibió `Environment` (Odoo 18) como `cr`."""
+    cr = _cursor_from_hook_arg(cr_or_env)
+    if cr is cr_or_env:  # recibió un cursor crudo (Odoo < 18)
+        return api.Environment(cr, SUPERUSER_ID, {})
+    return cr_or_env  # ya es un Environment
 
 
 def _table_exists(cr, table_name):
@@ -268,3 +278,21 @@ def post_init_hook(cr_or_env, registry=None):
                 OR BTRIM(contract_object) = ''
             """
         )
+
+    # ----------------------------------------------------------------------
+    # Backfill de `payment_date` / `payment_delay_days` en facturas existentes.
+    #
+    # Son campos computados con `store=True` que dependen de la conciliación
+    # (`account.partial.reconcile`). Al agregarlos, Odoo crea la columna pero
+    # el recálculo inicial sobre registros ya conciliados no es confiable, así
+    # que las facturas históricas quedan en NULL/0 y el tablero de tiempos de
+    # pago sale vacío. Forzamos el recálculo vía ORM (no se puede por SQL puro
+    # porque la lógica recorre las conciliaciones).
+    # ----------------------------------------------------------------------
+    env = _env_from_hook_arg(cr_or_env)
+    AccountMove = env["account.move"]
+    if "payment_delay_days" in AccountMove._fields:
+        moves = AccountMove.search([("move_type", "=", "in_invoice")])
+        if moves:
+            moves._compute_payment_delay()
+            moves.flush_recordset(["payment_date", "payment_delay_days"])

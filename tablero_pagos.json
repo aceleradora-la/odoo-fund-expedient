@@ -1,0 +1,176 @@
+{
+  "version": 22,
+  "sheets": [
+    {
+      "id": "sheet_pagos",
+      "name": "Pagos",
+      "colNumber": 26,
+      "rowNumber": 100,
+      "rows": {},
+      "cols": {},
+      "merges": [],
+      "cells": {
+        "A1": { "content": "Tablero de Tiempos de Pago" }
+      },
+      "styles": { "A1": 1 },
+      "formats": {},
+      "borders": {},
+      "conditionalFormats": [],
+      "dataValidationRules": [],
+      "figures": [
+        {
+          "id": "fig_pago_mes_4d1a",
+          "x": 0,
+          "y": 30,
+          "width": 660,
+          "height": 320,
+          "tag": "chart",
+          "data": {
+            "type": "odoo_line",
+            "title": { "text": "Días promedio de pago por mes" },
+            "background": "#FFFFFF",
+            "legendPosition": "none",
+            "verticalAxisPosition": "left",
+            "stacked": false,
+            "fillArea": true,
+            "metaData": {
+              "groupBy": ["invoice_date:month"],
+              "measure": "payment_delay_days",
+              "order": null,
+              "resModel": "account.move",
+              "mode": "line"
+            },
+            "searchParams": {
+              "comparison": null,
+              "context": {},
+              "domain": [
+                ["move_type", "=", "in_invoice"],
+                ["state", "=", "posted"],
+                ["payment_state", "in", ["paid", "in_payment"]]
+              ],
+              "groupBy": ["invoice_date:month"],
+              "orderBy": []
+            },
+            "fieldMatching": {
+              "gf_period": { "chain": "invoice_date", "type": "date", "offset": 0 }
+            }
+          }
+        },
+        {
+          "id": "fig_pago_prov_9c72",
+          "x": 680,
+          "y": 30,
+          "width": 660,
+          "height": 320,
+          "tag": "chart",
+          "data": {
+            "type": "odoo_bar",
+            "title": { "text": "Días promedio de pago por proveedor" },
+            "background": "#FFFFFF",
+            "legendPosition": "none",
+            "verticalAxisPosition": "left",
+            "stacked": false,
+            "metaData": {
+              "groupBy": ["partner_id"],
+              "measure": "payment_delay_days",
+              "order": "DSC",
+              "resModel": "account.move",
+              "mode": "bar"
+            },
+            "searchParams": {
+              "comparison": null,
+              "context": {},
+              "domain": [
+                ["move_type", "=", "in_invoice"],
+                ["state", "=", "posted"],
+                ["payment_state", "in", ["paid", "in_payment"]]
+              ],
+              "groupBy": ["partner_id"],
+              "orderBy": []
+            },
+            "fieldMatching": {
+              "gf_period": { "chain": "invoice_date", "type": "date", "offset": 0 }
+            }
+          }
+        },
+        {
+          "id": "fig_pago_gral_2e55",
+          "x": 0,
+          "y": 370,
+          "width": 660,
+          "height": 320,
+          "tag": "chart",
+          "data": {
+            "type": "odoo_bar",
+            "title": { "text": "Promedio general de días de pago (período seleccionado)" },
+            "background": "#FFFFFF",
+            "legendPosition": "none",
+            "verticalAxisPosition": "left",
+            "stacked": false,
+            "metaData": {
+              "groupBy": [],
+              "measure": "payment_delay_days",
+              "order": null,
+              "resModel": "account.move",
+              "mode": "bar"
+            },
+            "searchParams": {
+              "comparison": null,
+              "context": {},
+              "domain": [
+                ["move_type", "=", "in_invoice"],
+                ["state", "=", "posted"],
+                ["payment_state", "in", ["paid", "in_payment"]]
+              ],
+              "groupBy": [],
+              "orderBy": []
+            },
+            "fieldMatching": {
+              "gf_period": { "chain": "invoice_date", "type": "date", "offset": 0 }
+            }
+          }
+        }
+      ],
+      "tables": [],
+      "areGridLinesVisible": false,
+      "isVisible": true,
+      "headerGroups": { "ROW": [], "COL": [] },
+      "comments": {}
+    }
+  ],
+  "styles": {
+    "1": { "textColor": "#01666b", "fontSize": 16, "bold": true }
+  },
+  "formats": {},
+  "borders": {},
+  "revisionId": "START_REVISION",
+  "uniqueFigureIds": true,
+  "settings": {
+    "locale": {
+      "name": "English (US)",
+      "code": "en_US",
+      "thousandsSeparator": ",",
+      "decimalSeparator": ".",
+      "dateFormat": "mm/dd/yyyy",
+      "timeFormat": "hh:mm:ss",
+      "formulaArgSeparator": ",",
+      "weekStart": 7
+    }
+  },
+  "pivots": {},
+  "pivotNextId": 1,
+  "customTableStyles": {},
+  "odooVersion": 12,
+  "globalFilters": [
+    {
+      "id": "gf_period",
+      "type": "date",
+      "label": "Período",
+      "defaultValue": "this_year",
+      "rangeType": "fixedPeriod"
+    }
+  ],
+  "lists": {},
+  "listNextId": 1,
+  "chartOdooMenusReferences": {}
+}

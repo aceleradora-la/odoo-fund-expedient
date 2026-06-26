@@ -17,6 +17,53 @@ class AccountMove(models.Model):
         help="Para facturas directas (sin orden de compra). "
         "Si la factura viene de una OC, la relación se toma de la orden.",
     )
+    payment_date = fields.Date(
+        string="Fecha de pago",
+        compute="_compute_payment_delay",
+        store=True,
+        help="Fecha en que la factura de proveedor quedó totalmente pagada "
+        "(fecha del último asiento conciliado contra la línea a pagar).",
+    )
+    payment_delay_days = fields.Float(
+        string="Días hasta el pago",
+        compute="_compute_payment_delay",
+        store=True,
+        aggregator="avg",
+        help="Días entre la fecha de la factura y la fecha en que quedó pagada. "
+        "Solo se calcula para facturas de proveedor pagadas; el resto queda en 0. "
+        "Medida para promediar tiempos de pago en pivote/gráficos "
+        "(filtrar payment_state in ('paid','in_payment') para evitar sesgo por los ceros).",
+    )
+
+    @api.depends(
+        "move_type",
+        "invoice_date",
+        "payment_state",
+        "line_ids.matched_debit_ids.max_date",
+        "line_ids.matched_credit_ids.max_date",
+    )
+    def _compute_payment_delay(self):
+        for move in self:
+            pay_date = False
+            if (
+                move.move_type == "in_invoice"
+                and move.invoice_date
+                and move.payment_state in ("paid", "in_payment")
+            ):
+                payable_lines = move.line_ids.filtered(
+                    lambda l: l.account_id.account_type
+                    in ("liability_payable", "asset_receivable")
+                )
+                partials = payable_lines.matched_debit_ids | payable_lines.matched_credit_ids
+                dates = [d for d in partials.mapped("max_date") if d]
+                if dates:
+                    pay_date = max(dates)
+            move.payment_date = pay_date
+            move.payment_delay_days = (
+                (pay_date - move.invoice_date).days
+                if pay_date and move.invoice_date
+                else 0.0
+            )
 
     @api.onchange("expedient_ids")
     def _onchange_expedient_ids_analytic(self):
