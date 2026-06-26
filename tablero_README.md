@@ -102,15 +102,17 @@ Pasos:
 
 Tres elementos sobre `account.move` (facturas de proveedor), midiendo **días hasta el pago**
 (`payment_delay_days`, promedio). Todos filtran `move_type=in_invoice`, `state=posted`,
-`payment_state in (paid, in_payment)`:
+`payment_state in (paid, in_payment)`. Organizados en **dos hojas**:
 
-| Elemento | Tipo | Agrupado por | Detalle |
+| Hoja | Elemento | Tipo | Agrupado por |
 |---|---|---|---|
-| Días promedio de pago por mes | gráfico de líneas | `invoice_date:month` | evolución mensual |
-| Días promedio de pago por proveedor | **tabla pivote** (`=PIVOT(1)`) | `partner_id` (filas) | una fila por proveedor, ordenada por días desc |
-| Promedio general de días de pago | **tarjeta KPI** (`scorecard`) | — | valor del período + comparación |
+| **Resumen** | Promedio general de días de pago (izquierda) | **tarjeta KPI** (`scorecard`) | — (valor del período + comparación) |
+| **Resumen** | Días promedio de pago por mes (derecha) | gráfico de líneas | `invoice_date:month` |
+| **Por proveedor** | Días promedio de pago por proveedor | **tabla pivote** (`=PIVOT(1)`) | `partner_id` (filas), ordenada por días desc |
 
-Filtro global **Período** cableado a `invoice_date` (fecha de la factura) en los tres.
+La hoja **Resumen** es la vista ejecutiva (KPI + tendencia mensual); el detalle por proveedor vive en
+la hoja **Por proveedor** para no saturar la vista. Filtro global **Período** cableado a `invoice_date`
+(fecha de la factura) en los tres elementos, en ambas hojas.
 
 **Tarjeta KPI con comparación interanual.** El scorecard no lee directamente del modelo: toma su
 valor (`keyValue`) y su línea base (`baseline`) de dos celdas auxiliares (`B45`/`B46`), cada una con

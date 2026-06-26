@@ -2,34 +2,52 @@
   "version": 22,
   "sheets": [
     {
-      "id": "sheet_pagos",
-      "name": "Pagos",
+      "id": "sheet_resumen",
+      "name": "Resumen",
       "colNumber": 26,
-      "rowNumber": 1000,
+      "rowNumber": 100,
       "rows": {},
       "cols": {},
       "merges": [],
       "cells": {
         "A1": { "content": "Tablero de Tiempos de Pago" },
-        "H2": { "content": "Días promedio de pago por proveedor" },
-        "H3": { "content": "=PIVOT(1)" },
-        "A45": { "content": "Promedio actual (período seleccionado)" },
-        "B45": { "content": "=PIVOT.VALUE(2,\"payment_delay_days\")" },
-        "A46": { "content": "Promedio mismo período anterior" },
-        "B46": { "content": "=PIVOT.VALUE(3,\"payment_delay_days\")" }
+        "A40": { "content": "Promedio actual (período seleccionado)" },
+        "B40": { "content": "=PIVOT.VALUE(2,\"payment_delay_days\")" },
+        "A41": { "content": "Promedio mismo período anterior" },
+        "B41": { "content": "=PIVOT.VALUE(3,\"payment_delay_days\")" }
       },
-      "styles": { "A1": 1, "H2": 2 },
-      "formats": { "B45": 1, "B46": 1 },
+      "styles": { "A1": 1 },
+      "formats": { "B40": 1, "B41": 1 },
       "borders": {},
       "conditionalFormats": [],
       "dataValidationRules": [],
       "figures": [
         {
-          "id": "fig_pago_mes_4d1a",
+          "id": "fig_pago_kpi_2e55",
           "x": 0,
-          "y": 30,
-          "width": 660,
-          "height": 320,
+          "y": 40,
+          "width": 360,
+          "height": 260,
+          "tag": "chart",
+          "data": {
+            "type": "scorecard",
+            "title": { "text": "Promedio general de días de pago" },
+            "background": "#FFFFFF",
+            "keyValue": "B40",
+            "baseline": "B41",
+            "baselineMode": "difference",
+            "baselineDescr": "días vs. mismo período anterior",
+            "baselineColorUp": "#DC6965",
+            "baselineColorDown": "#00A04A",
+            "humanize": false
+          }
+        },
+        {
+          "id": "fig_pago_mes_4d1a",
+          "x": 380,
+          "y": 40,
+          "width": 700,
+          "height": 340,
           "tag": "chart",
           "data": {
             "type": "odoo_line",
@@ -61,28 +79,32 @@
               "gf_period": { "chain": "invoice_date", "type": "date", "offset": 0 }
             }
           }
-        },
-        {
-          "id": "fig_pago_kpi_2e55",
-          "x": 0,
-          "y": 370,
-          "width": 660,
-          "height": 230,
-          "tag": "chart",
-          "data": {
-            "type": "scorecard",
-            "title": { "text": "Promedio general de días de pago" },
-            "background": "#FFFFFF",
-            "keyValue": "B45",
-            "baseline": "B46",
-            "baselineMode": "difference",
-            "baselineDescr": "días vs. mismo período anterior",
-            "baselineColorUp": "#DC6965",
-            "baselineColorDown": "#00A04A",
-            "humanize": false
-          }
         }
       ],
+      "tables": [],
+      "areGridLinesVisible": false,
+      "isVisible": true,
+      "headerGroups": { "ROW": [], "COL": [] },
+      "comments": {}
+    },
+    {
+      "id": "sheet_proveedor",
+      "name": "Por proveedor",
+      "colNumber": 26,
+      "rowNumber": 1000,
+      "rows": {},
+      "cols": {},
+      "merges": [],
+      "cells": {
+        "A1": { "content": "Días promedio de pago por proveedor" },
+        "A3": { "content": "=PIVOT(1)" }
+      },
+      "styles": { "A1": 1 },
+      "formats": {},
+      "borders": {},
+      "conditionalFormats": [],
+      "dataValidationRules": [],
+      "figures": [],
       "tables": [],
       "areGridLinesVisible": false,
       "isVisible": true,
@@ -91,8 +113,7 @@
     }
   ],
   "styles": {
-    "1": { "textColor": "#01666b", "fontSize": 16, "bold": true },
-    "2": { "textColor": "#01666b", "fontSize": 13, "bold": true }
+    "1": { "textColor": "#01666b", "fontSize": 16, "bold": true }
   },
   "formats": {
     "1": "#,##0.0"
