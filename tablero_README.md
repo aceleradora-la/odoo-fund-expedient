@@ -100,16 +100,36 @@ Pasos:
 
 ## Tablero de Tiempos de Pago (`tablero_pagos.json`)
 
-Tres gráficos sobre `account.move` (facturas de proveedor), midiendo **días hasta el pago**:
+Tres elementos sobre `account.move` (facturas de proveedor), midiendo **días hasta el pago**
+(`payment_delay_days`, promedio). Todos filtran `move_type=in_invoice`, `state=posted`,
+`payment_state in (paid, in_payment)`:
 
-| Gráfico | Tipo | Medida | Agrupado por | Filtro (domain) |
-|---|---|---|---|---|
-| Días promedio de pago por mes | líneas | `payment_delay_days` (promedio) | `invoice_date:month` | `move_type=in_invoice`, `state=posted`, `payment_state in (paid, in_payment)` |
-| Días promedio de pago por proveedor | barras | `payment_delay_days` (promedio) | `partner_id` | ídem |
-| Promedio general de días de pago | barras (una sola barra) | `payment_delay_days` (promedio) | — (sin agrupar) | ídem |
+| Elemento | Tipo | Agrupado por | Detalle |
+|---|---|---|---|
+| Días promedio de pago por mes | gráfico de líneas | `invoice_date:month` | evolución mensual |
+| Días promedio de pago por proveedor | **tabla pivote** (`=PIVOT(1)`) | `partner_id` (filas) | una fila por proveedor |
+| Promedio general de días de pago | **tarjeta KPI** (`scorecard`) | — | valor del período + comparación |
 
-Filtro global **Período** cableado a `invoice_date` (fecha de la factura) en los 3 gráficos. La barra
-única del tercer gráfico es el promedio general de todo el período seleccionado.
+Filtro global **Período** cableado a `invoice_date` (fecha de la factura) en los tres.
+
+**Tarjeta KPI con comparación interanual.** El scorecard no lee directamente del modelo: toma su
+valor (`keyValue`) y su línea base (`baseline`) de dos celdas auxiliares (`B45`/`B46`), cada una con
+una fórmula `=PIVOT.VALUE(n, "payment_delay_days")`:
+
+- Pivote `2` → `offset: 0` en el `fieldMatching` del período = **promedio del período seleccionado**.
+- Pivote `3` → `offset: -1` = **mismo período anterior**. El `offset` se mide en la granularidad del
+  filtro: si arriba elegís un año, `-1` es el año anterior; si elegís un mes, el mes anterior.
+
+La tarjeta muestra la diferencia (`baselineMode: "difference"`); como menos días es mejor, se colorea
+**verde a la baja** (`baselineColorDown`) y **rojo al alza** (`baselineColorUp`). Las celdas `B45`/`B46`
+quedan detrás de la tarjeta (no molestan); si querés, podés moverlas a otra hoja.
+
+> ⚠️ La tabla pivote y la tarjeta KPI son los elementos **hechos a mano** del JSON (el resto son
+> gráficos Odoo autocontenidos). Si tras importar la tabla o el KPI no renderizan en tu build, la vía
+> infalible es generarlos desde la UI: para la tabla, abrí **Facturas de proveedor → vista Pivote**,
+> poné la medida *Días hasta el pago* y agrupá filas por *Proveedor*, y **Insertar en hoja de cálculo**;
+> para el KPI, **Insertar → Gráfico → Scorecard** apuntando a las celdas `B45`/`B46`. Eso genera el
+> formato exacto de tu instancia.
 
 ### ⚠️ Requiere upgrade del módulo antes de importar
 
