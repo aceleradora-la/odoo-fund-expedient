@@ -39,9 +39,17 @@
                     </group>
                     <notebook>
                         <page string="Valores por defecto" name="defaults">
+                            <field name="dynamic_placeholder_model" invisible="1"/>
+                            <div class="text-muted mb-2">
+                                Podés insertar campos dinámicos del expediente con
+                                <code>{{ object.campo }}</code> (p. ej.
+                                <code>{{ object.requestor_id.name }}</code>); se completan
+                                automáticamente al crear el expediente o al elegir el tipo.
+                            </div>
                             <group>
                                 <field name="default_description"
                                        widget="html"
+                                       options="{'dynamic_placeholder': true, 'dynamic_placeholder_model_reference_field': 'dynamic_placeholder_model'}"
                                        placeholder="Texto predeterminado para el campo Descripción/Memo al crear un expediente..."
                                        nolabel="1"/>
                             </group>
@@ -89,21 +97,24 @@
                                         <field name="hide_analytic_account_id"/>
                                         <field name="hide_amount_estimated"/>
                                     </group>
+                                    <field name="dynamic_placeholder_model" invisible="1"/>
                                     <group string="Disposición (por etapa)">
                                         <field name="require_disposition"/>
                                         <field name="disposition_file_required" invisible="not require_disposition"/>
                                         <field name="default_disposition_notes"
                                                widget="html"
+                                               options="{'dynamic_placeholder': true, 'dynamic_placeholder_model_reference_field': 'dynamic_placeholder_model'}"
                                                invisible="not require_disposition"
-                                               placeholder="Observaciones predeterminadas para Disposición en esta etapa..."/>
+                                               placeholder="Observaciones predeterminadas para Disposición en esta etapa... Admite {{ object.campo }} del expediente."/>
                                     </group>
                                     <group string="Resolución (por etapa)">
                                         <field name="require_resolution"/>
                                         <field name="resolution_file_required" invisible="not require_resolution"/>
                                         <field name="default_resolution_notes"
                                                widget="html"
+                                               options="{'dynamic_placeholder': true, 'dynamic_placeholder_model_reference_field': 'dynamic_placeholder_model'}"
                                                invisible="not require_resolution"
-                                               placeholder="Observaciones predeterminadas para Resolución en esta etapa..."/>
+                                               placeholder="Observaciones predeterminadas para Resolución en esta etapa... Admite {{ object.campo }} del expediente."/>
                                     </group>
                                     <group string="Documentos del expediente (por etapa)">
                                         <field name="require_technical_spec_document"/>

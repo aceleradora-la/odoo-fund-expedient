@@ -1294,7 +1294,10 @@ class FundExpedient(models.Model):
                                 "Solo los usuarios asignados a la etapa actual pueden modificar este expediente."
                             )
                         )
-            return super().write(vals)
+            res = super().write(vals)
+            if "description" in vals:
+                self._apply_inline_placeholders_to_description()
+            return res
 
         Type = self.env["fund.expedient.type"]
         Assign = self.env["fund.expedient.type.stage.assign"]
@@ -1524,6 +1527,8 @@ class FundExpedient(models.Model):
                                 )
 
             super(FundExpedient, rec).write(new_vals)
+            if "description" in new_vals:
+                rec._apply_inline_placeholders_to_description()
             if stage_will_change:
                 rec._notify_stage_assignees()
         return True
@@ -1590,7 +1595,11 @@ class FundExpedient(models.Model):
                     vals["stage_id"] = self._get_initial_stage_for_type(
                         expedient_type, company=company
                     ).id or vals["stage_id"]
-        return super().create(vals_list)
+        records = super().create(vals_list)
+        # Resolver placeholders dinámicos ({{ object.campo }}) ahora que el
+        # expediente ya tiene id y valores persistidos.
+        records._apply_inline_placeholders_to_description()
+        return records
 
     @api.depends("description")
     def _compute_description_plain(self):
@@ -1607,6 +1616,55 @@ class FundExpedient(models.Model):
         except Exception:
             # Fallback: si algo raro llega, tratamos como no vacío para no borrar datos.
             return False
+
+    @api.model
+    def _html_has_inline_placeholders(self, value):
+        """True si el texto contiene placeholders dinámicos del tipo {{ object.campo }}."""
+        if not value:
+            return False
+        text = str(value)
+        return "{{" in text and "}}" in text
+
+    def _render_inline_template_value(self, template_src):
+        """Renderiza placeholders {{ object.campo }} contra este expediente.
+
+        Usa el motor 'inline_template' de mail.render.mixin (Odoo 16+), donde
+        'object' es el propio expediente. Devuelve el texto original si algo falla,
+        para nunca bloquear la creación/edición por un placeholder mal escrito.
+        """
+        self.ensure_one()
+        if not template_src:
+            return template_src
+        try:
+            return self.env["mail.render.mixin"]._render_template(
+                template_src,
+                self._name,
+                self.ids,
+                engine="inline_template",
+            )[self.id]
+        except Exception as e:
+            _logger.warning(
+                "No se pudieron renderizar placeholders dinámicos en el expediente "
+                "%s (id=%s): %s",
+                self.display_name,
+                self.id,
+                e,
+            )
+            return template_src
+
+    def _apply_inline_placeholders_to_description(self):
+        """Resuelve los placeholders dinámicos de Descripción/Memo en cada expediente.
+
+        Se llama después de create/write (cuando el registro ya tiene id y valores
+        persistidos). Escribe vía super().write para no reentrar en las validaciones
+        de etapa ni en este mismo post-proceso.
+        """
+        for rec in self:
+            if not self._html_has_inline_placeholders(rec.description):
+                continue
+            rendered = rec._render_inline_template_value(rec.description)
+            if rendered and rendered != rec.description:
+                super(FundExpedient, rec).write({"description": rendered})
 
     def _get_spend_request(self, create_if_missing=False):
         self.ensure_one()

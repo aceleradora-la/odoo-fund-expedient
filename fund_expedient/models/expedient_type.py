@@ -135,6 +135,11 @@ class ExpedientTypeStageAssign(models.Model):
         related="type_id.company_id",
         store=True,
     )
+    dynamic_placeholder_model = fields.Char(
+        default="fund.expedient",
+        readonly=True,
+        help="Modelo de referencia para el selector de campos dinámicos (uso interno del widget).",
+    )
 
     display_name = fields.Char(
         compute="_compute_display_name",
@@ -258,7 +263,14 @@ class ExpedientType(models.Model):
     default_description = fields.Html(
         string="Descripción/Memo por defecto",
         help="Texto predeterminado que se copiará al campo Descripción/Memo al crear un expediente de este tipo. "
-        "No sobrescribe una descripción ingresada manualmente.",
+        "No sobrescribe una descripción ingresada manualmente. "
+        "Admite campos dinámicos del expediente con la sintaxis {{ object.campo }} "
+        "(p. ej. {{ object.requestor_id.name }}); se completan al crear/cambiar el tipo.",
+    )
+    dynamic_placeholder_model = fields.Char(
+        default="fund.expedient",
+        readonly=True,
+        help="Modelo de referencia para el selector de campos dinámicos (uso interno del widget).",
     )
     stage_assign_ids = fields.One2many(
         "fund.expedient.type.stage.assign",

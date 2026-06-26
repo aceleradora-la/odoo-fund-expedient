@@ -111,7 +111,16 @@ class FundExpedientDisposition(models.Model):
                 )
                 vals["number"] = seq_env.next_by_code("fund.expedient.disposition") or "/"
 
-        return super().create(vals_list)
+        records = super().create(vals_list)
+        # Resolver placeholders dinámicos ({{ object.campo }}) en Observaciones
+        # contra el expediente vinculado ('object' = el expediente).
+        for rec in records:
+            exp = rec.expedient_id
+            if exp and exp._html_has_inline_placeholders(rec.notes):
+                rendered = exp._render_inline_template_value(rec.notes)
+                if rendered and rendered != rec.notes:
+                    rec.notes = rendered
+        return records
 
     @api.depends("number", "stage_id.name")
     def _compute_name(self):
