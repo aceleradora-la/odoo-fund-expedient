@@ -10,14 +10,10 @@
       "cols": {},
       "merges": [],
       "cells": {
-        "A1": { "content": "Tablero de Tiempos de Pago" },
-        "A40": { "content": "Promedio actual (período seleccionado)" },
-        "B40": { "content": "=PIVOT.VALUE(2,\"payment_delay_days\")" },
-        "A41": { "content": "Promedio mismo período anterior" },
-        "B41": { "content": "=PIVOT.VALUE(3,\"payment_delay_days\")" }
+        "A1": { "content": "Tablero de Tiempos de Pago" }
       },
       "styles": { "A1": 1 },
-      "formats": { "B40": 1, "B41": 1 },
+      "formats": {},
       "borders": {},
       "conditionalFormats": [],
       "dataValidationRules": [],
@@ -33,8 +29,8 @@
             "type": "scorecard",
             "title": { "text": "Promedio general de días de pago" },
             "background": "#FFFFFF",
-            "keyValue": "B40",
-            "baseline": "B41",
+            "keyValue": "Datos!B1",
+            "baseline": "Datos!B2",
             "baselineMode": "difference",
             "baselineDescr": "días vs. mismo período anterior",
             "baselineColorUp": "#DC6965",
@@ -108,6 +104,32 @@
       "tables": [],
       "areGridLinesVisible": false,
       "isVisible": true,
+      "headerGroups": { "ROW": [], "COL": [] },
+      "comments": {}
+    },
+    {
+      "id": "sheet_datos",
+      "name": "Datos",
+      "colNumber": 26,
+      "rowNumber": 100,
+      "rows": {},
+      "cols": {},
+      "merges": [],
+      "cells": {
+        "A1": { "content": "Promedio actual (período seleccionado)" },
+        "B1": { "content": "=PIVOT.VALUE(2,\"payment_delay_days\")" },
+        "A2": { "content": "Promedio mismo período anterior" },
+        "B2": { "content": "=PIVOT.VALUE(3,\"payment_delay_days\")" }
+      },
+      "styles": {},
+      "formats": { "B1": 1, "B2": 1 },
+      "borders": {},
+      "conditionalFormats": [],
+      "dataValidationRules": [],
+      "figures": [],
+      "tables": [],
+      "areGridLinesVisible": true,
+      "isVisible": false,
       "headerGroups": { "ROW": [], "COL": [] },
       "comments": {}
     }

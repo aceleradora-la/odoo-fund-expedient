@@ -115,8 +115,9 @@ la hoja **Por proveedor** para no saturar la vista. Filtro global **Período** c
 (fecha de la factura) en los tres elementos, en ambas hojas.
 
 **Tarjeta KPI con comparación interanual.** El scorecard no lee directamente del modelo: toma su
-valor (`keyValue`) y su línea base (`baseline`) de dos celdas auxiliares (`B45`/`B46`), cada una con
-una fórmula `=PIVOT.VALUE(n, "payment_delay_days")`:
+valor (`keyValue`) y su línea base (`baseline`) de dos celdas auxiliares (`Datos!B1`/`Datos!B2`), cada
+una con una fórmula `=PIVOT.VALUE(n, "payment_delay_days")`. Esas celdas viven en una **hoja oculta
+`Datos`** (`isVisible: false`) para que no aparezcan a la vista en la hoja Resumen:
 
 - Pivote `2` → `offset: 0` en el `fieldMatching` del período = **promedio del período seleccionado**.
 - Pivote `3` → `offset: -1` = **mismo período anterior**. El `offset` se mide en la granularidad del
