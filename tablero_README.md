@@ -107,7 +107,7 @@ Tres elementos sobre `account.move` (facturas de proveedor), midiendo **días ha
 | Elemento | Tipo | Agrupado por | Detalle |
 |---|---|---|---|
 | Días promedio de pago por mes | gráfico de líneas | `invoice_date:month` | evolución mensual |
-| Días promedio de pago por proveedor | **tabla pivote** (`=PIVOT(1)`) | `partner_id` (filas) | una fila por proveedor |
+| Días promedio de pago por proveedor | **tabla pivote** (`=PIVOT(1)`) | `partner_id` (filas) | una fila por proveedor, ordenada por días desc |
 | Promedio general de días de pago | **tarjeta KPI** (`scorecard`) | — | valor del período + comparación |
 
 Filtro global **Período** cableado a `invoice_date` (fecha de la factura) en los tres.
@@ -123,6 +123,11 @@ una fórmula `=PIVOT.VALUE(n, "payment_delay_days")`:
 La tarjeta muestra la diferencia (`baselineMode: "difference"`); como menos días es mejor, se colorea
 **verde a la baja** (`baselineColorDown`) y **rojo al alza** (`baselineColorUp`). Las celdas `B45`/`B46`
 quedan detrás de la tarjeta (no molestan); si querés, podés moverlas a otra hoja.
+
+La tabla se ordena por días **descendente** (`sortedColumn`), así los proveedores que más tardan en
+cobrar quedan arriba. Como `=PIVOT(1)` es una tabla dinámica que se "derrama" hacia abajo, la hoja usa
+`rowNumber: 1000` para que entre el listado completo del año; si quedara corta, daría `#SPILL!` (la
+tabla no tiene espacio para expandirse) — en ese caso, agrandá más la hoja o filtrá un período menor.
 
 > ⚠️ La tabla pivote y la tarjeta KPI son los elementos **hechos a mano** del JSON (el resto son
 > gráficos Odoo autocontenidos). Si tras importar la tabla o el KPI no renderizan en tu build, la vía

@@ -5,7 +5,7 @@
       "id": "sheet_pagos",
       "name": "Pagos",
       "colNumber": 26,
-      "rowNumber": 100,
+      "rowNumber": 1000,
       "rows": {},
       "cols": {},
       "merges": [],
@@ -130,7 +130,11 @@
         ["payment_state", "in", ["paid", "in_payment"]]
       ],
       "context": {},
-      "sortedColumn": null,
+      "sortedColumn": {
+        "groupId": [[], []],
+        "measure": "payment_delay_days",
+        "order": "desc"
+      },
       "fieldMatching": {
         "gf_period": { "chain": "invoice_date", "type": "date", "offset": 0 }
       }
