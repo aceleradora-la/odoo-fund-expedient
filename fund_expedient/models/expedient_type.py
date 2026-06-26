@@ -136,10 +136,13 @@ class ExpedientTypeStageAssign(models.Model):
         store=True,
     )
     dynamic_placeholder_model = fields.Char(
-        default="fund.expedient",
-        readonly=True,
+        compute="_compute_dynamic_placeholder_model",
         help="Modelo de referencia para el selector de campos dinámicos (uso interno del widget).",
     )
+
+    def _compute_dynamic_placeholder_model(self):
+        for rec in self:
+            rec.dynamic_placeholder_model = "fund.expedient"
 
     display_name = fields.Char(
         compute="_compute_display_name",
@@ -268,10 +271,13 @@ class ExpedientType(models.Model):
         "(p. ej. {{ object.requestor_id.name }}); se completan al crear/cambiar el tipo.",
     )
     dynamic_placeholder_model = fields.Char(
-        default="fund.expedient",
-        readonly=True,
+        compute="_compute_dynamic_placeholder_model",
         help="Modelo de referencia para el selector de campos dinámicos (uso interno del widget).",
     )
+
+    def _compute_dynamic_placeholder_model(self):
+        for rec in self:
+            rec.dynamic_placeholder_model = "fund.expedient"
     stage_assign_ids = fields.One2many(
         "fund.expedient.type.stage.assign",
         "type_id",
