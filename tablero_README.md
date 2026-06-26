@@ -102,22 +102,22 @@ Pasos:
 
 Tres elementos sobre `account.move` (facturas de proveedor), midiendo **días hasta el pago**
 (`payment_delay_days`, promedio). Todos filtran `move_type=in_invoice`, `state=posted`,
-`payment_state in (paid, in_payment)`. Organizados en **dos hojas**:
+`payment_state in (paid, in_payment)`. **Una sola hoja** (el panel "Mi tablero" de Odoo solo muestra
+la primera hoja, por eso no se usan pestañas extra):
 
-| Hoja | Elemento | Tipo | Agrupado por |
+| Posición | Elemento | Tipo | Agrupado por |
 |---|---|---|---|
-| **Resumen** | Promedio general de días de pago (izquierda) | **tarjeta KPI** (`scorecard`) | — (valor del período + comparación) |
-| **Resumen** | Días promedio de pago por mes (derecha) | gráfico de líneas | `invoice_date:month` |
-| **Por proveedor** | Días promedio de pago por proveedor | **tabla pivote** (`=PIVOT(1)`) | `partner_id` (filas), ordenada por días desc |
+| Arriba izquierda | Promedio general de días de pago | **tarjeta KPI** (`scorecard`) | — (valor del período + comparación) |
+| Arriba derecha | Días promedio de pago por mes | gráfico de líneas | `invoice_date:month` |
+| Debajo (desde `A23`) | Días promedio de pago por proveedor | **tabla pivote** (`=PIVOT(1)`) | `partner_id` (filas), ordenada por días desc |
 
-La hoja **Resumen** es la vista ejecutiva (KPI + tendencia mensual); el detalle por proveedor vive en
-la hoja **Por proveedor** para no saturar la vista. Filtro global **Período** cableado a `invoice_date`
-(fecha de la factura) en los tres elementos, en ambas hojas.
+Filtro global **Período** cableado a `invoice_date` (fecha de la factura) en los tres elementos.
 
 **Tarjeta KPI con comparación interanual.** El scorecard no lee directamente del modelo: toma su
 valor (`keyValue`) y su línea base (`baseline`) de dos celdas auxiliares (`Datos!B1`/`Datos!B2`), cada
-una con una fórmula `=PIVOT.VALUE(n, "payment_delay_days")`. Esas celdas viven en una **hoja oculta
-`Datos`** (`isVisible: false`) para que no aparezcan a la vista en la hoja Resumen:
+una con una fórmula `=PIVOT.VALUE(n, "payment_delay_days")`. Esas celdas viven en una **segunda hoja
+`Datos`**: Odoo no la muestra en el panel "Mi tablero" (que solo renderiza la primera hoja), pero sus
+fórmulas igual se calculan y la tarjeta las referencia entre hojas. Así no ensucian la hoja principal:
 
 - Pivote `2` → `offset: 0` en el `fieldMatching` del período = **promedio del período seleccionado**.
 - Pivote `3` → `offset: -1` = **mismo período anterior**. El `offset` se mide en la granularidad del

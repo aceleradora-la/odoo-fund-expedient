@@ -3,16 +3,18 @@
   "sheets": [
     {
       "id": "sheet_resumen",
-      "name": "Resumen",
+      "name": "Tiempos de Pago",
       "colNumber": 26,
-      "rowNumber": 100,
+      "rowNumber": 1000,
       "rows": {},
       "cols": {},
       "merges": [],
       "cells": {
-        "A1": { "content": "Tablero de Tiempos de Pago" }
+        "A1": { "content": "Tablero de Tiempos de Pago" },
+        "A22": { "content": "Días promedio de pago por proveedor" },
+        "A23": { "content": "=PIVOT(1)" }
       },
-      "styles": { "A1": 1 },
+      "styles": { "A1": 1, "A22": 1 },
       "formats": {},
       "borders": {},
       "conditionalFormats": [],
@@ -84,30 +86,6 @@
       "comments": {}
     },
     {
-      "id": "sheet_proveedor",
-      "name": "Por proveedor",
-      "colNumber": 26,
-      "rowNumber": 1000,
-      "rows": {},
-      "cols": {},
-      "merges": [],
-      "cells": {
-        "A1": { "content": "Días promedio de pago por proveedor" },
-        "A3": { "content": "=PIVOT(1)" }
-      },
-      "styles": { "A1": 1 },
-      "formats": {},
-      "borders": {},
-      "conditionalFormats": [],
-      "dataValidationRules": [],
-      "figures": [],
-      "tables": [],
-      "areGridLinesVisible": false,
-      "isVisible": true,
-      "headerGroups": { "ROW": [], "COL": [] },
-      "comments": {}
-    },
-    {
       "id": "sheet_datos",
       "name": "Datos",
       "colNumber": 26,
@@ -129,7 +107,7 @@
       "figures": [],
       "tables": [],
       "areGridLinesVisible": true,
-      "isVisible": false,
+      "isVisible": true,
       "headerGroups": { "ROW": [], "COL": [] },
       "comments": {}
     }
