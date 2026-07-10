@@ -94,10 +94,24 @@
               groups="fund_expedient.group_fund_expedient_manager"/>
 
     <menuitem id="menu_fund_expedient_reports_spend_requests"
-              name="Solicitudes de Gasto"
+              name="Solicitudes de Gasto / Ingreso"
               parent="menu_fund_expedient_reports"
               action="action_fund_expedient_spend_request"
               sequence="30"
+              groups="fund_expedient.group_fund_expedient_manager"/>
+
+    <menuitem id="menu_fund_expedient_reports_locacion"
+              name="Contrataciones (Locación)"
+              parent="menu_fund_expedient_reports"
+              action="action_expedient_locacion_contrataciones"
+              sequence="40"
+              groups="fund_expedient.group_fund_expedient_manager"/>
+
+    <menuitem id="menu_fund_expedient_reports_locacion_projection"
+              name="Proyección de Locación"
+              parent="menu_fund_expedient_reports"
+              action="action_expedient_locacion_projection"
+              sequence="45"
               groups="fund_expedient.group_fund_expedient_manager"/>
 
     <menuitem id="menu_expedient_stage"

@@ -8,7 +8,7 @@
             <xpath expr="//field[@name='partner_id']" position="after">
                 <field name="expedient_ids" widget="many2many_tags"
                        options="{'no_create': True}"
-                       invisible="move_type not in ('in_invoice', 'in_refund')"/>
+                       invisible="move_type not in ('in_invoice', 'in_refund', 'out_invoice', 'out_refund')"/>
                 <field name="payment_date" readonly="1"
                        invisible="move_type != 'in_invoice' or not payment_date"/>
                 <field name="payment_delay_days" readonly="1"

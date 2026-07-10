@@ -12,7 +12,7 @@
         <field name="report_type">qweb-pdf</field>
         <field name="report_name">fund_expedient.report_fund_expedient_spend_request</field>
         <field name="report_file">fund_expedient.report_fund_expedient_spend_request</field>
-        <field name="print_report_name">'SG-%s' % (object.number or object.id)</field>
+        <field name="print_report_name">('SI-%s' if object.operation_type == 'income' else 'SG-%s') % (object.number or object.id)</field>
         <field name="binding_model_id" ref="model_fund_expedient_spend_request"/>
         <field name="binding_type">report</field>
     </record>
@@ -69,7 +69,8 @@
                     }
                 </style>
                 <h2 class="mb-1" style="font-size: 20px;">
-                    Solicitud de Gasto
+                    <span t-if="o.operation_type == 'income'">Solicitud de Ingreso</span>
+                    <span t-else="">Solicitud de Gasto</span>
                     <span t-if="o.number and o.number != '/'" t-esc="o.number"/>
                 </h2>
                 <!--

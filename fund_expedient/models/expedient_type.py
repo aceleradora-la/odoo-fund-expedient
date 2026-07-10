@@ -259,6 +259,26 @@ class ExpedientType(models.Model):
 
     name = fields.Char(required=True, string="Tipo")
     sequence = fields.Integer(default=10)
+    operation_type = fields.Selection(
+        [("expense", "Gasto"), ("income", "Ingreso")],
+        string="Tipo de operación",
+        default="expense",
+        required=True,
+        help="Gasto: el expediente genera Solicitud de Gasto y consume presupuesto. "
+        "Ingreso: genera Solicitud de Ingreso, se vincula a facturas de venta y suma al saldo presupuestario.",
+    )
+    contract_kind = fields.Selection(
+        [
+            ("none", "No aplica"),
+            ("service_lease", "Locación de Servicios"),
+            ("work_lease", "Locación de Obra"),
+        ],
+        string="Locación",
+        default="none",
+        required=True,
+        help="Si es Locación de Servicios u Obra, las líneas del expediente habilitan Fecha Inicio/Fin "
+        "y quedan disponibles los reportes de contratación y proyección mensual.",
+    )
     approval_currency_id = fields.Many2one(
         "res.currency",
         string="Moneda (tipo de expediente)",

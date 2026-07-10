@@ -69,6 +69,8 @@
                     <field name="can_edit_in_stage" invisible="1"/>
                     <field name="allowed_stage_ids" invisible="1"/>
                     <field name="stage_spend_request_mode" invisible="1"/>
+                    <field name="operation_type" invisible="1"/>
+                    <field name="contract_kind" invisible="1"/>
                     <field name="has_dispositions_feature" invisible="1"/>
                     <field name="has_resolutions_feature" invisible="1"/>
                     <field name="current_assign_require_disposition" invisible="1"/>
@@ -99,11 +101,19 @@
                     <button name="action_create_spend_request_initial" type="object"
                             string="Crear SG preventiva"
                             class="btn-secondary"
-                            invisible="state == 'cancel' or not can_edit_in_stage or stage_spend_request_mode != 'preventiva'"/>
+                            invisible="state == 'cancel' or not can_edit_in_stage or stage_spend_request_mode != 'preventiva' or operation_type == 'income'"/>
                     <button name="action_create_spend_request_final" type="object"
                             string="Crear SG Definitiva"
                             class="btn-secondary"
-                            invisible="state == 'cancel' or not can_edit_in_stage or stage_spend_request_mode != 'final'"/>
+                            invisible="state == 'cancel' or not can_edit_in_stage or stage_spend_request_mode != 'final' or operation_type == 'income'"/>
+                    <button name="action_create_spend_request_initial" type="object"
+                            string="Crear SI preventiva"
+                            class="btn-secondary"
+                            invisible="state == 'cancel' or not can_edit_in_stage or stage_spend_request_mode != 'preventiva' or operation_type != 'income'"/>
+                    <button name="action_create_spend_request_final" type="object"
+                            string="Crear SI Definitiva"
+                            class="btn-secondary"
+                            invisible="state == 'cancel' or not can_edit_in_stage or stage_spend_request_mode != 'final' or operation_type != 'income'"/>
                     <button name="action_cancel" type="object" string="Cancelar"
                             class="btn-danger" invisible="state == 'cancel' or not can_edit_in_stage"
                             confirm="¿Está seguro de que desea cancelar este expediente?"/>
@@ -234,6 +244,10 @@
                                            readonly="not parent.line_amount_final_editable"/>
                                     <field name="amount_final_line" readonly="1"
                                            column_invisible="not parent.line_amount_final_editable"/>
+                                    <field name="date_start"
+                                           column_invisible="parent.contract_kind == 'none'"/>
+                                    <field name="date_end"
+                                           column_invisible="parent.contract_kind == 'none'"/>
                                     <field name="analytic_account_id" optional="show"/>
                                     <field name="recommended_supplier_ids" widget="many2many_tags" optional="show"
                                            options="{'no_create': True, 'search_view_ref': 'fund_expedient.view_res_partner_recommended_supplier_search'}"
@@ -247,6 +261,11 @@
                                                 <field name="name" string="Descripción"/>
                                                 <field name="product_qty"/>
                                                 <field name="product_uom_id"/>
+                                                <field name="contract_kind" invisible="1"/>
+                                                <field name="date_start"
+                                                       invisible="contract_kind == 'none'"/>
+                                                <field name="date_end"
+                                                       invisible="contract_kind == 'none'"/>
                                             </group>
                                             <group>
                                                 <field name="currency_id" invisible="1"/>
@@ -593,9 +612,23 @@
                             </field>
                         </page>
                         <page string="Facturas" name="invoices"
-                              invisible="not can_view_invoices">
+                              invisible="not can_view_invoices or operation_type == 'income'">
                             <field name="direct_invoice_ids" nolabel="1"
                                    context="{'default_move_type': 'in_invoice'}">
+                                <list create="1" delete="1" open="1">
+                                    <field name="name"/>
+                                    <field name="partner_id"/>
+                                    <field name="invoice_date"/>
+                                    <field name="amount_total"/>
+                                    <field name="state"/>
+                                    <field name="move_type" column_invisible="1"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Facturas de venta" name="sale_invoices"
+                              invisible="not can_view_invoices or operation_type != 'income'">
+                            <field name="sale_invoice_ids" nolabel="1"
+                                   context="{'default_move_type': 'out_invoice'}">
                                 <list create="1" delete="1" open="1">
                                     <field name="name"/>
                                     <field name="partner_id"/>
@@ -648,8 +681,15 @@
                 <filter string="Aprobados" name="approved" domain="[('state', '=', 'approved')]"/>
                 <filter string="Cancelados" name="cancelled" domain="[('state', '=', 'cancel')]"/>
                 <filter string="Activos (no cancelados)" name="not_cancelled" domain="[('state', '!=', 'cancel')]"/>
+                <separator/>
+                <filter string="Gasto" name="op_expense" domain="[('operation_type', '=', 'expense')]"/>
+                <filter string="Ingreso" name="op_income" domain="[('operation_type', '=', 'income')]"/>
+                <filter string="Locación" name="is_locacion"
+                        domain="[('contract_kind', 'in', ('service_lease', 'work_lease'))]"/>
                 <group expand="0" string="Agrupar por">
                     <filter string="Etapa" name="group_stage" context="{'group_by': 'stage_id'}"/>
+                    <filter string="Tipo de operación" name="group_operation_type"
+                            context="{'group_by': 'operation_type'}"/>
                     <filter string="Solicitante" name="group_requestor" context="{'group_by': 'requestor_id'}"/>
                     <filter string="Sector requirente" name="group_department"
                             context="{'group_by': 'requestor_department_id'}"/>

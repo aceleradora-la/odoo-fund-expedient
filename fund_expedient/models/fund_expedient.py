@@ -231,6 +231,20 @@ class FundExpedient(models.Model):
         string="Tipo",
         tracking=True,
     )
+    operation_type = fields.Selection(
+        related="type_id.operation_type",
+        string="Tipo de operación",
+        store=True,
+        readonly=True,
+        help="Gasto o Ingreso, según el tipo de expediente. Determina la fuente de importes reales "
+        "(facturas de proveedor vs. de venta) y el signo en el control presupuestario.",
+    )
+    contract_kind = fields.Selection(
+        related="type_id.contract_kind",
+        string="Locación",
+        store=True,
+        readonly=True,
+    )
     description = fields.Html(
         string="Descripción/Memo",
         sanitize="email_outgoing",
@@ -422,6 +436,22 @@ class FundExpedient(models.Model):
         groups="account.group_account_readonly",
         help="Facturas de proveedor sin orden de compra. "
         "Las facturas desde OC se vinculan automáticamente.",
+    )
+    # Facturas de venta vinculadas (expedientes de ingreso). Comparten la misma
+    # tabla de relación que `direct_invoice_ids`, pero el dominio restringe la
+    # selección a facturas/notas de crédito de cliente. Los cómputos de importes
+    # filtran por `move_type`, de modo que un expediente de gasto y uno de
+    # ingreso nunca se contaminan entre sí.
+    sale_invoice_ids = fields.Many2many(
+        "account.move",
+        "fund_expedient_account_move_rel",
+        "expedient_id",
+        "move_id",
+        string="Facturas de venta",
+        copy=False,
+        domain="[('move_type', 'in', ('out_invoice', 'out_refund'))]",
+        groups="account.group_account_readonly",
+        help="Facturas de cliente vinculadas al expediente de ingreso.",
     )
     invoice_ids = fields.Many2many(
         "account.move",
@@ -1144,10 +1174,21 @@ class FundExpedient(models.Model):
             rec.payment_count = len(all_payments)
 
     def _invoices_data(self):
-        """Facturas (OC + directas) para cómputos y smart buttons."""
+        """Facturas reales para cómputos y smart buttons.
+
+        - Gasto: facturas de proveedor (in_invoice/in_refund) desde OC + directas.
+        - Ingreso: facturas de venta (out_invoice/out_refund) vinculadas.
+
+        Se filtra explícitamente por `move_type` porque las facturas de gasto e
+        ingreso comparten la tabla de relación (`fund_expedient_account_move_rel`).
+        """
         self.ensure_one()
+        linked = self._direct_invoices_data()
+        if self.operation_type == "income":
+            return linked.filtered(lambda m: m.move_type in ("out_invoice", "out_refund"))
         invoices_po = self._purchase_orders_data().mapped("invoice_ids")
-        return invoices_po | self._direct_invoices_data()
+        purchase_direct = linked.filtered(lambda m: m.move_type in ("in_invoice", "in_refund"))
+        return invoices_po | purchase_direct
 
     @api.depends_context("uid")
     def _compute_invoice_ids(self):
@@ -1166,6 +1207,7 @@ class FundExpedient(models.Model):
         "company_id",
         "currency_id",
         "approval_currency_id",
+        "operation_type",
     )
     @api.depends_context("uid")
     def _compute_amounts_unit(self):
@@ -1205,12 +1247,14 @@ class FundExpedient(models.Model):
                 committed_unit += company_currency._convert(pending_cc, unit_currency, company, po_date)
             rec.amount_committed_unit = committed_unit
 
-            # Real: facturas posteadas (desde OC o directas) convertido a moneda del tipo por fecha de factura.
+            # Real: facturas posteadas convertidas a moneda del tipo por fecha de factura.
+            # Signo según operación (ver _compute_amounts): ingreso +, gasto −.
+            real_sign = 1.0 if rec.operation_type == "income" else -1.0
             all_invoices = rec._invoices_data().filtered(lambda m: m.state == "posted")
             real_unit = 0.0
             for inv in all_invoices:
                 inv_date = inv.invoice_date or inv.date
-                signed = -inv.amount_total_signed
+                signed = real_sign * inv.amount_total_signed
                 amt_cc = inv.currency_id._convert(signed, company_currency, company, inv_date)
                 real_unit += company_currency._convert(amt_cc, unit_currency, company, inv_date)
             rec.amount_real_unit = real_unit
@@ -1234,7 +1278,7 @@ class FundExpedient(models.Model):
                 rec.amount_estimated_confirmed, unit_currency, company, rec.request_date
             )
 
-    @api.depends("company_id")
+    @api.depends("company_id", "operation_type")
     @api.depends_context("uid")
     def _compute_amounts(self):
         for rec in self:
@@ -1264,13 +1308,15 @@ class FundExpedient(models.Model):
                 amount_committed += pending_cc
             rec.amount_committed = amount_committed
 
-            # Total Real: facturas posteadas (desde OC o directas)
+            # Total Real: facturas posteadas.
+            #  - Gasto: facturas de proveedor (amount_total_signed negativo) → magnitud positiva con -signed.
+            #  - Ingreso: facturas de venta (amount_total_signed positivo) → magnitud positiva con +signed.
+            real_sign = 1.0 if rec.operation_type == "income" else -1.0
             all_invoices = rec._invoices_data().filtered(lambda m: m.state == "posted")
             amount_real = 0.0
             for inv in all_invoices:
                 inv_date = inv.invoice_date or inv.date
-                # amount_total_signed: negativo para facturas, positivo para devoluciones
-                signed = -inv.amount_total_signed
+                signed = real_sign * inv.amount_total_signed
                 amt_cc = inv.currency_id._convert(
                     signed, company_currency, rec.company_id, inv_date
                 )
@@ -1836,15 +1882,19 @@ class FundExpedient(models.Model):
         self.ensure_one()
         if not self._user_can_read_account_moves():
             raise UserError(_("No tiene permisos de Contabilidad para ver las facturas."))
+        default_move_type = (
+            "out_invoice" if self.operation_type == "income" else "in_invoice"
+        )
+        name = "Facturas de venta" if self.operation_type == "income" else "Facturas"
         return {
             "type": "ir.actions.act_window",
-            "name": "Facturas",
+            "name": name,
             "res_model": "account.move",
             "view_mode": "list,form",
             "domain": [("id", "in", self.invoice_ids.ids)],
             "context": {
                 "default_expedient_ids": [(4, self.id)],
-                "default_move_type": "in_invoice",
+                "default_move_type": default_move_type,
             },
         }
 

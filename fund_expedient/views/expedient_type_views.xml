@@ -8,6 +8,8 @@
             <list string="Tipos de expediente" create="1" delete="1" edit="1">
                 <field name="sequence" widget="handle"/>
                 <field name="name"/>
+                <field name="operation_type"/>
+                <field name="contract_kind"/>
                 <field name="company_id" groups="base.group_multi_company"/>
             </list>
         </field>
@@ -24,6 +26,8 @@
                         <group>
                             <field name="name"/>
                             <field name="sequence"/>
+                            <field name="operation_type"/>
+                            <field name="contract_kind"/>
                         </group>
                         <group>
                             <field name="approval_currency_id"/>

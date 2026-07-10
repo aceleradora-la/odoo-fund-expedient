@@ -79,6 +79,12 @@ class ExpedientLine(models.Model):
         store=True,
         readonly=True,
     )
+    contract_kind = fields.Selection(
+        related="expedient_id.contract_kind",
+        string="Locación",
+        store=True,
+        readonly=True,
+    )
     # Precio unitario y total estimado: el precio unitario es el dato
     # cargado por el usuario; el total se calcula automáticamente como
     # `price_unit_estimated * product_qty`. Se mantiene `inverse` para
@@ -103,6 +109,11 @@ class ExpedientLine(models.Model):
         currency_field="currency_id",
         default=0.0,
     )
+    # Fechas de vigencia de la línea (solo para expedientes de locación de
+    # servicios/obra). Se usan en el reporte de contratación y para prorratear
+    # el importe en la proyección mensual de flujo de caja.
+    date_start = fields.Date(string="Fecha inicio")
+    date_end = fields.Date(string="Fecha fin")
     amount_final_line = fields.Monetary(
         string="Importe definitivo",
         currency_field="currency_id",
@@ -140,6 +151,47 @@ class ExpedientLine(models.Model):
         for rec in self:
             if rec.product_qty:
                 rec.price_unit_final = rec.amount_final_line / rec.product_qty
+
+    # Campos auxiliares para el reporte de contratación (Locación). El proveedor
+    # contratado y las facturas reales se vinculan a nivel expediente (no de
+    # línea), por eso los traemos como computados desde el expediente.
+    contracted_supplier_ids = fields.Many2many(
+        "res.partner",
+        string="Proveedor contratado (OC)",
+        compute="_compute_contract_report_fields",
+        help="Proveedores de las órdenes de compra vinculadas al expediente.",
+    )
+    expedient_amount_real = fields.Monetary(
+        string="Facturas reales",
+        currency_field="currency_id",
+        compute="_compute_contract_report_fields",
+        help="Total real facturado del expediente (facturas de proveedor o de venta según la operación).",
+    )
+
+    @api.depends(
+        "expedient_id.purchase_order_ids.partner_id",
+        "expedient_id.amount_real",
+    )
+    def _compute_contract_report_fields(self):
+        for rec in self:
+            exp = rec.expedient_id
+            if not exp:
+                rec.contracted_supplier_ids = False
+                rec.expedient_amount_real = 0.0
+                continue
+            # sudo: `purchase_order_ids` está restringido al grupo de compras;
+            # este campo es informativo (reporte) y debe poder leerse aunque el
+            # usuario no tenga permisos de Compras, sin romper la ficha.
+            rec.contracted_supplier_ids = exp.sudo().purchase_order_ids.mapped("partner_id")
+            rec.expedient_amount_real = exp.amount_real
+
+    @api.constrains("date_start", "date_end")
+    def _check_contract_dates(self):
+        for rec in self:
+            if rec.date_start and rec.date_end and rec.date_end < rec.date_start:
+                raise ValidationError(
+                    _("La Fecha fin no puede ser anterior a la Fecha inicio en la línea del expediente.")
+                )
 
     @api.model
     def _default_uom(self):

@@ -4,7 +4,7 @@
 {
     "name": "Fundación - Expedientes",
     "summary": "Gestión de expedientes con etapas, cuentas analíticas y relaciones con compras y proyectos",
-    "version": "18.0.4.10",
+    "version": "18.0.5.0",
     "category": "Administration",
     "website": "https://aceleradora.la",
     "author": "aceleradora.la",
@@ -50,6 +50,7 @@
         "views/expedient_disposition_report_views.xml",
         "views/expedient_resolution_report_views.xml",
         "views/expedient_spend_request_views.xml",
+        "views/expedient_locacion_report_views.xml",
         "reports/fund_expedient_spend_request_report.xml",
         "views/fund_expedient_menus.xml",
     ],

@@ -72,7 +72,7 @@ class FundBudgetAnalyticReport(models.Model):
                         b.id AS budget_id,
                         e.analytic_account_id,
                         0 AS month,
-                        SUM(e.amount_committed) AS amount_committed
+                        SUM(e.amount_committed * CASE WHEN e.operation_type = 'income' THEN -1 ELSE 1 END) AS amount_committed
                     FROM fund_budget b
                     JOIN fund_expedient e
                         ON e.company_id = b.company_id
@@ -84,7 +84,7 @@ class FundBudgetAnalyticReport(models.Model):
                         b.id AS budget_id,
                         e.analytic_account_id,
                         EXTRACT(MONTH FROM e.request_date)::int AS month,
-                        SUM(e.amount_committed) AS amount_committed
+                        SUM(e.amount_committed * CASE WHEN e.operation_type = 'income' THEN -1 ELSE 1 END) AS amount_committed
                     FROM fund_budget b
                     JOIN fund_expedient e
                         ON e.company_id = b.company_id
@@ -97,7 +97,7 @@ class FundBudgetAnalyticReport(models.Model):
                         b.id AS budget_id,
                         e.analytic_account_id,
                         0 AS month,
-                        SUM(e.amount_real) AS amount_real
+                        SUM(e.amount_real * CASE WHEN e.operation_type = 'income' THEN -1 ELSE 1 END) AS amount_real
                     FROM fund_budget b
                     JOIN fund_expedient e
                         ON e.company_id = b.company_id
@@ -109,7 +109,7 @@ class FundBudgetAnalyticReport(models.Model):
                         b.id AS budget_id,
                         e.analytic_account_id,
                         EXTRACT(MONTH FROM e.request_date)::int AS month,
-                        SUM(e.amount_real) AS amount_real
+                        SUM(e.amount_real * CASE WHEN e.operation_type = 'income' THEN -1 ELSE 1 END) AS amount_real
                     FROM fund_budget b
                     JOIN fund_expedient e
                         ON e.company_id = b.company_id

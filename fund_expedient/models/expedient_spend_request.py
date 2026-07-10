@@ -23,6 +23,15 @@ class FundExpedientSpendRequest(models.Model):
     approval_currency_id = fields.Many2one(
         related="expedient_id.approval_currency_id", store=True, readonly=True
     )
+    # Gasto o Ingreso, heredado del tipo de expediente. Determina la numeración
+    # (SG- vs SI-), el título del reporte y las etiquetas de la vista. Almacenado
+    # para poder filtrar/agrupar y separar "Solicitudes de Gasto" de "de Ingreso".
+    operation_type = fields.Selection(
+        related="expedient_id.type_id.operation_type",
+        string="Tipo de operación",
+        store=True,
+        readonly=True,
+    )
     # Lookup informativo (no se guarda): trae el "Número por tipo" del expediente para
     # identificar visualmente la SG según el tipo. La numeración real vive en el expediente.
     expedient_type_number = fields.Char(
@@ -200,7 +209,7 @@ class FundExpedientSpendRequest(models.Model):
     )
     display_name = fields.Char(compute="_compute_display_name", store=True)
 
-    @api.depends("expedient_id.number", "number", "spend_state")
+    @api.depends("expedient_id.number", "number", "spend_state", "operation_type")
     def _compute_display_name(self):
         for rec in self:
             exp = rec.expedient_id.number if rec.expedient_id and rec.expedient_id.number else ""
@@ -212,7 +221,10 @@ class FundExpedientSpendRequest(models.Model):
                 state_lbl = _("Definitiva")
             parts = [p for p in [num, state_lbl] if p]
             label = " · ".join(parts) if parts else ""
-            rec.display_name = f"SG {exp} {label}".strip() if exp or label else _("Solicitud de Gasto")
+            is_income = rec.operation_type == "income"
+            prefix = "SI" if is_income else "SG"
+            fallback = _("Solicitud de Ingreso") if is_income else _("Solicitud de Gasto")
+            rec.display_name = f"{prefix} {exp} {label}".strip() if exp or label else fallback
 
     def _search_expedient_type_number(self, operator, value):
         """Buscar por el número por tipo sin almacenarlo en la SG."""
@@ -240,8 +252,16 @@ class FundExpedientSpendRequest(models.Model):
                 )
         return super().create(vals_list)
 
-    def _next_number(self, code):
+    def _sequence_code(self):
+        """Código de secuencia según la operación: gasto (SG-) o ingreso (SI-)."""
         self.ensure_one()
+        if self.operation_type == "income":
+            return "fund.expedient.income.request"
+        return "fund.expedient.spend.request"
+
+    def _next_number(self, code=None):
+        self.ensure_one()
+        code = code or self._sequence_code()
         seq_env = self.env["ir.sequence"].with_company(self.company_id)
         return seq_env.next_by_code(code) or "/"
 
@@ -258,6 +278,8 @@ class FundExpedientSpendRequest(models.Model):
             "price_unit_final": line.price_unit_final or 0.0,
             "amount_final_line": line.amount_final_line or 0.0,
             "analytic_account_id": line.analytic_account_id.id,
+            "date_start": line.date_start,
+            "date_end": line.date_end,
         }
 
     def _snapshot_lines_from_expedient(self, exp, replace=False):
@@ -291,7 +313,7 @@ class FundExpedientSpendRequest(models.Model):
         if exp.stage_id.spend_request_mode != "preventiva":
             raise UserError(_("La etapa actual no permite crear Solicitud de Gasto preventiva."))
         if not self.number or self.number == "/":
-            self.number = self._next_number("fund.expedient.spend.request")
+            self.number = self._next_number()
         self.write(
             {
                 "spend_state": "preventiva",
@@ -431,6 +453,8 @@ class FundExpedientSpendRequestLine(models.Model):
         currency_field="currency_id",
         readonly=True,
     )
+    date_start = fields.Date(string="Fecha inicio", readonly=True)
+    date_end = fields.Date(string="Fecha fin", readonly=True)
 
     @api.constrains("product_id", "name", "display_type")
     def _check_name_required(self):
