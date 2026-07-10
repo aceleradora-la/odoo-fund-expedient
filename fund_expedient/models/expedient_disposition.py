@@ -1,8 +1,8 @@
 # Copyright 2026
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 
-from odoo import api, fields, models
-from odoo.exceptions import ValidationError
+from odoo import _, api, fields, models
+from odoo.exceptions import UserError, ValidationError
 
 
 class FundExpedientDisposition(models.Model):
@@ -39,6 +39,54 @@ class FundExpedientDisposition(models.Model):
         default=fields.Date.context_today,
         help="Fecha asociada a la disposición. Por defecto se propone la fecha de hoy.",
     )
+    disposition_type = fields.Selection(
+        selection=[
+            ("adjudicacion", "Adjudicación"),
+            ("desierto", "Declarar Desierto"),
+            ("sin_efecto", "Dejar sin efecto"),
+            ("fracasado", "Declarar Fracasado"),
+        ],
+        string="Tipo de disposición",
+        default="adjudicacion",
+        required=True,
+        help="Adjudicación: el proceso continúa con las etapas siguientes. "
+        "Desierto / Sin efecto / Fracasado: al aplicar la disposición, el expediente "
+        "se cierra en la etapa final correspondiente a ese resultado.",
+    )
+    outcome_applied = fields.Boolean(
+        string="Resultado aplicado",
+        compute="_compute_outcome_applied",
+        help="True si el expediente ya está en la etapa final que corresponde a esta disposición.",
+    )
+
+    @api.depends("disposition_type", "expedient_id.stage_id", "expedient_id.stage_id.final_outcome")
+    def _compute_outcome_applied(self):
+        for rec in self:
+            rec.outcome_applied = bool(
+                rec.disposition_type
+                and rec.disposition_type != "adjudicacion"
+                and rec.expedient_id
+                and rec.expedient_id.stage_id.final_outcome == rec.disposition_type
+            )
+
+    def action_apply_disposition(self):
+        """Cierra el expediente en la etapa final según el tipo de disposición.
+
+        Solo aplica para Desierto / Sin efecto / Fracasado; con Adjudicación el
+        flujo sigue su curso normal y este botón no está disponible.
+        """
+        for rec in self:
+            if rec.disposition_type == "adjudicacion":
+                raise UserError(
+                    _(
+                        "La disposición de Adjudicación no cierra el expediente: "
+                        "el proceso continúa con las etapas siguientes."
+                    )
+                )
+            rec.expedient_id._apply_disposition_outcome(
+                rec.disposition_type, disposition=rec
+            )
+        return True
     name = fields.Char(
         string="Disposición",
         compute="_compute_name",

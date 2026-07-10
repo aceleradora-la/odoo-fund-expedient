@@ -296,3 +296,7 @@ def post_init_hook(cr_or_env, registry=None):
         if moves:
             moves._compute_payment_delay()
             moves.flush_recordset(["payment_date", "payment_delay_days"])
+
+    # Vistas de etapas generadas por código: crearlas si faltan y reescribir el
+    # arch cuando se agregan campos nuevos (p. ej. `final_outcome`).
+    env["fund.expedient.stage"].init_expedient_stage_view()

@@ -414,8 +414,23 @@
                                     <field name="stage_id" options="{'no_create': True}"/>
                                     <field name="number" readonly="1"/>
                                     <field name="disposition_date"/>
+                                    <field name="disposition_type"/>
+                                    <field name="outcome_applied" column_invisible="1"/>
+                                    <button name="action_apply_disposition" type="object"
+                                            string="Aplicar disposición"
+                                            class="btn-warning"
+                                            confirm="El expediente se cerrará en la etapa final correspondiente al resultado de esta disposición. ¿Continuar?"
+                                            invisible="disposition_type == 'adjudicacion' or outcome_applied"/>
                                 </list>
                                 <form string="Disposición">
+                                    <header>
+                                        <field name="outcome_applied" invisible="1"/>
+                                        <button name="action_apply_disposition" type="object"
+                                                string="Aplicar disposición"
+                                                class="btn-warning"
+                                                confirm="El expediente se cerrará en la etapa final correspondiente al resultado de esta disposición. ¿Continuar?"
+                                                invisible="disposition_type == 'adjudicacion' or outcome_applied"/>
+                                    </header>
                                     <group>
                                         <group>
                                             <field name="expedient_id" readonly="1"/>
@@ -423,6 +438,7 @@
                                             <field name="sequence"/>
                                             <field name="number" readonly="1"/>
                                             <field name="disposition_date"/>
+                                            <field name="disposition_type"/>
                                         </group>
                                     </group>
                                     <group>
@@ -679,6 +695,7 @@
                 <separator/>
                 <filter string="Por aprobar" name="to_approve" domain="[('state', '=', 'to_approve')]"/>
                 <filter string="Aprobados" name="approved" domain="[('state', '=', 'approved')]"/>
+                <filter string="Sin adjudicar" name="no_award" domain="[('state', '=', 'no_award')]"/>
                 <filter string="Cancelados" name="cancelled" domain="[('state', '=', 'cancel')]"/>
                 <filter string="Activos (no cancelados)" name="not_cancelled" domain="[('state', '!=', 'cancel')]"/>
                 <separator/>

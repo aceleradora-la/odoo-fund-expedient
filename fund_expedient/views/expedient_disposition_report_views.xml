@@ -10,6 +10,7 @@
                 <field name="expedient_id"/>
                 <field name="stage_id"/>
                 <field name="disposition_date"/>
+                <field name="disposition_type"/>
                 <field name="company_id" groups="base.group_multi_company"/>
             </list>
         </field>
@@ -21,6 +22,7 @@
         <field name="type">pivot</field>
         <field name="arch" type="xml">
             <pivot string="Disposiciones - Análisis">
+                <field name="disposition_type" type="row"/>
                 <field name="stage_id" type="row"/>
                 <field name="expedient_id" type="row"/>
                 <field name="disposition_date" interval="month" type="col"/>

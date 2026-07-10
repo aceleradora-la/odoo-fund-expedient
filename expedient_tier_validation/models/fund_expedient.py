@@ -318,6 +318,14 @@ class FundExpedient(models.Model):
                     "Solo los usuarios asignados a la etapa actual pueden pasar a la siguiente."
                 )
             )
+        if self.stage_id.final_outcome:
+            raise UserError(
+                _(
+                    "El expediente está cerrado como «%s»; no puede avanzar de etapa. "
+                    "Solo puede cancelarse si corresponde."
+                )
+                % self.stage_id.name
+            )
         self._check_spend_request_before_leave_stage()
         if not self.env.context.get("skip_document_check"):
             self._check_required_documents_before_leave_stage()

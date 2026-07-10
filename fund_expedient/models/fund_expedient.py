@@ -284,6 +284,7 @@ class FundExpedient(models.Model):
             ("purchases", "Compras"),
             ("to_approve", "Por aprobar"),
             ("approved", "Aprobado"),
+            ("no_award", "Sin adjudicar"),
             ("cancel", "Cancelado"),
         ],
         string="Estado",
@@ -766,6 +767,7 @@ class FundExpedient(models.Model):
         "type_id",
         "type_id.stage_assign_ids",
         "type_id.stage_assign_ids.stage_id",
+        "type_id.stage_assign_ids.stage_id.final_outcome",
         "type_id.stage_assign_ids.is_final_stage",
         "stage_id",
         "company_id",
@@ -794,12 +796,21 @@ class FundExpedient(models.Model):
                     and rec.stage_id.id in ordered.ids
                 ):
                     idx = ordered.ids.index(rec.stage_id.id)
-                    rec.allowed_stage_ids = ordered[: idx + 1]
+                    allowed = ordered[: idx + 1]
                 else:
-                    rec.allowed_stage_ids = ordered
+                    allowed = ordered
+                # Las etapas de resultado final (Desierto/Sin efecto/Fracasado)
+                # no se ofrecen en el statusbar: se llega a ellas solo con la
+                # Disposición. Si el expediente YA está en una, se muestra.
+                rec.allowed_stage_ids = allowed.filtered(
+                    lambda s: not s.final_outcome or s == rec.stage_id
+                )
             else:
-                rec.allowed_stage_ids = Stage.search(
+                stages = Stage.search(
                     [("company_id", "in", [False, rec.company_id.id])], order="sequence, id"
+                )
+                rec.allowed_stage_ids = stages.filtered(
+                    lambda s: not s.final_outcome or s == rec.stage_id
                 )
 
     @api.onchange("type_id")
@@ -931,15 +942,26 @@ class FundExpedient(models.Model):
             rec.project_count = len(rec.project_ids)
 
     def _get_allowed_stages(self):
-        """Etapas permitidas para el expediente según su tipo (asignaciones por etapa del tipo)."""
+        """Etapas del flujo SECUENCIAL del expediente según su tipo.
+
+        Excluye las etapas con `final_outcome` (Desierto/Sin efecto/Fracasado):
+        son cierres alternativos a los que solo se llega aplicando una
+        Disposición; nunca por "Siguiente etapa" ni por el avance del portal.
+        """
         Stage = self.env["fund.expedient.stage"]
         for rec in self:
             if rec.type_id and rec.type_id.stage_assign_ids:
-                allowed = rec.type_id.stage_assign_ids.mapped("stage_id")
+                allowed = rec.type_id.stage_assign_ids.mapped("stage_id").filtered(
+                    lambda s: not s.final_outcome
+                )
                 yield rec, allowed.sorted(key=lambda s: (s.sequence, s.id))
             else:
                 all_stages = Stage.search(
-                    [("company_id", "in", [False, rec.company_id.id])], order="sequence, id"
+                    [
+                        ("company_id", "in", [False, rec.company_id.id]),
+                        ("final_outcome", "=", False),
+                    ],
+                    order="sequence, id",
                 )
                 yield rec, all_stages
 
@@ -1047,6 +1069,14 @@ class FundExpedient(models.Model):
                     _(
                         "Solo los usuarios asignados a la etapa actual pueden pasar a la siguiente."
                     )
+                )
+            if rec.stage_id.final_outcome:
+                raise UserError(
+                    _(
+                        "El expediente está cerrado como «%s»; no puede avanzar de etapa. "
+                        "Solo puede cancelarse si corresponde."
+                    )
+                    % rec.stage_id.name
                 )
             if not self.env.context.get("skip_document_check"):
                 rec._check_required_documents_before_leave_stage()
@@ -1840,6 +1870,82 @@ class FundExpedient(models.Model):
         if not cancel_stage:
             raise UserError("No existe una etapa de tipo 'Cancelado' configurada.")
         return self.write({"stage_id": cancel_stage.id})
+
+    def _find_outcome_stage(self, outcome):
+        """Etapa final del flujo para un resultado (desierto/sin_efecto/fracasado).
+
+        Si el tipo define asignaciones por etapa, la etapa debe estar en el flujo
+        del tipo (igual criterio que el resto de las etapas). Sin tipo/asignaciones,
+        se busca globalmente por compañía.
+        """
+        self.ensure_one()
+        if self.type_id and self.type_id.stage_assign_ids:
+            stages = (
+                self.type_id.stage_assign_ids.mapped("stage_id")
+                .filtered(lambda s: s.final_outcome == outcome)
+                .sorted(key=lambda s: (s.sequence, s.id))
+            )
+            return stages[:1]
+        return self.env["fund.expedient.stage"].search(
+            [
+                ("final_outcome", "=", outcome),
+                ("company_id", "in", [False, self.company_id.id]),
+            ],
+            order="sequence, id",
+            limit=1,
+        )
+
+    def _apply_disposition_outcome(self, outcome, disposition=None):
+        """Cierra el expediente en la etapa final del resultado indicado.
+
+        Se invoca desde la Disposición (botón «Aplicar disposición»). El salto
+        omite las validaciones de salida de etapa (SG, documentos, disposición,
+        resolución, notificación y tier): declarar desierto/sin efecto/fracasado
+        es un cierre administrativo, análogo a Cancelar. El permiso de etapa
+        (usuarios asignados) sí se exige.
+        """
+        self.ensure_one()
+        if not self.can_edit_in_stage:
+            raise UserError(
+                _(
+                    "Solo los usuarios asignados a la etapa actual pueden aplicar "
+                    "la disposición y cerrar el expediente."
+                )
+            )
+        target = self._find_outcome_stage(outcome)
+        if not target:
+            raise UserError(
+                _(
+                    "No hay una etapa final configurada para el resultado «%s». "
+                    "Cree una etapa con ese Resultado final y agréguela a las "
+                    "Asignaciones por etapa del tipo de expediente."
+                )
+                % dict(
+                    self.env["fund.expedient.stage"]._fields["final_outcome"].selection
+                ).get(outcome, outcome)
+            )
+        if self.stage_id == target:
+            return True
+        old_stage = self.stage_id
+        self.with_context(
+            skip_validation_check=True,
+            skip_spend_request_check=True,
+            skip_document_check=True,
+            skip_disposition_check=True,
+            skip_resolution_check=True,
+            skip_notification_check=True,
+        ).write({"stage_id": target.id})
+        self.message_post(
+            body=_(
+                "El expediente pasó de la etapa <b>%(old)s</b> a <b>%(new)s</b> "
+                "por aplicación de la disposición %(disp)s.",
+                old=old_stage.name or "",
+                new=target.name,
+                disp=disposition.name if disposition else "",
+            ),
+            subtype_xmlid="mail.mt_note",
+        )
+        return True
 
     def action_view_purchase_orders(self):
         self.ensure_one()
