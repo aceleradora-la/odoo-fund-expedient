@@ -402,6 +402,36 @@ class FundExpedient(models.Model):
         help="Usuarios que pueden operar en la etapa actual según la configuración del tipo/etapa. "
         "Se almacena para poder filtrar expedientes 'asignados a mí' desde la búsqueda.",
     )
+    # ------------------------------------------------------------------
+    # Responsable actual ("quién tiene el expediente")
+    #
+    # No se almacenan: dependen de las tier reviews (otro modelo, que cambia
+    # sin escribir el expediente), por lo que almacenarlos exigiría invalidar
+    # a mano en cada transición de aprobación. Se recalculan al leer.
+    # ------------------------------------------------------------------
+    holder_user_ids = fields.Many2many(
+        "res.users",
+        compute="_compute_holder",
+        search="_search_holder_user_ids",
+        string="En poder de",
+        help="Quién debe actuar sobre el expediente ahora: los aprobadores pendientes "
+        "si hay una validación en curso (del expediente o de su Solicitud), o los "
+        "usuarios asignados a la etapa actual en caso contrario.",
+    )
+    holder_reason = fields.Selection(
+        selection=[
+            ("stage", "Asignado por etapa"),
+            ("expedient_approval", "Esperando aprobación del expediente"),
+            ("spend_request_approval", "Esperando aprobación de la solicitud"),
+        ],
+        compute="_compute_holder",
+        string="Motivo",
+    )
+    holder_summary = fields.Char(
+        compute="_compute_holder",
+        string="Situación actual",
+        help="Texto listo para mostrar: motivo + responsables actuales.",
+    )
     project_ids = fields.Many2many(
         "project.project",
         "fund_expedient_project_rel",
@@ -2117,3 +2147,103 @@ class FundExpedient(models.Model):
                 continue
             users = rec._get_assignable_user_ids()
             rec.assignable_user_ids = [(6, 0, users.ids)]
+
+    # ------------------------------------------------------------------
+    # Responsable actual del expediente
+    #
+    # `_get_pending_approval_info` y `_search_ids_with_pending_approval` son
+    # puntos de extensión: el módulo base no conoce las tier reviews, así que
+    # devuelven "sin aprobaciones pendientes". `expedient_tier_validation` los
+    # sobreescribe para mirar las reviews del expediente y de su Solicitud.
+    # ------------------------------------------------------------------
+
+    def _get_pending_approval_info(self):
+        """Aprobaciones pendientes del expediente.
+
+        Devuelve la tupla ``(users, reason, label)``:
+        - ``users``: recordset de ``res.users`` que deben aprobar ahora.
+        - ``reason``: valor de ``holder_reason`` (``expedient_approval`` o
+          ``spend_request_approval``), o False si no hay nada pendiente.
+        - ``label``: texto de contexto para el cartel (p. ej. la etapa o la fase).
+        """
+        self.ensure_one()
+        return self.env["res.users"], False, ""
+
+    @api.model
+    def _search_ids_with_pending_approval(self, user):
+        """Ids de expedientes con aprobaciones pendientes.
+
+        Devuelve ``(ids_con_pendientes, ids_pendientes_de_user)``: el primer
+        conjunto sirve para excluir del filtro "En mi poder" a los asignados de
+        etapa cuando el expediente está esperando una aprobación; el segundo,
+        para el filtro "Esperando mi aprobación".
+        """
+        return set(), set()
+
+    def _holder_names_text(self, users, limit=6):
+        """Nombres de los responsables, truncados para no romper el cartel."""
+        names = users.mapped("name")
+        if len(names) > limit:
+            return _(
+                "%(names)s y %(extra)s más",
+                names=", ".join(names[:limit]),
+                extra=len(names) - limit,
+            )
+        return ", ".join(names)
+
+    @api.depends(
+        "stage_id",
+        "assignable_user_ids",
+    )
+    def _compute_holder(self):
+        for rec in self:
+            users, reason, label = rec._get_pending_approval_info()
+            if users and reason:
+                # `label` describe qué se está aprobando (la etapa o la fase de
+                # la solicitud); lo aporta el módulo de tier validation.
+                rec.holder_user_ids = [(6, 0, users.ids)]
+                rec.holder_reason = reason
+                rec.holder_summary = _(
+                    "Esperando aprobación de %(what)s: %(users)s",
+                    what=label or _("este expediente"),
+                    users=rec._holder_names_text(users),
+                )
+                continue
+
+            # `assignable_user_ids` ya está almacenado y se calcula con
+            # `_get_assignable_user_ids()`: usarlo evita un search por registro
+            # (importante en kanban/lista, que computan por lote).
+            stage_users = rec.assignable_user_ids if rec.stage_id else rec.env["res.users"]
+            if stage_users:
+                rec.holder_user_ids = [(6, 0, stage_users.ids)]
+                rec.holder_reason = "stage"
+                rec.holder_summary = _(
+                    "En la etapa «%(stage)s» el expediente está en manos de: %(users)s",
+                    stage=rec.stage_id.name or "",
+                    users=rec._holder_names_text(stage_users),
+                )
+            else:
+                # Sin asignación configurada para la etapa: cualquiera con
+                # permisos puede operar, así que no afirmamos un responsable.
+                rec.holder_user_ids = [(6, 0, [])]
+                rec.holder_reason = False
+                rec.holder_summary = ""
+
+    def _search_holder_user_ids(self, operator, value):
+        """Buscar por responsable actual (no se puede sobre un compute sin store).
+
+        Se resuelve a ids: quienes esperan aprobación del usuario, más los
+        expedientes asignados a él por etapa que NO estén esperando aprobación
+        (en ese caso el responsable son los aprobadores, no el asignado).
+        """
+        if operator not in ("in", "not in", "=", "!=") or not value:
+            raise UserError(
+                _("La búsqueda por «En poder de» solo admite igualdad sobre usuarios.")
+            )
+        user_ids = value if isinstance(value, (list, tuple)) else [value]
+        users = self.env["res.users"].browse(user_ids)
+        pending_all, pending_mine = self._search_ids_with_pending_approval(users)
+        assigned = self.search([("assignable_user_ids", "in", users.ids)])
+        holder_ids = set(pending_mine) | (set(assigned.ids) - set(pending_all))
+        negative = operator in ("not in", "!=")
+        return [("id", "not in" if negative else "in", list(holder_ids))]

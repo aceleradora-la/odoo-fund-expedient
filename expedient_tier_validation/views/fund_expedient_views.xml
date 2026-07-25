@@ -39,4 +39,20 @@
             </xpath>
         </field>
     </record>
+
+    <!--
+        Filtro "Esperando mi aprobación": vive en este módulo porque depende de
+        las tier reviews (del expediente o de su Solicitud).
+    -->
+    <record id="view_fund_expedient_search_tier_validation" model="ir.ui.view">
+        <field name="name">fund.expedient.search.tier.validation</field>
+        <field name="model">fund.expedient</field>
+        <field name="inherit_id" ref="fund_expedient.view_fund_expedient_search"/>
+        <field name="arch" type="xml">
+            <xpath expr="//filter[@name='my_holder']" position="after">
+                <filter string="Esperando mi aprobación" name="pending_my_approval"
+                        domain="[('pending_my_approval', '=', True)]"/>
+            </xpath>
+        </field>
+    </record>
 </odoo>

@@ -4,7 +4,7 @@
 {
     "name": "Expedientes - Validación por niveles",
     "summary": "Extiende los expedientes con un proceso de validación por niveles (tier validation).",
-    "version": "18.0.4.8",
+    "version": "18.0.4.9",
     "category": "Administration",
     "website": "https://aceleradora.la",
     "author": "aceleradora.la",

@@ -16,6 +16,8 @@
                 <field name="encuadre_id"/>
                 <field name="type_id"/>
                 <field name="stage_id"/>
+                <field name="holder_user_ids" widget="many2many_tags"
+                       string="En poder de" optional="show"/>
                 <field name="state" column_invisible="1"/>
                 <field name="project_ids" widget="many2many_tags"/>
                 <field name="company_id" groups="base.group_multi_company"/>
@@ -50,6 +52,15 @@
                             <div class="mt-2">
                                 <field name="request_date" widget="date"/>
                                 <field name="requestor_id"/>
+                            </div>
+                            <!--
+                                Responsables actuales: aprobadores pendientes o
+                                asignados de la etapa. El título del avatar deja
+                                ver el motivo sin abrir el expediente.
+                            -->
+                            <div class="d-flex justify-content-end mt-1">
+                                <field name="holder_user_ids" widget="many2many_avatar_user"
+                                       nolabel="1" readonly="1"/>
                             </div>
                         </div>
                     </t>
@@ -88,6 +99,7 @@
                     <field name="hide_recommended_supplier_id_stage" invisible="1"/>
                     <field name="hide_recommended_supplier_ids_stage" invisible="1"/>
                     <field name="hide_amount_estimated_stage" invisible="1"/>
+                    <field name="holder_reason" invisible="1"/>
                     <button name="action_previous_stage" type="object" string="Etapa anterior"
                             class="btn-secondary"
                             modifiers='{"invisible": ["|", ["state", "=", "cancel"], ["can_edit_in_stage", "=", false]]}'/>
@@ -119,6 +131,23 @@
                             confirm="¿Está seguro de que desea cancelar este expediente?"/>
                 </header>
                 <sheet readonly="not can_edit_in_stage">
+                    <!--
+                        Cartel de situación: quién tiene el expediente ahora.
+                        Amarillo cuando espera una aprobación (del expediente o
+                        de su Solicitud) y azul cuando está en manos de los
+                        asignados de la etapa. `holder_summary` ya viene armado
+                        desde el modelo (motivo + nombres).
+                    -->
+                    <div class="alert alert-warning d-flex align-items-center" role="alert"
+                         invisible="holder_reason not in ('expedient_approval', 'spend_request_approval')">
+                        <i class="fa fa-clock-o me-2" aria-hidden="true"/>
+                        <field name="holder_summary" nolabel="1" readonly="1" class="fw-bold"/>
+                    </div>
+                    <div class="alert alert-info d-flex align-items-center" role="status"
+                         invisible="holder_reason != 'stage'">
+                        <i class="fa fa-user-o me-2" aria-hidden="true"/>
+                        <field name="holder_summary" nolabel="1" readonly="1"/>
+                    </div>
                     <field name="can_view_purchase_orders" invisible="1"/>
                     <field name="can_view_invoices" invisible="1"/>
                     <field name="can_view_payments" invisible="1"/>
@@ -691,6 +720,13 @@
                 <field name="project_ids"/>
                 <filter string="Míos o asignados" name="my_or_assigned"
                         domain="['|', ('requestor_id.user_id', '=', uid), ('assignable_user_ids', 'in', uid)]"/>
+                <!--
+                    "En mi poder" no es lo mismo que "asignados a mí": si el
+                    expediente está esperando una aprobación, el responsable son
+                    los aprobadores pendientes, no los asignados de la etapa.
+                -->
+                <filter string="En mi poder" name="my_holder"
+                        domain="[('holder_user_ids', 'in', uid)]"/>
                 <filter string="Creados por mí" name="my_created" domain="[('create_uid', '=', uid)]"/>
                 <separator/>
                 <filter string="Por aprobar" name="to_approve" domain="[('state', '=', 'to_approve')]"/>

@@ -590,6 +590,168 @@ class FundExpedient(models.Model):
         self.review_ids._compute_can_review()
         return True
 
+    # ------------------------------------------------------------------
+    # Responsable actual: aportar las aprobaciones pendientes
+    # (el módulo base solo conoce los asignados de etapa)
+    # ------------------------------------------------------------------
+
+    pending_my_approval = fields.Boolean(
+        string="Esperando mi aprobación",
+        compute="_compute_pending_my_approval",
+        search="_search_pending_my_approval",
+        help="True si el expediente O su Solicitud tienen una validación abierta en la "
+        "que el usuario figura como aprobador, incluso si todavía no es su turno en la "
+        "secuencia. Se corresponde con el cartel de situación del expediente. "
+        "Para «es mi turno ahora» existe `tier_approval_pending_mine` (usa can_review), "
+        "que además solo mira las validaciones del expediente, no las de la Solicitud.",
+    )
+
+    def _open_review_statuses(self):
+        return ("waiting", "pending")
+
+    def _pending_spend_request_reviews(self):
+        """Reviews pendientes de la fase activa de la Solicitud vinculada.
+
+        Solo cuentan si la fase está generada y todavía no aprobada: una vez
+        aprobada, la pelota vuelve a los asignados de la etapa.
+        """
+        self.ensure_one()
+        sr = self.spend_request_ids[:1]
+        if not sr:
+            return self.env["tier.review"]
+        phase = sr._get_active_spend_phase()
+        if not sr.is_phase_generated(phase) or sr.is_phase_approved(phase):
+            return self.env["tier.review"]
+        open_statuses = self._open_review_statuses()
+        return sr.review_ids.filtered(
+            lambda r: r.status in open_statuses
+            and (r.spend_phase == phase or not r.spend_phase)
+        )
+
+    def _get_pending_approval_info(self):
+        """Aprobadores pendientes: primero del expediente, luego de la Solicitud."""
+        self.ensure_one()
+        open_statuses = self._open_review_statuses()
+        stage_reviews = self._current_stage_reviews().filtered(
+            lambda r: r.status in open_statuses
+        )
+        if stage_reviews:
+            return (
+                stage_reviews.mapped("reviewer_ids"),
+                "expedient_approval",
+                _("la validación de la etapa «%s»") % (self.stage_id.name or ""),
+            )
+        sr_reviews = self._pending_spend_request_reviews()
+        if sr_reviews:
+            sr = self.spend_request_ids[:1]
+            phase_label = dict(
+                sr._fields["spend_state"].selection
+            ).get(sr._get_active_spend_phase(), "")
+            doc_label = (
+                _("la Solicitud de Ingreso")
+                if self.operation_type == "income"
+                else _("la Solicitud de Gasto")
+            )
+            label = "%s (%s)" % (doc_label, phase_label.lower()) if phase_label else doc_label
+            return sr_reviews.mapped("reviewer_ids"), "spend_request_approval", label
+        return self.env["res.users"], False, ""
+
+    @api.model
+    def _search_ids_with_pending_approval(self, user):
+        """Expedientes con validación pendiente, y los pendientes de `user`.
+
+        Se filtra en Python (no por dominio SQL) por dos razones: `reviewer_ids`
+        de `tier.review` es computado sin almacenar, y hay que descartar las
+        reviews que no pertenecen al contexto activo del registro —etapa actual
+        para el expediente, fase activa para la Solicitud.
+        """
+        Review = self.env["tier.review"].sudo()
+        user_ids = set(user.ids) if user else set()
+        pending_all = set()
+        pending_mine = set()
+
+        reviews = Review.search(
+            [
+                ("model", "in", ("fund.expedient", "fund.expedient.spend.request")),
+                ("status", "in", ("waiting", "pending")),
+            ]
+        )
+        expedient_reviews = reviews.filtered(lambda r: r.model == "fund.expedient")
+        sr_reviews = reviews - expedient_reviews
+
+        for review in expedient_reviews:
+            expedient = review.fund_expedient_id
+            if not expedient:
+                continue
+            if review.stage_id and review.stage_id != expedient.stage_id:
+                continue
+            pending_all.add(expedient.id)
+            if user_ids & set(review.reviewer_ids.ids):
+                pending_mine.add(expedient.id)
+
+        for review in sr_reviews:
+            sr = review.fund_spend_request_id
+            expedient = review.fund_expedient_id
+            if not sr or not expedient:
+                continue
+            phase = sr._get_active_spend_phase()
+            if review.spend_phase and review.spend_phase != phase:
+                continue
+            if not sr.is_phase_generated(phase) or sr.is_phase_approved(phase):
+                continue
+            pending_all.add(expedient.id)
+            if user_ids & set(review.reviewer_ids.ids):
+                pending_mine.add(expedient.id)
+
+        return pending_all, pending_mine
+
+    @api.depends(
+        "stage_id",
+        "assignable_user_ids",
+        "review_ids",
+        "review_ids.status",
+        "review_ids.stage_id",
+        "review_ids.reviewer_ids",
+        "spend_request_ids.preventiva_state",
+        "spend_request_ids.definitiva_state",
+        "spend_request_ids.spend_state",
+        "spend_request_ids.review_ids.status",
+        "spend_request_ids.review_ids.spend_phase",
+        "spend_request_ids.review_ids.reviewer_ids",
+    )
+    def _compute_holder(self):
+        """Mismo cómputo del base, con las dependencias de las validaciones.
+
+        El módulo base no puede declarar `review_ids` en `@api.depends` (no
+        conoce tier validation), así que redeclaramos el compute acá para que
+        el cartel se refresque al solicitar, aprobar o rechazar una validación.
+        """
+        return super()._compute_holder()
+
+    @api.depends_context("uid")
+    @api.depends(
+        "review_ids",
+        "review_ids.status",
+        "review_ids.stage_id",
+        "review_ids.reviewer_ids",
+        "stage_id",
+        "spend_request_ids.review_ids.status",
+        "spend_request_ids.review_ids.reviewer_ids",
+    )
+    def _compute_pending_my_approval(self):
+        for rec in self:
+            users, reason, _label = rec._get_pending_approval_info()
+            rec.pending_my_approval = bool(reason) and self.env.user in users
+
+    def _search_pending_my_approval(self, operator, value):
+        if operator not in ("=", "!=") or not isinstance(value, bool):
+            raise UserError(
+                _("El filtro «Esperando mi aprobación» solo admite valores verdadero/falso.")
+            )
+        _pending_all, pending_mine = self._search_ids_with_pending_approval(self.env.user)
+        positive = (operator == "=") == value
+        return [("id", "in" if positive else "not in", list(pending_mine))]
+
     def action_next_stage(self):
         """No permitir pasar a la siguiente etapa hasta que la validación esté finalizada."""
         for rec in self:
