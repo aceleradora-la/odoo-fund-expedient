@@ -90,6 +90,44 @@ class FundExpedientDocument(models.Model):
         "usuario está asignado a esa etapa. Si es False, el documento es de consulta: "
         "no puede modificarse ningún dato.",
     )
+    # Los selectores de Disposición / Resolución solo tienen sentido si la etapa
+    # ORIGEN del documento las exige. Se mira la etapa del documento (no la actual
+    # del expediente) para que un documento viejo siga mostrando su vínculo.
+    stage_requires_disposition = fields.Boolean(
+        compute="_compute_stage_requirements",
+        store=False,
+    )
+    stage_requires_resolution = fields.Boolean(
+        compute="_compute_stage_requirements",
+        store=False,
+    )
+
+    @api.depends(
+        "stage_id",
+        "expedient_id.type_id",
+        "expedient_id.type_id.stage_assign_ids.stage_id",
+        "expedient_id.type_id.stage_assign_ids.require_disposition",
+        "expedient_id.type_id.stage_assign_ids.require_resolution",
+    )
+    def _compute_stage_requirements(self):
+        Assign = self.env["fund.expedient.type.stage.assign"]
+        for rec in self:
+            rec.stage_requires_disposition = False
+            rec.stage_requires_resolution = False
+            expedient_type = rec.expedient_id.type_id
+            if not expedient_type or not rec.stage_id:
+                continue
+            assign = Assign.search(
+                [
+                    ("type_id", "=", expedient_type.id),
+                    ("stage_id", "=", rec.stage_id.id),
+                ],
+                limit=1,
+            )
+            if not assign:
+                continue
+            rec.stage_requires_disposition = assign.require_disposition
+            rec.stage_requires_resolution = assign.require_resolution
 
     @api.depends("expedient_id", "expedient_id.stage_id", "expedient_id.can_edit_in_stage", "stage_id")
     @api.depends_context("uid")

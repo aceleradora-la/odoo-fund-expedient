@@ -577,12 +577,16 @@
                                     <field name="notes" readonly="not can_edit_document"/>
                                     <field name="stage_id" optional="hide" readonly="1"/>
                                     <field name="disposition_id" optional="hide"
-                                           readonly="not can_edit_document"/>
+                                           readonly="not can_edit_document"
+                                           invisible="not stage_requires_disposition"/>
                                     <field name="resolution_id" optional="hide"
-                                           readonly="not can_edit_document"/>
+                                           readonly="not can_edit_document"
+                                           invisible="not stage_requires_resolution"/>
                                     <field name="can_download_file" column_invisible="1"/>
                                     <field name="can_unlink_file" column_invisible="1"/>
                                     <field name="can_edit_document" column_invisible="1"/>
+                                    <field name="stage_requires_disposition" column_invisible="1"/>
+                                    <field name="stage_requires_resolution" column_invisible="1"/>
                                     <button type="object"
                                             name="action_preview_file"
                                             string="Previsualizar"
@@ -613,8 +617,16 @@
                                             <field name="expedient_id" readonly="1"/>
                                             <field name="number" readonly="1"/>
                                             <field name="stage_id" readonly="1" options="{'no_create': True}"/>
-                                            <field name="disposition_id" readonly="not can_edit_document"/>
-                                            <field name="resolution_id" readonly="not can_edit_document"/>
+                                            <!--
+                                                Disposición / Resolución solo si la etapa origen
+                                                del documento las exige (config del tipo).
+                                            -->
+                                            <field name="stage_requires_disposition" invisible="1"/>
+                                            <field name="stage_requires_resolution" invisible="1"/>
+                                            <field name="disposition_id" readonly="not can_edit_document"
+                                                   invisible="not stage_requires_disposition"/>
+                                            <field name="resolution_id" readonly="not can_edit_document"
+                                                   invisible="not stage_requires_resolution"/>
                                             <field name="delivered" readonly="not can_edit_document"/>
                                             <field name="document_type_id" options="{'no_create_edit': True}"
                                                    readonly="not can_edit_document"/>
