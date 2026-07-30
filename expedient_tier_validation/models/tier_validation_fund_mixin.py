@@ -223,7 +223,32 @@ class TierValidationFundMixin(models.AbstractModel):
             vals["spend_phase"] = ctx
         return vals
 
+    def _check_stage_user_for_tier_action(self, action):
+        """Exige operar la etapa del expediente para mover el circuito.
+
+        Aplica a solicitar la aprobación y a reiniciar la validación: ambas
+        empujan (o dan de baja) el circuito de este registro, que pertenece a la
+        etapa del expediente. Aprobar y rechazar quedan fuera: esos los definen
+        los revisores de la configuración de niveles.
+
+        Se saltea bajo `sudo` porque ahí el llamador es código del módulo —el
+        portal, por ejemplo— que ya aplicó sus propias reglas de acceso; con el
+        usuario superusuario la comprobación de etapa nunca daría verdadera.
+        """
+        if self.env.su:
+            return
+        for rec in self:
+            if not rec.expedient_stage_editable:
+                raise UserError(
+                    _(
+                        "Solo los usuarios asignados a la etapa actual del expediente "
+                        "pueden %s."
+                    )
+                    % action
+                )
+
     def request_validation(self):
+        self._check_stage_user_for_tier_action(_("solicitar la aprobación"))
         tr_obj = self.env["tier.review"]
         vals_list = []
         for rec in self:
@@ -257,20 +282,12 @@ class TierValidationFundMixin(models.AbstractModel):
         return created_trs
 
     def restart_validation(self):
-        """Reiniciar la validación: solo quien opera la etapa del expediente.
+        """Reiniciar la validación borra las revisiones del contexto.
 
-        Reiniciar borra las revisiones del contexto, así que equivale a dar de
-        baja lo actuado: es una acción del circuito del expediente, no de
-        cualquiera con acceso de lectura al registro.
+        Equivale a dar de baja lo actuado, así que sigue la misma regla que
+        solicitar la aprobación (ver `_check_stage_user_for_tier_action`).
         """
-        for rec in self:
-            if not rec.expedient_stage_editable:
-                raise UserError(
-                    _(
-                        "Solo los usuarios asignados a la etapa actual del expediente "
-                        "pueden reiniciar la validación."
-                    )
-                )
+        self._check_stage_user_for_tier_action(_("reiniciar la validación"))
         for rec in self:
             rec._current_context_reviews().sudo().unlink()
         self.review_ids._compute_can_review()

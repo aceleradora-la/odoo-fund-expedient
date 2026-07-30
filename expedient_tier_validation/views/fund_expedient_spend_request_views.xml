@@ -50,7 +50,7 @@
                 <button name="request_validation" type="object"
                         string="Solicitar aprobación"
                         class="btn-primary"
-                        invisible="not need_validation or stage_validation_status == 'rejected' or hide_reviews"/>
+                        invisible="not need_validation or stage_validation_status == 'rejected' or hide_reviews or not expedient_stage_editable"/>
                 <button name="validate_tier" type="object"
                         string="Aprobar"
                         class="btn-success"
@@ -149,7 +149,7 @@
                 <button name="action_tier_request_validation" type="object"
                         string="Solicitar aprobación"
                         class="btn-primary"
-                        invisible="not need_validation or stage_validation_status == 'rejected' or hide_reviews"/>
+                        invisible="not need_validation or stage_validation_status == 'rejected' or hide_reviews or not expedient_stage_editable"/>
                 <button name="action_tier_validate" type="object"
                         string="Aprobar"
                         class="btn-success"

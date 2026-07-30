@@ -110,6 +110,10 @@ class FundExpedient(models.Model):
             for td in applicable
         )
 
+    # depends_context("uid"): el cómputo pasó a mirar `can_edit_in_stage`, que
+    # depende del usuario. Sin declararlo, la caché (compartida entre entornos
+    # con distinto uid, p. ej. tras un sudo) podría servir el valor de otro.
+    @api.depends_context("uid")
     @api.depends(
         "review_ids",
         "review_ids.status",
