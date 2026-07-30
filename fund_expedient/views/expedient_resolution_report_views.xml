@@ -5,13 +5,75 @@
         <field name="model">fund.expedient.resolution</field>
         <field name="type">list</field>
         <field name="arch" type="xml">
-            <list string="Resoluciones" create="0" delete="0" edit="0">
+            <list string="Resoluciones" create="0" delete="0" edit="0"
+                  decoration-muted="cancelled">
                 <field name="number"/>
                 <field name="expedient_id"/>
                 <field name="stage_id"/>
                 <field name="resolution_date"/>
+                <field name="cancelled" optional="show"/>
                 <field name="company_id" groups="base.group_multi_company"/>
             </list>
+        </field>
+    </record>
+
+    <!--
+        Formulario propio de la Resolución: se abre fuera del expediente (botón
+        «Crear Resolución» y reporte), y sin esta vista Odoo generaría una
+        automática con todos los campos técnicos de validación por niveles.
+    -->
+    <record id="view_fund_expedient_resolution_form" model="ir.ui.view">
+        <field name="name">fund.expedient.resolution.form</field>
+        <field name="model">fund.expedient.resolution</field>
+        <field name="type">form</field>
+        <field name="arch" type="xml">
+            <form string="Resolución" create="0" delete="0">
+                <header>
+                    <field name="cancelled" invisible="1"/>
+                    <field name="expedient_stage_editable" invisible="1"/>
+                    <button name="action_cancel" type="object"
+                            string="Anular resolución" class="btn-secondary"
+                            confirm="La resolución quedará anulada como historial y podrá crearse otra. ¿Continuar?"
+                            invisible="cancelled or not expedient_stage_editable"/>
+                </header>
+                <sheet>
+                    <widget name="web_ribbon" title="Anulada" bg_color="text-bg-danger"
+                            invisible="not cancelled"/>
+                    <div class="oe_title">
+                        <h1><field name="number" readonly="1"/></h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="expedient_id" readonly="1"/>
+                            <field name="stage_id" options="{'no_create': True}" readonly="1"/>
+                            <field name="resolution_date"/>
+                        </group>
+                        <group>
+                            <field name="sequence"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                        </group>
+                    </group>
+                    <group string="Observaciones">
+                        <field name="notes" widget="html" placeholder="Observaciones..." nolabel="1"/>
+                    </group>
+                    <group string="Documentos relacionados">
+                        <field name="document_ids" nolabel="1"
+                               context="{'default_expedient_id': expedient_id, 'default_stage_id': stage_id, 'default_resolution_id': id}">
+                            <list create="1" delete="1" edit="1">
+                                <field name="number"/>
+                                <field name="file_name"/>
+                                <field name="name"/>
+                                <field name="delivered"/>
+                                <field name="document_type_id" optional="show"/>
+                                <button type="object"
+                                        name="action_open_document"
+                                        string="Abrir"
+                                        class="btn-secondary"/>
+                            </list>
+                        </field>
+                    </group>
+                </sheet>
+            </form>
         </field>
     </record>
 

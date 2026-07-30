@@ -432,6 +432,47 @@ class FundExpedient(models.Model):
         string="Situación actual",
         help="Texto listo para mostrar: motivo + responsables actuales.",
     )
+    # Disposición / Resolución: el botón se ofrece solo mientras falte crearla
+    # en la etapa actual. Igual criterio que la Solicitud.
+    can_create_disposition = fields.Boolean(
+        compute="_compute_can_create_stage_records",
+        string="Puede crear disposición",
+    )
+    can_create_resolution = fields.Boolean(
+        compute="_compute_can_create_stage_records",
+        string="Puede crear resolución",
+    )
+
+    @api.depends(
+        "stage_id",
+        "type_id",
+        "disposition_ids.stage_id",
+        "disposition_ids.cancelled",
+        "resolution_ids.stage_id",
+        "resolution_ids.cancelled",
+        "type_id.stage_assign_ids.require_disposition",
+        "type_id.stage_assign_ids.require_resolution",
+    )
+    def _compute_can_create_stage_records(self):
+        for rec in self:
+            assign = rec._current_stage_assign()
+            has_disposition = bool(
+                rec.disposition_ids.filtered(
+                    lambda d: d.stage_id == rec.stage_id and not d.cancelled
+                )
+            )
+            has_resolution = bool(
+                rec.resolution_ids.filtered(
+                    lambda r: r.stage_id == rec.stage_id and not r.cancelled
+                )
+            )
+            rec.can_create_disposition = bool(
+                assign and assign.require_disposition and not has_disposition
+            )
+            rec.can_create_resolution = bool(
+                assign and assign.require_resolution and not has_resolution
+            )
+
     # Disponibilidad real de los botones de Solicitud: no alcanza con que la
     # etapa lo permita, hay que mirar si ya existe una solicitud vigente y en
     # qué fase está. Si no, el botón se ofrece y falla al pulsarlo.
@@ -1607,7 +1648,9 @@ class FundExpedient(models.Model):
                     limit=1,
                 )
                 if assign_cur and assign_cur.require_disposition:
-                    dispositions = rec.disposition_ids.filtered(lambda d: d.stage_id == rec.stage_id)
+                    dispositions = rec.disposition_ids.filtered(
+                        lambda d: d.stage_id == rec.stage_id and not d.cancelled
+                    )
                     if not dispositions:
                         raise UserError(
                             _(
@@ -1641,7 +1684,9 @@ class FundExpedient(models.Model):
                     limit=1,
                 )
                 if assign_cur and assign_cur.require_resolution:
-                    resolutions = rec.resolution_ids.filtered(lambda r: r.stage_id == rec.stage_id)
+                    resolutions = rec.resolution_ids.filtered(
+                        lambda r: r.stage_id == rec.stage_id and not r.cancelled
+                    )
                     if not resolutions:
                         raise UserError(
                             _(
@@ -1940,7 +1985,7 @@ class FundExpedient(models.Model):
 
         if assign.require_disposition:
             dispositions = self.disposition_ids.filtered(
-                lambda d: d.stage_id == self.stage_id
+                lambda d: d.stage_id == self.stage_id and not d.cancelled
             )
             if not dispositions:
                 pending.append(_("crear la Disposición de la etapa"))
@@ -1953,7 +1998,7 @@ class FundExpedient(models.Model):
 
         if assign.require_resolution:
             resolutions = self.resolution_ids.filtered(
-                lambda r: r.stage_id == self.stage_id
+                lambda r: r.stage_id == self.stage_id and not r.cancelled
             )
             if not resolutions:
                 pending.append(_("crear la Resolución de la etapa"))
@@ -2054,7 +2099,9 @@ class FundExpedient(models.Model):
                     _("La Solicitud de Gasto definitiva debe estar aprobada antes de salir de esta etapa.")
                 )
 
-    def _action_create_stage_record(self, model, requirement_field, label):
+    def _action_create_stage_record(
+        self, model, requirement_field, label, form_view_xmlid=None
+    ):
         """Crea una Disposición o Resolución para la etapa actual y la abre.
 
         Mismo patrón que la Solicitud de Gasto: un botón en la cabecera evita
@@ -2076,23 +2123,40 @@ class FundExpedient(models.Model):
         record = self.env[model].create(
             {"expedient_id": self.id, "stage_id": self.stage_id.id}
         )
-        return {
+        # target "new": se abre como diálogo sobre el expediente. Al cerrarlo el
+        # cliente recarga el formulario padre, así el cartel de requisitos y el
+        # botón de crear reflejan enseguida que el registro ya existe (navegando
+        # a otra pantalla el expediente quedaba con los datos viejos).
+        action = {
             "type": "ir.actions.act_window",
             "name": label,
             "res_model": model,
             "res_id": record.id,
             "view_mode": "form",
-            "target": "current",
+            "target": "new",
         }
+        # Vista explícita: sin ella Odoo arma un formulario automático con todos
+        # los campos técnicos (incluidos los de validación por niveles).
+        if form_view_xmlid:
+            view = self.env.ref(form_view_xmlid, raise_if_not_found=False)
+            if view:
+                action["views"] = [(view.id, "form")]
+        return action
 
     def action_create_disposition(self):
         return self._action_create_stage_record(
-            "fund.expedient.disposition", "require_disposition", _("Disposición")
+            "fund.expedient.disposition",
+            "require_disposition",
+            _("Disposición"),
+            form_view_xmlid="fund_expedient.view_fund_expedient_disposition_form",
         )
 
     def action_create_resolution(self):
         return self._action_create_stage_record(
-            "fund.expedient.resolution", "require_resolution", _("Resolución")
+            "fund.expedient.resolution",
+            "require_resolution",
+            _("Resolución"),
+            form_view_xmlid="fund_expedient.view_fund_expedient_resolution_form",
         )
 
     def action_create_spend_request_initial(self):
@@ -2485,7 +2549,9 @@ class FundExpedient(models.Model):
         "document_ids.disposition_id",
         "document_ids.resolution_id",
         "disposition_ids.stage_id",
+        "disposition_ids.cancelled",
         "resolution_ids.stage_id",
+        "resolution_ids.cancelled",
         "spend_request_ids.preventiva_state",
         "spend_request_ids.definitiva_state",
     )

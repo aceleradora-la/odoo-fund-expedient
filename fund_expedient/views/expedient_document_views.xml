@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!--
+        Formulario propio del Documento. Igual que Disposición y Resolución, el
+        registro se abre fuera del expediente (botón «Abrir» de las listas de
+        documentos de una disposición/resolución, y desde sus formularios
+        propios). Sin esta vista Odoo genera una automática con todos los campos.
+        Replica el formulario embebido en la solapa «Documentos por etapa».
+    -->
+    <record id="view_fund_expedient_document_form" model="ir.ui.view">
+        <field name="name">fund.expedient.document.form</field>
+        <field name="model">fund.expedient.document</field>
+        <field name="type">form</field>
+        <field name="arch" type="xml">
+            <form string="Documento" create="0" delete="0">
+                <sheet>
+                    <field name="can_download_file" invisible="1"/>
+                    <field name="can_edit_document" invisible="1"/>
+                    <field name="stage_requires_disposition" invisible="1"/>
+                    <field name="stage_requires_resolution" invisible="1"/>
+                    <div class="alert alert-info" role="status" invisible="can_edit_document">
+                        <i class="fa fa-lock me-2" aria-hidden="true"/>
+                        Documento de solo consulta: pertenece a otra etapa del
+                        expediente y no puede modificarse.
+                    </div>
+                    <div class="oe_title">
+                        <h1><field name="number" readonly="1"/></h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="expedient_id" readonly="1"/>
+                            <field name="stage_id" readonly="1" options="{'no_create': True}"/>
+                            <field name="document_type_id" options="{'no_create_edit': True}"
+                                   readonly="not can_edit_document"/>
+                            <field name="delivered" readonly="not can_edit_document"/>
+                            <field name="disposition_id" readonly="not can_edit_document"
+                                   invisible="not stage_requires_disposition"/>
+                            <field name="resolution_id" readonly="not can_edit_document"
+                                   invisible="not stage_requires_resolution"/>
+                        </group>
+                        <group>
+                            <!-- Subida: solo en la etapa actual y estando asignado. -->
+                            <field name="file_data" filename="file_name" widget="binary"
+                                   invisible="not can_download_file or file_data"
+                                   readonly="not can_download_file"/>
+                            <field name="file_name" readonly="1" force_save="1"
+                                   invisible="not file_data"/>
+                            <button type="object" name="action_preview_file"
+                                    string="Previsualizar" class="btn-secondary"
+                                    invisible="not file_data"/>
+                            <button type="object" name="action_download_file"
+                                    string="Descargar" class="btn-primary"
+                                    invisible="not file_data or not can_download_file"/>
+                            <field name="name" invisible="1"/>
+                        </group>
+                    </group>
+                    <group string="Observaciones">
+                        <field name="notes" readonly="not can_edit_document" nolabel="1"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+</odoo>

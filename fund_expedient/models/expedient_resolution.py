@@ -73,6 +73,51 @@ class FundExpedientResolution(models.Model):
                 rec.expedient_id and rec.expedient_id.can_edit_in_stage
             )
 
+    cancelled = fields.Boolean(
+        string="Anulada",
+        readonly=True,
+        copy=False,
+        index=True,
+        help="Una resolución anulada queda como historial: no cuenta para los "
+        "requisitos de la etapa y permite crear otra en su lugar.",
+    )
+    cancel_date = fields.Date(string="Fecha de anulación", readonly=True, copy=False)
+
+    def action_cancel(self):
+        """Anula la resolución para poder crear otra en su lugar.
+
+        No se borra: conserva su número y sus aprobaciones cerradas como
+        historial, y deja de contar para los requisitos de la etapa.
+        """
+        for rec in self:
+            if rec.cancelled:
+                raise UserError(_("La resolución %s ya está anulada.") % (rec.number or ""))
+            if not rec.expedient_stage_editable:
+                raise UserError(
+                    _(
+                        "Solo los usuarios asignados a la etapa actual del expediente "
+                        "pueden anular la resolución."
+                    )
+                )
+            rec._cancel_pending_approvals()
+            rec.with_context(skip_validation_check=True).write(
+                {"cancelled": True, "cancel_date": fields.Date.context_today(rec)}
+            )
+            rec.expedient_id.message_post(
+                body=_("Se anuló la resolución <b>%s</b>. Puede crearse otra.", rec.number or ""),
+                subtype_xmlid="mail.mt_note",
+            )
+        return True
+
+    def _cancel_pending_approvals(self):
+        """Hook: al anular, limpiar aprobaciones abiertas.
+
+        En el módulo base no hay validaciones; `expedient_tier_validation` lo
+        sobreescribe para eliminar las revisiones pendientes.
+        """
+        return True
+
+
 
     _sql_constraints = [
         (

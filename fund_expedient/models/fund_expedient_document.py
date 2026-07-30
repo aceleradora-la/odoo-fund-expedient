@@ -352,13 +352,23 @@ class FundExpedientDocument(models.Model):
         }
 
     def action_open_document(self):
-        """Abrir el documento (mismo registro que en la solapa del expediente)."""
+        """Abrir el documento (mismo registro que en la solapa del expediente).
+
+        Se fija la vista explícitamente: sin ella Odoo arma un formulario
+        automático con todos los campos técnicos.
+        """
         self.ensure_one()
-        return {
+        action = {
             "type": "ir.actions.act_window",
             "name": _("Documento"),
             "res_model": "fund.expedient.document",
             "res_id": self.id,
             "view_mode": "form",
-            "target": "current",
+            "target": "new",
         }
+        view = self.env.ref(
+            "fund_expedient.view_fund_expedient_document_form", raise_if_not_found=False
+        )
+        if view:
+            action["views"] = [(view.id, "form")]
+        return action

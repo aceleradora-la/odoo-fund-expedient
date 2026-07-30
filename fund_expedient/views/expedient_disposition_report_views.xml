@@ -5,14 +5,85 @@
         <field name="model">fund.expedient.disposition</field>
         <field name="type">list</field>
         <field name="arch" type="xml">
-            <list string="Disposiciones" create="0" delete="0" edit="0">
+            <list string="Disposiciones" create="0" delete="0" edit="0"
+                  decoration-muted="cancelled">
                 <field name="number"/>
                 <field name="expedient_id"/>
                 <field name="stage_id"/>
                 <field name="disposition_date"/>
                 <field name="disposition_type"/>
+                <field name="cancelled" optional="show"/>
                 <field name="company_id" groups="base.group_multi_company"/>
             </list>
+        </field>
+    </record>
+
+    <!--
+        Formulario propio de la Disposición. Hace falta porque el registro se
+        abre fuera del expediente: desde el botón «Crear Disposición» y desde el
+        reporte. Sin esta vista Odoo genera una automática con todos los campos
+        técnicos (incluidos los de validación por niveles).
+        Refleja el mismo contenido que el formulario embebido en el expediente.
+    -->
+    <record id="view_fund_expedient_disposition_form" model="ir.ui.view">
+        <field name="name">fund.expedient.disposition.form</field>
+        <field name="model">fund.expedient.disposition</field>
+        <field name="type">form</field>
+        <field name="arch" type="xml">
+            <form string="Disposición" create="0" delete="0">
+                <header>
+                    <field name="outcome_applied" invisible="1"/>
+                    <field name="cancelled" invisible="1"/>
+                    <field name="expedient_stage_editable" invisible="1"/>
+                    <button name="action_apply_disposition" type="object"
+                            string="Aplicar disposición"
+                            class="btn-warning"
+                            confirm="El expediente se cerrará en la etapa final correspondiente al resultado de esta disposición. ¿Continuar?"
+                            invisible="cancelled or disposition_type == 'adjudicacion' or outcome_applied"/>
+                    <button name="action_cancel" type="object"
+                            string="Anular disposición" class="btn-secondary"
+                            confirm="La disposición quedará anulada como historial y podrá crearse otra. ¿Continuar?"
+                            invisible="cancelled or not expedient_stage_editable"/>
+                </header>
+                <sheet>
+                    <widget name="web_ribbon" title="Anulada" bg_color="text-bg-danger"
+                            invisible="not cancelled"/>
+                    <div class="oe_title">
+                        <h1><field name="number" readonly="1"/></h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="expedient_id" readonly="1"/>
+                            <field name="stage_id" options="{'no_create': True}" readonly="1"/>
+                            <field name="disposition_date"/>
+                            <field name="disposition_type"/>
+                        </group>
+                        <group>
+                            <field name="sequence"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                        </group>
+                    </group>
+                    <group string="Observaciones">
+                        <field name="notes" widget="html" placeholder="Observaciones..." nolabel="1"/>
+                    </group>
+                    <group string="Documentos relacionados">
+                        <field name="document_ids" nolabel="1"
+                               context="{'default_expedient_id': expedient_id, 'default_stage_id': stage_id, 'default_disposition_id': id}">
+                            <list create="1" delete="1" edit="1">
+                                <field name="number"/>
+                                <field name="file_name"/>
+                                <field name="name"/>
+                                <field name="delivered"/>
+                                <field name="document_type_id" optional="show"/>
+                                <button type="object"
+                                        name="action_open_document"
+                                        string="Abrir"
+                                        class="btn-secondary"/>
+                            </list>
+                        </field>
+                    </group>
+                </sheet>
+            </form>
         </field>
     </record>
 

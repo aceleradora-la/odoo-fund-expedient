@@ -87,6 +87,8 @@
                     <field name="has_dispositions_feature" invisible="1"/>
                     <field name="has_resolutions_feature" invisible="1"/>
                     <field name="current_assign_require_disposition" invisible="1"/>
+                    <field name="can_create_disposition" invisible="1"/>
+                    <field name="can_create_resolution" invisible="1"/>
                     <field name="current_assign_require_resolution" invisible="1"/>
                     <field name="current_assign_require_notification" invisible="1"/>
                     <field name="current_stage_notification_template_id" invisible="1"/>
@@ -124,11 +126,11 @@
                     <button name="action_create_disposition" type="object"
                             string="Crear Disposición"
                             class="btn-secondary"
-                            invisible="state == 'cancel' or not can_edit_in_stage or not current_assign_require_disposition"/>
+                            invisible="state == 'cancel' or not can_edit_in_stage or not can_create_disposition"/>
                     <button name="action_create_resolution" type="object"
                             string="Crear Resolución"
                             class="btn-secondary"
-                            invisible="state == 'cancel' or not can_edit_in_stage or not current_assign_require_resolution"/>
+                            invisible="state == 'cancel' or not can_edit_in_stage or not can_create_resolution"/>
                     <button name="action_open_notification_wizard" type="object"
                             string="Notificar oferentes"
                             class="btn-secondary"
@@ -485,28 +487,41 @@
                             <field name="disposition_ids" nolabel="1"
                                    readonly="not current_assign_require_disposition"
                                    context="{'default_expedient_id': id, 'default_stage_id': stage_id}">
-                                <list create="1" delete="1" edit="1">
+                                <list create="1" delete="1" edit="1" decoration-muted="cancelled">
                                     <field name="sequence" widget="handle"/>
                                     <field name="stage_id" options="{'no_create': True}"/>
                                     <field name="number" readonly="1"/>
                                     <field name="disposition_date"/>
                                     <field name="disposition_type"/>
+                                    <field name="cancelled"/>
                                     <field name="outcome_applied" column_invisible="1"/>
                                     <button name="action_apply_disposition" type="object"
                                             string="Aplicar disposición"
                                             class="btn-warning"
                                             confirm="El expediente se cerrará en la etapa final correspondiente al resultado de esta disposición. ¿Continuar?"
-                                            invisible="disposition_type == 'adjudicacion' or outcome_applied"/>
+                                            invisible="cancelled or disposition_type == 'adjudicacion' or outcome_applied"/>
                                 </list>
                                 <form string="Disposición">
                                     <header>
                                         <field name="outcome_applied" invisible="1"/>
+                                        <field name="cancelled" invisible="1"/>
+                                        <field name="expedient_stage_editable" invisible="1"/>
                                         <button name="action_apply_disposition" type="object"
                                                 string="Aplicar disposición"
                                                 class="btn-warning"
                                                 confirm="El expediente se cerrará en la etapa final correspondiente al resultado de esta disposición. ¿Continuar?"
-                                                invisible="disposition_type == 'adjudicacion' or outcome_applied"/>
+                                                invisible="cancelled or disposition_type == 'adjudicacion' or outcome_applied"/>
+                                        <button name="action_cancel" type="object"
+                                                string="Anular disposición" class="btn-secondary"
+                                                confirm="La disposición quedará anulada como historial y podrá crearse otra. ¿Continuar?"
+                                                invisible="cancelled or not expedient_stage_editable"/>
                                     </header>
+                                    <div class="alert alert-danger mb-0" role="status"
+                                         invisible="not cancelled">
+                                        <i class="fa fa-ban me-2" aria-hidden="true"/>
+                                        Disposición anulada: queda como historial y no cuenta
+                                        para los requisitos de la etapa.
+                                    </div>
                                     <group>
                                         <group>
                                             <field name="expedient_id" readonly="1"/>
@@ -543,13 +558,28 @@
                             <field name="resolution_ids" nolabel="1"
                                    readonly="not current_assign_require_resolution"
                                    context="{'default_expedient_id': id, 'default_stage_id': stage_id}">
-                                <list create="1" delete="1" edit="1">
+                                <list create="1" delete="1" edit="1" decoration-muted="cancelled">
                                     <field name="sequence" widget="handle"/>
                                     <field name="stage_id" options="{'no_create': True}"/>
                                     <field name="number" readonly="1"/>
                                     <field name="resolution_date"/>
+                                    <field name="cancelled"/>
                                 </list>
                                 <form string="Resolución">
+                                    <header>
+                                        <field name="cancelled" invisible="1"/>
+                                        <field name="expedient_stage_editable" invisible="1"/>
+                                        <button name="action_cancel" type="object"
+                                                string="Anular resolución" class="btn-secondary"
+                                                confirm="La resolución quedará anulada como historial y podrá crearse otra. ¿Continuar?"
+                                                invisible="cancelled or not expedient_stage_editable"/>
+                                    </header>
+                                    <div class="alert alert-danger mb-0" role="status"
+                                         invisible="not cancelled">
+                                        <i class="fa fa-ban me-2" aria-hidden="true"/>
+                                        Resolución anulada: queda como historial y no cuenta
+                                        para los requisitos de la etapa.
+                                    </div>
                                     <group>
                                         <group>
                                             <field name="expedient_id" readonly="1"/>
