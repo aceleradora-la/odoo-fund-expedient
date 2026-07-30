@@ -100,12 +100,27 @@
                     <field name="hide_recommended_supplier_ids_stage" invisible="1"/>
                     <field name="hide_amount_estimated_stage" invisible="1"/>
                     <field name="holder_reason" invisible="1"/>
+                    <field name="stage_requirements_ok" invisible="1"/>
                     <button name="action_previous_stage" type="object" string="Etapa anterior"
                             class="btn-secondary"
-                            modifiers='{"invisible": ["|", ["state", "=", "cancel"], ["can_edit_in_stage", "=", false]]}'/>
+                            invisible="state == 'cancel' or not can_edit_in_stage"/>
+                    <!--
+                        «Siguiente etapa» solo aparece cuando la etapa está completa:
+                        `stage_requirements_ok` resume documentos, disposición,
+                        resolución, notificación, solicitud y monto. El cartel de
+                        arriba explica qué falta cuando el botón no está.
+                    -->
                     <button name="action_next_stage" type="object" string="Siguiente etapa"
                             class="btn-primary"
-                            modifiers='{"invisible": ["|", ["state", "=", "cancel"], ["can_edit_in_stage", "=", false]]}'/>
+                            invisible="state == 'cancel' or not can_edit_in_stage or not stage_requirements_ok"/>
+                    <button name="action_create_disposition" type="object"
+                            string="Crear Disposición"
+                            class="btn-secondary"
+                            invisible="state == 'cancel' or not can_edit_in_stage or not current_assign_require_disposition"/>
+                    <button name="action_create_resolution" type="object"
+                            string="Crear Resolución"
+                            class="btn-secondary"
+                            invisible="state == 'cancel' or not can_edit_in_stage or not current_assign_require_resolution"/>
                     <button name="action_open_notification_wizard" type="object"
                             string="Notificar oferentes"
                             class="btn-secondary"
@@ -147,6 +162,15 @@
                          invisible="holder_reason != 'stage'">
                         <i class="fa fa-user-o me-2" aria-hidden="true"/>
                         <field name="holder_summary" nolabel="1" readonly="1"/>
+                    </div>
+                    <!--
+                        Qué falta para avanzar. Se muestra solo mientras el expediente
+                        esté activo: en cancelado o en una etapa de cierre ya no aplica.
+                    -->
+                    <div class="alert alert-warning d-flex align-items-center" role="alert"
+                         invisible="stage_requirements_ok or state in ('cancel', 'no_award')">
+                        <i class="fa fa-exclamation-triangle me-2" aria-hidden="true"/>
+                        <field name="stage_requirements_pending" nolabel="1" readonly="1"/>
                     </div>
                     <field name="can_view_purchase_orders" invisible="1"/>
                     <field name="can_view_invoices" invisible="1"/>

@@ -432,6 +432,17 @@ class FundExpedient(models.Model):
         string="Situación actual",
         help="Texto listo para mostrar: motivo + responsables actuales.",
     )
+    stage_requirements_ok = fields.Boolean(
+        compute="_compute_stage_requirements",
+        string="Requisitos de la etapa cumplidos",
+        help="False si falta cumplir algún requisito obligatorio de la etapa actual "
+        "(documentos, disposición, resolución, notificación, solicitud o monto).",
+    )
+    stage_requirements_pending = fields.Char(
+        compute="_compute_stage_requirements",
+        string="Pendientes de la etapa",
+        help="Texto con los requisitos obligatorios que faltan para poder avanzar.",
+    )
     project_ids = fields.Many2many(
         "project.project",
         "fund_expedient_project_rel",
@@ -1847,6 +1858,95 @@ class FundExpedient(models.Model):
         uploaded_types = stage_docs.mapped("document_type_id")
         return assign.required_document_type_ids - uploaded_types
 
+    def _spend_request_doc_label(self):
+        """Nombre del documento de solicitud según la operación del expediente."""
+        self.ensure_one()
+        return (
+            _("Solicitud de Ingreso")
+            if self.operation_type == "income"
+            else _("Solicitud de Gasto")
+        )
+
+    def _stage_pending_requirements(self):
+        """Requisitos obligatorios de la etapa actual que todavía no se cumplen.
+
+        Fuente única para el cartel de la ficha y para la visibilidad del botón
+        «Siguiente etapa». Las validaciones que efectivamente cortan el avance
+        siguen en `_check_*_before_leave_stage()` y en `write()`: esto no las
+        reemplaza, las anticipa para que el usuario sepa qué le falta.
+
+        No incluye el estado de las aprobaciones por niveles: de eso ya informa
+        el cartel de situación (`holder_summary`) y la visibilidad del botón la
+        maneja `expedient_tier_validation`.
+        """
+        self.ensure_one()
+        pending = []
+        assign = self._current_stage_assign()
+        if not assign:
+            return pending
+
+        missing_types = self._missing_required_document_types()
+        if missing_types:
+            pending.append(
+                _("subir un documento de: %s") % ", ".join(missing_types.mapped("name"))
+            )
+
+        if assign.require_disposition:
+            dispositions = self.disposition_ids.filtered(
+                lambda d: d.stage_id == self.stage_id
+            )
+            if not dispositions:
+                pending.append(_("crear la Disposición de la etapa"))
+            elif assign.disposition_file_required and not self.document_ids.filtered(
+                lambda doc: doc.stage_id == self.stage_id
+                and doc.disposition_id in dispositions
+                and bool(doc.file_data)
+            ):
+                pending.append(_("adjuntar el archivo de la Disposición"))
+
+        if assign.require_resolution:
+            resolutions = self.resolution_ids.filtered(
+                lambda r: r.stage_id == self.stage_id
+            )
+            if not resolutions:
+                pending.append(_("crear la Resolución de la etapa"))
+            elif assign.resolution_file_required and not self.document_ids.filtered(
+                lambda doc: doc.stage_id == self.stage_id
+                and doc.resolution_id in resolutions
+                and bool(doc.file_data)
+            ):
+                pending.append(_("adjuntar el archivo de la Resolución"))
+
+        if assign.require_notification and not self._notification_stage_satisfied():
+            pending.append(_("notificar a los oferentes"))
+
+        mode = self.stage_id.spend_request_mode
+        if mode in ("preventiva", "final"):
+            phase = "preventiva" if mode == "preventiva" else "definitiva"
+            doc_label = self._spend_request_doc_label()
+            sr = self.spend_request_ids[:1]
+            if not sr or not sr.is_phase_generated(phase):
+                pending.append(
+                    _("generar la %(doc)s %(phase)s", doc=doc_label, phase=phase)
+                )
+            elif not sr.is_phase_approved(phase):
+                pending.append(
+                    _(
+                        "esperar la aprobación de la %(doc)s %(phase)s",
+                        doc=doc_label,
+                        phase=phase,
+                    )
+                )
+
+        # Primera etapa del flujo: sin monto estimado no tiene sentido avanzar.
+        if not (self.amount_estimated and self.amount_estimated > 0):
+            for _rec, stages in self._get_allowed_stages():
+                if stages and self.stage_id == stages[0]:
+                    pending.append(_("cargar un total estimado mayor a cero"))
+                break
+
+        return pending
+
     def _check_required_documents_before_leave_stage(self):
         """Valida los tipos de documento obligatorios configurados en la etapa."""
         self.ensure_one()
@@ -1893,6 +1993,47 @@ class FundExpedient(models.Model):
                 raise UserError(
                     _("La Solicitud de Gasto definitiva debe estar aprobada antes de salir de esta etapa.")
                 )
+
+    def _action_create_stage_record(self, model, requirement_field, label):
+        """Crea una Disposición o Resolución para la etapa actual y la abre.
+
+        Mismo patrón que la Solicitud de Gasto: un botón en la cabecera evita
+        tener que ir a la solapa y usar «Agregar línea». Los modelos destino ya
+        validan en `create()` que la etapa las requiera, aplican las
+        observaciones por defecto del tipo y asignan la numeración.
+        """
+        self.ensure_one()
+        if not self.can_edit_in_stage:
+            raise UserError(
+                _("Solo los usuarios asignados a la etapa actual pueden crear la %s.") % label
+            )
+        assign = self._current_stage_assign()
+        if not assign or not assign[requirement_field]:
+            raise UserError(
+                _("La etapa «%(stage)s» no requiere %(label)s.")
+                % {"stage": self.stage_id.name or "", "label": label}
+            )
+        record = self.env[model].create(
+            {"expedient_id": self.id, "stage_id": self.stage_id.id}
+        )
+        return {
+            "type": "ir.actions.act_window",
+            "name": label,
+            "res_model": model,
+            "res_id": record.id,
+            "view_mode": "form",
+            "target": "current",
+        }
+
+    def action_create_disposition(self):
+        return self._action_create_stage_record(
+            "fund.expedient.disposition", "require_disposition", _("Disposición")
+        )
+
+    def action_create_resolution(self):
+        return self._action_create_stage_record(
+            "fund.expedient.resolution", "require_resolution", _("Resolución")
+        )
 
     def action_create_spend_request_initial(self):
         self.ensure_one()
@@ -2268,6 +2409,32 @@ class FundExpedient(models.Model):
                 rec.holder_user_ids = [(6, 0, [])]
                 rec.holder_reason = False
                 rec.holder_summary = ""
+
+    @api.depends(
+        "stage_id",
+        "type_id",
+        "amount_estimated",
+        "document_ids.document_type_id",
+        "document_ids.file_data",
+        "document_ids.stage_id",
+        "document_ids.disposition_id",
+        "document_ids.resolution_id",
+        "disposition_ids.stage_id",
+        "resolution_ids.stage_id",
+        "spend_request_ids.preventiva_state",
+        "spend_request_ids.definitiva_state",
+    )
+    def _compute_stage_requirements(self):
+        for rec in self:
+            pending = rec._stage_pending_requirements()
+            rec.stage_requirements_ok = not pending
+            if pending:
+                # Se arma como una frase única: el cartel debe leerse de un vistazo.
+                rec.stage_requirements_pending = _(
+                    "Para avanzar de etapa falta: %s."
+                ) % "; ".join(pending)
+            else:
+                rec.stage_requirements_pending = ""
 
     def _search_holder_user_ids(self, operator, value):
         """Buscar por responsable actual (no se puede sobre un compute sin store).

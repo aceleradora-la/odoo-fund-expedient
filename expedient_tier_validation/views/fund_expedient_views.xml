@@ -19,8 +19,14 @@
                 <field name="has_stage_reviews" invisible="1"/>
                 <field name="requestor_user_id" invisible="1"/>
             </xpath>
+            <!--
+                Se suma la condición de tier a la del módulo base (que ya oculta el
+                botón si la etapa tiene requisitos pendientes o el usuario no opera
+                la etapa): mientras haya una validación en curso o rechazada no se
+                puede avanzar, y el cartel de situación explica de quién se espera.
+            -->
             <xpath expr="//button[@name='action_next_stage']" position="attributes">
-                <attribute name="modifiers">{"invisible": ["|", ["state", "=", "cancel"], ["validation_status", "in", ["pending", "waiting", "rejected"]]]}</attribute>
+                <attribute name="invisible">state == 'cancel' or not can_edit_in_stage or not stage_requirements_ok or validation_status in ('pending', 'waiting', 'rejected')</attribute>
             </xpath>
             <xpath expr="//notebook" position="inside">
                 <page string="Aprobaciones" name="tier_reviews">
