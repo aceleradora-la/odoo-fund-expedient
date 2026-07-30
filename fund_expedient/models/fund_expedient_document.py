@@ -204,7 +204,44 @@ class FundExpedientDocument(models.Model):
                 exp_number = (exp.number or "").strip()
                 vals["number"] = f"{exp_number}-{next_seq:03d}" if exp_number else f"{next_seq:03d}"
 
+        self._check_create_allowed(vals_list)
         return super().create(vals_list)
+
+    def _check_create_allowed(self, vals_list):
+        """Solo se pueden cargar documentos en la etapa actual, estando asignado.
+
+        Se valida acá (y no solo con `readonly` en la vista) para que el guard
+        aplique también a importaciones y RPC. Se ejecuta después de resolver
+        `stage_id`, para comparar contra la etapa definitiva.
+        """
+        if self.env.context.get("skip_document_stage_check"):
+            return
+        Expedient = self.env["fund.expedient"]
+        for vals in vals_list:
+            exp_id = vals.get("expedient_id")
+            if not exp_id:
+                continue
+            exp = Expedient.browse(exp_id)
+            if not exp.exists():
+                continue
+            if not exp.can_edit_in_stage:
+                raise UserError(
+                    _(
+                        "No puede cargar documentos en el expediente %(number)s: solo los "
+                        "usuarios asignados a la etapa «%(stage)s» pueden hacerlo.",
+                        number=exp.number or "",
+                        stage=exp.stage_id.name or "",
+                    )
+                )
+            stage_id = vals.get("stage_id")
+            if stage_id and exp.stage_id and stage_id != exp.stage_id.id:
+                raise UserError(
+                    _(
+                        "Los documentos se cargan en la etapa actual del expediente "
+                        "(«%(current)s»). No puede crear un documento en otra etapa.",
+                        current=exp.stage_id.name or "",
+                    )
+                )
 
     def write(self, vals):
         """Un documento solo puede modificarse desde su propia etapa.

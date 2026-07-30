@@ -547,11 +547,25 @@
                             </field>
                         </page>
                         <page string="Documentos por etapa" name="stage_documents">
-                            <field name="document_ids" nolabel="1" context="{'default_stage_id': stage_id}">
+                            <!--
+                                `readonly` explícito en el o2m: el `create="1"` del list
+                                embebido habilita «Agregar línea» aunque el sheet esté
+                                readonly, así que sin esto un usuario no asignado a la
+                                etapa podía empezar a cargar un documento y recién
+                                fallaba al guardar. El modelo además lo valida en create().
+                            -->
+                            <field name="document_ids" nolabel="1"
+                                   readonly="not can_edit_in_stage"
+                                   context="{'default_stage_id': stage_id}">
                                 <list create="1" delete="1" edit="1">
                                     <field name="sequence" widget="handle"/>
                                     <field name="number" readonly="1"/>
-                                    <field name="file_name" string="Archivo" readonly="1"/>
+                                    <!--
+                                        force_save: el nombre lo completa el widget al subir
+                                        el archivo, y los campos readonly no se envían al
+                                        guardar si no se fuerza.
+                                    -->
+                                    <field name="file_name" string="Archivo" readonly="1" force_save="1"/>
                                     <!--
                                         Solo se editan las filas de la etapa actual: los
                                         documentos de etapas anteriores quedan de consulta
@@ -587,8 +601,9 @@
                                         campos quedan readonly. El modelo además lo valida en
                                         `write()`, para cubrir importaciones y RPC.
                                     -->
+                                    <!-- `not id`: en un documento nuevo todavía no aplica. -->
                                     <div class="alert alert-info" role="status"
-                                         invisible="can_edit_document">
+                                         invisible="can_edit_document or not id">
                                         <i class="fa fa-lock me-2" aria-hidden="true"/>
                                         Documento de solo consulta: pertenece a otra etapa del
                                         expediente y no puede modificarse.
@@ -612,8 +627,13 @@
                                             <field name="file_data" filename="file_name" widget="binary"
                                                    invisible="not can_download_file or file_data"
                                                    readonly="not can_download_file"/>
-                                            <!-- Visualización: evitar widget binary (descarga directa) -->
-                                            <field name="file_name" readonly="1" invisible="not file_data"/>
+                                            <!--
+                                                Visualización: evitar widget binary (descarga directa).
+                                                force_save porque el nombre lo escribe el widget de
+                                                subida y los readonly no viajan al servidor al guardar.
+                                            -->
+                                            <field name="file_name" readonly="1" force_save="1"
+                                                   invisible="not file_data"/>
                                             <button type="object"
                                                     name="action_preview_file"
                                                     string="Previsualizar"
