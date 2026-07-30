@@ -21,6 +21,7 @@
                 <field name="next_review" invisible="1"/>
                 <field name="tier_stage_locked" invisible="1"/>
                 <field name="can_restart_validation_stage" invisible="1"/>
+                <field name="expedient_stage_editable" invisible="1"/>
                 <field name="stage_validation_status" invisible="1"/>
                 <field name="has_stage_reviews" invisible="1"/>
 
@@ -83,7 +84,7 @@
                     <button name="action_tier_restart_validation" type="object"
                             string="Reiniciar validación"
                             class="btn-secondary"
-                            invisible="not can_restart_validation_stage or hide_reviews"
+                            invisible="not can_restart_validation_stage or hide_reviews or not expedient_stage_editable"
                             confirm="¿Reiniciar la validación de la etapa actual?"/>
                 </header>
             </xpath>

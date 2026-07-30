@@ -105,6 +105,23 @@ class FundExpedientDisposition(models.Model):
         store=True,
     )
 
+    # Quién puede operar este registro: se hereda de la etapa actual del
+    # expediente. Gobierna la cancelación y el reinicio de la validación, y la
+    # visibilidad de esos botones.
+    expedient_stage_editable = fields.Boolean(
+        string="Opera la etapa del expediente",
+        compute="_compute_expedient_stage_editable",
+    )
+
+    @api.depends("expedient_id.can_edit_in_stage")
+    @api.depends_context("uid")
+    def _compute_expedient_stage_editable(self):
+        for rec in self:
+            rec.expedient_stage_editable = bool(
+                rec.expedient_id and rec.expedient_id.can_edit_in_stage
+            )
+
+
     _sql_constraints = [
         (
             "expedient_stage_number_uniq",

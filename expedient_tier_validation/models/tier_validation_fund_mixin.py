@@ -257,6 +257,20 @@ class TierValidationFundMixin(models.AbstractModel):
         return created_trs
 
     def restart_validation(self):
+        """Reiniciar la validación: solo quien opera la etapa del expediente.
+
+        Reiniciar borra las revisiones del contexto, así que equivale a dar de
+        baja lo actuado: es una acción del circuito del expediente, no de
+        cualquiera con acceso de lectura al registro.
+        """
+        for rec in self:
+            if not rec.expedient_stage_editable:
+                raise UserError(
+                    _(
+                        "Solo los usuarios asignados a la etapa actual del expediente "
+                        "pueden reiniciar la validación."
+                    )
+                )
         for rec in self:
             rec._current_context_reviews().sudo().unlink()
         self.review_ids._compute_can_review()

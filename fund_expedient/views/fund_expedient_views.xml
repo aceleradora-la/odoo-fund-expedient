@@ -378,8 +378,9 @@
                                         <button name="action_cancel" type="object"
                                                 string="Cancelar solicitud" class="btn-secondary"
                                                 confirm="La solicitud quedará cancelada como historial y podrá generarse una nueva. ¿Continuar?"
-                                                invisible="cancelled or not number or number == '/'"/>
+                                                invisible="cancelled or not expedient_stage_editable or not number or number == '/'"/>
                                         <field name="cancelled" invisible="1"/>
+                                        <field name="expedient_stage_editable" invisible="1"/>
                                     </header>
                                     <div class="alert alert-danger mb-0" role="status"
                                          invisible="not cancelled">
