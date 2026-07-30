@@ -117,14 +117,30 @@ class FundExpedient(models.Model):
         "review_ids.definition_id",
         "stage_id",
         "state",
+        "can_edit_in_stage",
+        "stage_requirements_ok",
     )
     def _compute_need_validation(self):
-        """Puede solicitar validación si faltan reviews de la etapa actual para defs. aplicables."""
+        """Cuándo se ofrece «Solicitar validación» de la etapa.
+
+        Además de faltar reviews para las definiciones aplicables, exigimos:
+        - que el usuario opere la etapa (`can_edit_in_stage`), y
+        - que la etapa no tenga requisitos pendientes (`stage_requirements_ok`),
+          por ejemplo la Solicitud de Gasto todavía sin aprobar o documentos sin
+          subir. No tiene sentido pedir la aprobación del expediente antes de
+          completar lo que la etapa exige.
+
+        Este campo gobierna la visibilidad del botón que inyecta
+        base_tier_validation, que por sí solo no conoce ninguna de las dos cosas.
+        """
         for rec in self:
             if isinstance(rec.id, models.NewId):
                 rec.need_validation = False
                 continue
             if not rec._check_state_from_condition():
+                rec.need_validation = False
+                continue
+            if not rec.can_edit_in_stage or not rec.stage_requirements_ok:
                 rec.need_validation = False
                 continue
             rec.need_validation = bool(rec._missing_tier_reviews_for_current_stage())
@@ -761,7 +777,16 @@ class FundExpedient(models.Model):
         return True
 
     def action_previous_stage(self):
-        """Permitir volver de etapa usando skip_validation_check para no bloquear por tier validation."""
+        """Volver de etapa: se permite salvo que haya una aprobación EN CURSO.
+
+        Criterio: mientras algo esté esperando aprobación (del expediente o de su
+        Solicitud) el expediente no se mueve; hay que reiniciar esa validación
+        primero. Una validación **rechazada** sí deja volver: retroceder es
+        justamente la forma de corregir lo observado.
+
+        Los requisitos de la etapa (documentos, disposición, importes) no se
+        exigen para retroceder, solo para avanzar.
+        """
         for rec in self:
             if not rec.can_edit_in_stage:
                 raise UserError(
@@ -769,14 +794,13 @@ class FundExpedient(models.Model):
                         "Solo los usuarios asignados a la etapa actual pueden volver a la etapa anterior."
                     )
                 )
-            if not self.env.context.get("skip_document_check"):
-                rec._check_required_documents_before_leave_stage()
-            stage_reviews = rec._current_stage_reviews()
-            if any(r.status in ("waiting", "pending", "rejected") for r in stage_reviews):
+            _users, reason, label = rec._get_pending_approval_info()
+            if reason:
                 raise UserError(
                     _(
-                        "No puede volver de etapa hasta que la validación de la etapa "
-                        "actual esté finalizada."
+                        "No puede volver de etapa mientras esté pendiente la aprobación de "
+                        "%(what)s. Reinicie esa validación si necesita retroceder.",
+                        what=label or _("la etapa"),
                     )
                 )
         for rec, stages in self._get_allowed_stages():
@@ -789,5 +813,6 @@ class FundExpedient(models.Model):
             rec.with_context(
                 skip_validation_check=True,
                 skip_spend_request_check=True,
+                skip_document_check=True,
             ).write({"stage_id": target.id})
         return True

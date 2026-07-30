@@ -1210,6 +1210,12 @@ class FundExpedient(models.Model):
         return True
 
     def action_previous_stage(self):
+        """Volver a la etapa anterior.
+
+        A diferencia de avanzar, retroceder NO exige los requisitos de la etapa:
+        justamente se vuelve atrás para poder corregir lo que falta (documentos,
+        disposición, importes). Por eso se escribe con `skip_document_check`.
+        """
         for rec in self:
             if not rec.can_edit_in_stage:
                 raise UserError(
@@ -1217,8 +1223,6 @@ class FundExpedient(models.Model):
                         "Solo los usuarios asignados a la etapa actual pueden volver a la etapa anterior."
                     )
                 )
-            if not self.env.context.get("skip_document_check"):
-                rec._check_required_documents_before_leave_stage()
         for rec, stages in self._get_allowed_stages():
             if not rec.stage_id or not stages:
                 continue
@@ -1226,7 +1230,7 @@ class FundExpedient(models.Model):
             if current_index <= 0:
                 continue
             target = stages[current_index - 1]
-            rec.stage_id = target
+            rec.with_context(skip_document_check=True).write({"stage_id": target.id})
         return True
 
     @api.depends_context("uid")

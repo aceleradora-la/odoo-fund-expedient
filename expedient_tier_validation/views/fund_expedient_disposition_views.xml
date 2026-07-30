@@ -68,19 +68,19 @@
                            statusbar_visible="draft,in_progress,purchases,to_approve,approved"
                            readonly="1"/>
 
-                    <button name="request_validation" type="object"
+                    <button name="action_tier_request_validation" type="object"
                             string="Solicitar aprobación"
                             class="btn-primary"
                             invisible="not need_validation or stage_validation_status == 'rejected' or hide_reviews"/>
-                    <button name="validate_tier" type="object"
+                    <button name="action_tier_validate" type="object"
                             string="Aprobar"
                             class="btn-success"
                             invisible="not can_review"/>
-                    <button name="reject_tier" type="object"
+                    <button name="action_tier_reject" type="object"
                             string="Rechazar"
                             class="btn-danger"
                             invisible="not can_review"/>
-                    <button name="restart_validation" type="object"
+                    <button name="action_tier_restart_validation" type="object"
                             string="Reiniciar validación"
                             class="btn-secondary"
                             invisible="not can_restart_validation_stage or hide_reviews"

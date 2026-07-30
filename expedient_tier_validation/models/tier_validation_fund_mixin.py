@@ -309,6 +309,38 @@ class TierValidationFundMixin(models.AbstractModel):
     def _on_context_tier_validated(self):
         """Hook: acciones al completar validación del contexto actual."""
 
+    # ------------------------------------------------------------------
+    # Acciones para los botones EMBEBIDOS en el formulario del expediente
+    #
+    # La Solicitud, la Disposición y la Resolución se abren como diálogo desde
+    # el expediente. Al aprobar o solicitar aprobación desde ahí, el cliente
+    # recarga el registro del diálogo pero NO el expediente padre, así que sus
+    # carteles y botones (quién lo tiene, requisitos pendientes, siguiente
+    # etapa) quedaban con datos viejos hasta reabrir el expediente.
+    #
+    # Estos envoltorios existen solo para devolver una recarga del cliente. No
+    # se cambia el retorno de `request_validation` / `restart_validation`
+    # porque el portal los reutiliza y espera su valor original.
+    # ------------------------------------------------------------------
+
+    def _tier_ui_result(self, result):
+        """Respeta la acción devuelta (p. ej. wizard de comentario) o recarga."""
+        if isinstance(result, dict) and result.get("type"):
+            return result
+        return {"type": "ir.actions.client", "tag": "reload"}
+
+    def action_tier_request_validation(self):
+        return self._tier_ui_result(self.request_validation())
+
+    def action_tier_validate(self):
+        return self._tier_ui_result(self.validate_tier())
+
+    def action_tier_reject(self):
+        return self._tier_ui_result(self.reject_tier())
+
+    def action_tier_restart_validation(self):
+        return self._tier_ui_result(self.restart_validation())
+
     def reject_tier(self):
         self.ensure_one()
         sequences = self._get_sequences_to_approve(self.env.user)
