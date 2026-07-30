@@ -80,6 +80,8 @@
                     <field name="can_edit_in_stage" invisible="1"/>
                     <field name="allowed_stage_ids" invisible="1"/>
                     <field name="stage_spend_request_mode" invisible="1"/>
+                    <field name="can_create_spend_request_preventiva" invisible="1"/>
+                    <field name="can_create_spend_request_final" invisible="1"/>
                     <field name="operation_type" invisible="1"/>
                     <field name="contract_kind" invisible="1"/>
                     <field name="has_dispositions_feature" invisible="1"/>
@@ -134,19 +136,19 @@
                     <button name="action_create_spend_request_initial" type="object"
                             string="Crear SG preventiva"
                             class="btn-secondary"
-                            invisible="state == 'cancel' or not can_edit_in_stage or stage_spend_request_mode != 'preventiva' or operation_type == 'income'"/>
+                            invisible="state == 'cancel' or not can_edit_in_stage or not can_create_spend_request_preventiva or operation_type == 'income'"/>
                     <button name="action_create_spend_request_final" type="object"
                             string="Crear SG Definitiva"
                             class="btn-secondary"
-                            invisible="state == 'cancel' or not can_edit_in_stage or stage_spend_request_mode != 'final' or operation_type == 'income'"/>
+                            invisible="state == 'cancel' or not can_edit_in_stage or not can_create_spend_request_final or operation_type == 'income'"/>
                     <button name="action_create_spend_request_initial" type="object"
                             string="Crear SI preventiva"
                             class="btn-secondary"
-                            invisible="state == 'cancel' or not can_edit_in_stage or stage_spend_request_mode != 'preventiva' or operation_type != 'income'"/>
+                            invisible="state == 'cancel' or not can_edit_in_stage or not can_create_spend_request_preventiva or operation_type != 'income'"/>
                     <button name="action_create_spend_request_final" type="object"
                             string="Crear SI Definitiva"
                             class="btn-secondary"
-                            invisible="state == 'cancel' or not can_edit_in_stage or stage_spend_request_mode != 'final' or operation_type != 'income'"/>
+                            invisible="state == 'cancel' or not can_edit_in_stage or not can_create_spend_request_final or operation_type != 'income'"/>
                     <button name="action_cancel" type="object" string="Cancelar"
                             class="btn-danger" invisible="state == 'cancel' or not can_edit_in_stage"
                             confirm="¿Está seguro de que desea cancelar este expediente?"/>

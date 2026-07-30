@@ -432,6 +432,40 @@ class FundExpedient(models.Model):
         string="Situación actual",
         help="Texto listo para mostrar: motivo + responsables actuales.",
     )
+    # Disponibilidad real de los botones de Solicitud: no alcanza con que la
+    # etapa lo permita, hay que mirar si ya existe una solicitud vigente y en
+    # qué fase está. Si no, el botón se ofrece y falla al pulsarlo.
+    can_create_spend_request_preventiva = fields.Boolean(
+        compute="_compute_can_create_spend_request",
+        string="Puede crear solicitud preventiva",
+    )
+    can_create_spend_request_final = fields.Boolean(
+        compute="_compute_can_create_spend_request",
+        string="Puede crear solicitud definitiva",
+    )
+
+    @api.depends(
+        "stage_id.spend_request_mode",
+        "spend_request_ids.cancelled",
+        "spend_request_ids.preventiva_state",
+        "spend_request_ids.definitiva_state",
+    )
+    def _compute_can_create_spend_request(self):
+        for rec in self:
+            mode = rec.stage_id.spend_request_mode
+            sr = rec._active_spend_request()
+            # Preventiva: solo si no hay ninguna solicitud vigente (una cancelada
+            # no cuenta, justamente para poder generar la nueva).
+            rec.can_create_spend_request_preventiva = mode == "preventiva" and not sr
+            # Definitiva: requiere la preventiva aprobada y que la definitiva no
+            # se haya generado ya (regenerarla borraría su aprobación).
+            rec.can_create_spend_request_final = bool(
+                mode == "final"
+                and sr
+                and sr.is_phase_approved("preventiva")
+                and not sr.is_phase_generated("definitiva")
+            )
+
     stage_requirements_ok = fields.Boolean(
         compute="_compute_stage_requirements",
         string="Requisitos de la etapa cumplidos",
