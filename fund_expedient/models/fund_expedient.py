@@ -432,6 +432,40 @@ class FundExpedient(models.Model):
         string="Situación actual",
         help="Texto listo para mostrar: motivo + responsables actuales.",
     )
+    # Existencia de etapa anterior/siguiente en el flujo del tipo. Sin esto los
+    # botones se ofrecen en los extremos del circuito y al pulsarlos no pasa
+    # nada (el código sale silenciosamente cuando no hay destino).
+    has_previous_stage = fields.Boolean(
+        compute="_compute_has_adjacent_stages",
+        string="Tiene etapa anterior",
+    )
+    has_next_stage = fields.Boolean(
+        compute="_compute_has_adjacent_stages",
+        string="Tiene etapa siguiente",
+    )
+
+    @api.depends(
+        "stage_id",
+        "type_id",
+        "type_id.stage_assign_ids.stage_id",
+        "company_id",
+    )
+    def _compute_has_adjacent_stages(self):
+        for rec in self:
+            rec.has_previous_stage = False
+            rec.has_next_stage = False
+            if not rec.stage_id:
+                continue
+            for _record, stages in rec._get_allowed_stages():
+                # Una etapa de resultado final (Desierto/Sin efecto/Fracasado)
+                # no está en el flujo secuencial: desde ahí no hay adyacentes.
+                if not stages or rec.stage_id.id not in stages.ids:
+                    break
+                index = stages.ids.index(rec.stage_id.id)
+                rec.has_previous_stage = index > 0
+                rec.has_next_stage = index + 1 < len(stages)
+                break
+
     visible_page_codes = fields.Char(
         compute="_compute_visible_page_codes",
         string="Solapas visibles (códigos)",

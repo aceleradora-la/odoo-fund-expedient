@@ -26,7 +26,7 @@
                 puede avanzar, y el cartel de situación explica de quién se espera.
             -->
             <xpath expr="//button[@name='action_next_stage']" position="attributes">
-                <attribute name="invisible">state == 'cancel' or not can_edit_in_stage or not stage_requirements_ok or validation_status in ('pending', 'waiting', 'rejected')</attribute>
+                <attribute name="invisible">state == 'cancel' or not can_edit_in_stage or not has_next_stage or not stage_requirements_ok or validation_status in ('pending', 'waiting', 'rejected')</attribute>
             </xpath>
             <xpath expr="//notebook" position="inside">
                 <page string="Aprobaciones" name="tier_reviews">

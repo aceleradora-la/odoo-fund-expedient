@@ -105,6 +105,8 @@
                     <field name="hide_amount_estimated_stage" invisible="1"/>
                     <field name="holder_reason" invisible="1"/>
                     <field name="stage_requirements_ok" invisible="1"/>
+                    <field name="has_previous_stage" invisible="1"/>
+                    <field name="has_next_stage" invisible="1"/>
                     <field name="visible_page_codes" invisible="1"/>
                     <!--
                         «Etapa anterior» no depende de los requisitos de la etapa
@@ -114,7 +116,7 @@
                     -->
                     <button name="action_previous_stage" type="object" string="Etapa anterior"
                             class="btn-secondary"
-                            invisible="state == 'cancel' or not can_edit_in_stage or holder_reason in ('expedient_approval', 'spend_request_approval')"/>
+                            invisible="state == 'cancel' or not can_edit_in_stage or not has_previous_stage or holder_reason in ('expedient_approval', 'spend_request_approval')"/>
                     <!--
                         «Siguiente etapa» solo aparece cuando la etapa está completa:
                         `stage_requirements_ok` resume documentos, disposición,
@@ -123,7 +125,7 @@
                     -->
                     <button name="action_next_stage" type="object" string="Siguiente etapa"
                             class="btn-primary"
-                            invisible="state == 'cancel' or not can_edit_in_stage or not stage_requirements_ok"/>
+                            invisible="state == 'cancel' or not can_edit_in_stage or not has_next_stage or not stage_requirements_ok"/>
                     <button name="action_create_disposition" type="object"
                             string="Crear Disposición"
                             class="btn-secondary"
