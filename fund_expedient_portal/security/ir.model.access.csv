@@ -4,6 +4,7 @@ access_fund_expedient_stage_portal,fund.expedient.stage portal,fund_expedient.mo
 access_fund_expedient_type_portal,fund.expedient.type portal,fund_expedient.model_fund_expedient_type,base.group_portal,1,0,0,0
 access_fund_expedient_encuadre_portal,fund.expedient.encuadre portal,fund_expedient.model_fund_expedient_encuadre,base.group_portal,1,0,0,0
 access_fund_expedient_document_type_portal,fund.expedient.document.type portal,fund_expedient.model_fund_expedient_document_type,base.group_portal,1,0,0,0
+access_fund_expedient_page_portal,fund.expedient.page portal,fund_expedient.model_fund_expedient_page,base.group_portal,1,0,0,0
 access_fund_expedient_line_portal,fund.expedient.line portal,fund_expedient.model_fund_expedient_line,base.group_portal,1,0,0,0
 access_fund_expedient_disposition_portal,fund.expedient.disposition portal,fund_expedient.model_fund_expedient_disposition,base.group_portal,1,0,0,0
 access_fund_expedient_resolution_portal,fund.expedient.resolution portal,fund_expedient.model_fund_expedient_resolution,base.group_portal,1,0,0,0

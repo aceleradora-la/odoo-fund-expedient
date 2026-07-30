@@ -432,6 +432,33 @@ class FundExpedient(models.Model):
         string="Situación actual",
         help="Texto listo para mostrar: motivo + responsables actuales.",
     )
+    visible_page_codes = fields.Char(
+        compute="_compute_visible_page_codes",
+        string="Solapas visibles (códigos)",
+        help="Campo técnico: códigos de las solapas visibles en la etapa actual, "
+        "delimitados por «|». Las vistas preguntan por él para mostrar u ocultar "
+        "cada solapa.",
+    )
+
+    @api.depends(
+        "stage_id",
+        "type_id",
+        "type_id.stage_assign_ids.visible_page_ids",
+    )
+    def _compute_visible_page_codes(self):
+        # Sin configuración se muestran TODAS: así las etapas que ya existían
+        # siguen viéndose igual, y configurar es opt-in.
+        all_codes = self.env["fund.expedient.page"]._all_codes_token()
+        for rec in self:
+            assign = rec._current_stage_assign()
+            pages = assign.visible_page_ids if assign else False
+            if not pages:
+                rec.visible_page_codes = all_codes
+                continue
+            rec.visible_page_codes = "|%s|" % "|".join(
+                code for code in pages.mapped("code") if code
+            )
+
     # Disposición / Resolución: el botón se ofrece solo mientras falte crearla
     # en la etapa actual. Igual criterio que la Solicitud.
     can_create_disposition = fields.Boolean(

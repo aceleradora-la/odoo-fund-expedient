@@ -103,6 +103,19 @@ class ExpedientTypeStageAssign(models.Model):
         string="Archivo obligatorio en resolución",
         help="Si está activo, la resolución requerida debe tener un archivo subido.",
     )
+    visible_page_ids = fields.Many2many(
+        "fund.expedient.page",
+        "fund_expedient_stage_assign_page_rel",
+        "assign_id",
+        "page_id",
+        string="Solapas visibles",
+        help=(
+            "Solapas del expediente que se muestran en esta etapa. "
+            "Si se deja vacío se muestran todas (comportamiento por defecto). "
+            "Las solapas que además dependen de permisos o del tipo de operación "
+            "siguen respetando esas condiciones."
+        ),
+    )
     required_document_type_ids = fields.Many2many(
         "fund.expedient.document.type",
         "fund_expedient_stage_assign_doc_type_rel",

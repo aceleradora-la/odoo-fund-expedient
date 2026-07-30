@@ -74,6 +74,8 @@
                                     <field name="allow_edit_line_amount_final" optional="show"/>
                                     <field name="required_document_type_ids" widget="many2many_tags"
                                            optional="hide"/>
+                                    <field name="visible_page_ids" widget="many2many_tags"
+                                           optional="hide"/>
                                     <field name="committed_from_expedient" optional="hide"/>
                                     <field name="is_final_stage" optional="show"/>
                                     <field name="require_notification" optional="show"/>
@@ -129,6 +131,12 @@
                                         etapa hay que subir, en esta misma etapa, un documento
                                         con archivo de cada tipo listado.
                                     -->
+                                    <group string="Solapas visibles (por etapa)">
+                                        <field name="visible_page_ids"
+                                               widget="many2many_tags"
+                                               options="{'no_create': True, 'no_quick_create': True}"
+                                               placeholder="Vacío = se muestran todas las solapas..."/>
+                                    </group>
                                     <group string="Documentos del expediente (por etapa)">
                                         <field name="required_document_type_ids"
                                                widget="many2many_tags"

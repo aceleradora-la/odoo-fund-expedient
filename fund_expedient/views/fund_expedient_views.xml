@@ -105,6 +105,7 @@
                     <field name="hide_amount_estimated_stage" invisible="1"/>
                     <field name="holder_reason" invisible="1"/>
                     <field name="stage_requirements_ok" invisible="1"/>
+                    <field name="visible_page_codes" invisible="1"/>
                     <!--
                         «Etapa anterior» no depende de los requisitos de la etapa
                         (se vuelve justamente para corregirlos), pero sí se oculta
@@ -279,14 +280,16 @@
                         </group>
                     </group>
                     <notebook>
-                        <page string="Descripción/Memo" name="description">
+                        <page string="Descripción/Memo" name="description"
+                              invisible="'|description|' not in visible_page_codes">
                             <field name="description"
                                    widget="html"
                                    placeholder="Descripción o memo de la solicitud..."
                                    nolabel="1"
                                    readonly="state != 'draft'"/>
                         </page>
-                        <page string="Líneas" name="lines">
+                        <page string="Líneas" name="lines"
+                              invisible="'|lines|' not in visible_page_codes">
                             <field name="can_create_purchase" invisible="1"/>
                             <button name="action_wizard_create_purchase" type="object"
                                     string="Crear solicitud desde líneas"
@@ -354,7 +357,8 @@
                                 </form>
                             </field>
                         </page>
-                        <page string="Solicitud de Gasto" name="spend_request">
+                        <page string="Solicitud de Gasto" name="spend_request"
+                              invisible="'|spend_request|' not in visible_page_codes">
                             <field name="spend_request_ids" nolabel="1" create="0" delete="0"
                                    context="{'default_expedient_id': id}">
                                 <!-- Las canceladas quedan como historial, atenuadas. -->
@@ -483,7 +487,8 @@
                                 manual sin tener que abrir la SG primero.
                             -->
                         </page>
-                        <page string="Disposiciones" name="dispositions" invisible="not has_dispositions_feature">
+                        <page string="Disposiciones" name="dispositions"
+                              invisible="not has_dispositions_feature or '|dispositions|' not in visible_page_codes">
                             <field name="disposition_ids" nolabel="1"
                                    readonly="not current_assign_require_disposition"
                                    context="{'default_expedient_id': id, 'default_stage_id': stage_id}">
@@ -554,7 +559,8 @@
                                 </form>
                             </field>
                         </page>
-                        <page string="Resoluciones" name="resolutions" invisible="not has_resolutions_feature">
+                        <page string="Resoluciones" name="resolutions"
+                              invisible="not has_resolutions_feature or '|resolutions|' not in visible_page_codes">
                             <field name="resolution_ids" nolabel="1"
                                    readonly="not current_assign_require_resolution"
                                    context="{'default_expedient_id': id, 'default_stage_id': stage_id}">
@@ -611,7 +617,8 @@
                                 </form>
                             </field>
                         </page>
-                        <page string="Notificaciones (correo)" name="notification_mails">
+                        <page string="Notificaciones (correo)" name="notification_mails"
+                              invisible="'|notification_mails|' not in visible_page_codes">
                             <field name="notification_mail_ids" nolabel="1" create="0" delete="0" edit="0">
                                 <list>
                                     <field name="create_date" string="Fecha"/>
@@ -623,7 +630,8 @@
                                 </list>
                             </field>
                         </page>
-                        <page string="Documentos por etapa" name="stage_documents">
+                        <page string="Documentos por etapa" name="stage_documents"
+                              invisible="'|stage_documents|' not in visible_page_codes">
                             <!--
                                 `readonly` explícito en el o2m: el `create="1"` del list
                                 embebido habilita «Agregar línea» aunque el sheet esté
@@ -742,7 +750,8 @@
                                 </form>
                             </field>
                         </page>
-                        <page string="Expedientes relacionados" name="children">
+                        <page string="Expedientes relacionados" name="children"
+                              invisible="'|children|' not in visible_page_codes">
                             <!-- El readonly viene del <sheet readonly="not can_edit_in_stage">,
                                  por eso aquí no fijamos readonly explícito.
                                  Para "relacionados" usamos un selector + botón "Vincular":
@@ -774,7 +783,7 @@
                             </field>
                         </page>
                         <page string="Solicitudes de cotización" name="purchases"
-                              invisible="not can_view_purchase_orders">
+                              invisible="not can_view_purchase_orders or '|purchases|' not in visible_page_codes">
                             <field name="can_create_purchase" invisible="1"/>
                             <field name="purchase_order_ids" nolabel="1">
                                 <list create="can_create_purchase" delete="0" open="0">
@@ -786,7 +795,7 @@
                             </field>
                         </page>
                         <page string="Facturas" name="invoices"
-                              invisible="not can_view_invoices or operation_type == 'income'">
+                              invisible="not can_view_invoices or operation_type == 'income' or '|invoices|' not in visible_page_codes">
                             <field name="direct_invoice_ids" nolabel="1"
                                    context="{'default_move_type': 'in_invoice'}">
                                 <list create="1" delete="1" open="1">
@@ -800,7 +809,7 @@
                             </field>
                         </page>
                         <page string="Facturas de venta" name="sale_invoices"
-                              invisible="not can_view_invoices or operation_type != 'income'">
+                              invisible="not can_view_invoices or operation_type != 'income' or '|sale_invoices|' not in visible_page_codes">
                             <field name="sale_invoice_ids" nolabel="1"
                                    context="{'default_move_type': 'out_invoice'}">
                                 <list create="1" delete="1" open="1">
@@ -814,7 +823,7 @@
                             </field>
                         </page>
                         <page string="Pagos" name="payments"
-                              invisible="not can_view_payments">
+                              invisible="not can_view_payments or '|payments|' not in visible_page_codes">
                             <field name="payment_ids" nolabel="1">
                                 <list create="0" delete="0" open="1">
                                     <field name="name"/>

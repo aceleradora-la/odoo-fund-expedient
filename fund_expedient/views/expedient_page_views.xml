@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_expedient_page_list" model="ir.ui.view">
+        <field name="name">fund.expedient.page.list</field>
+        <field name="model">fund.expedient.page</field>
+        <field name="type">list</field>
+        <field name="arch" type="xml">
+            <!--
+                Catálogo cerrado: los códigos se corresponden con las solapas
+                que existen en el formulario, por eso no se crean ni borran
+                desde acá. Solo se pueden renombrar y reordenar.
+            -->
+            <list string="Solapas del expediente" create="0" delete="0" edit="1">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="code" readonly="1"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_expedient_page_form" model="ir.ui.view">
+        <field name="name">fund.expedient.page.form</field>
+        <field name="model">fund.expedient.page</field>
+        <field name="type">form</field>
+        <field name="arch" type="xml">
+            <form string="Solapa del expediente" create="0" delete="0">
+                <sheet>
+                    <div class="alert alert-info" role="status">
+                        <i class="fa fa-info-circle me-2" aria-hidden="true"/>
+                        El código identifica la solapa dentro del formulario del
+                        expediente y no debe modificarse. Para elegir qué solapas se
+                        ven en cada etapa, use «Solapas visibles» en las Asignaciones
+                        por etapa del tipo de expediente.
+                    </div>
+                    <group>
+                        <field name="name"/>
+                        <field name="code" readonly="1"/>
+                        <field name="sequence"/>
+                        <field name="company_id" groups="base.group_multi_company"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+</odoo>

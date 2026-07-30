@@ -6,6 +6,7 @@ from . import fund_budget_adjustment
 from . import expedient_stage
 from . import expedient_encuadre
 from . import expedient_document_type
+from . import expedient_page
 from . import expedient_type
 from . import expedient_disposition
 from . import expedient_resolution
