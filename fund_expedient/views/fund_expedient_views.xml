@@ -353,11 +353,14 @@
                         <page string="Solicitud de Gasto" name="spend_request">
                             <field name="spend_request_ids" nolabel="1" create="0" delete="0"
                                    context="{'default_expedient_id': id}">
-                                <list create="0" delete="0" edit="0">
+                                <!-- Las canceladas quedan como historial, atenuadas. -->
+                                <list create="0" delete="0" edit="0" decoration-muted="cancelled">
                                     <field name="number"/>
                                     <field name="spend_state"/>
                                     <field name="date_preventiva"/>
                                     <field name="date_definitiva"/>
+                                    <field name="cancelled"/>
+                                    <field name="cancel_date" optional="hide"/>
                                 </list>
                                 <form string="Solicitud de Gasto">
                                     <!--
@@ -372,7 +375,18 @@
                                         <button name="action_print_report" type="object"
                                                 string="Imprimir SG" class="btn-secondary"
                                                 invisible="not number or number == '/'"/>
+                                        <button name="action_cancel" type="object"
+                                                string="Cancelar solicitud" class="btn-secondary"
+                                                confirm="La solicitud quedará cancelada como historial y podrá generarse una nueva. ¿Continuar?"
+                                                invisible="cancelled or not number or number == '/'"/>
+                                        <field name="cancelled" invisible="1"/>
                                     </header>
+                                    <div class="alert alert-danger mb-0" role="status"
+                                         invisible="not cancelled">
+                                        <i class="fa fa-ban me-2" aria-hidden="true"/>
+                                        Solicitud cancelada: queda como historial y no cuenta
+                                        para los requisitos de la etapa.
+                                    </div>
                                     <!--
                                         Dos columnas: izquierda identificación y
                                         estado; derecha datos de la contratación

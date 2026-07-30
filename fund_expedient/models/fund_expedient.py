@@ -1834,9 +1834,18 @@ class FundExpedient(models.Model):
             if rendered and rendered != rec.description:
                 super(FundExpedient, rec).write({"description": rendered})
 
+    def _active_spend_request(self):
+        """Solicitud vigente del expediente (la no cancelada).
+
+        Puede haber varias en el historial: al cancelar una se habilita generar
+        otra. Toda la lógica de etapa trabaja siempre sobre la vigente.
+        """
+        self.ensure_one()
+        return self.spend_request_ids.filtered(lambda s: not s.cancelled)[:1]
+
     def _get_spend_request(self, create_if_missing=False):
         self.ensure_one()
-        sr = self.spend_request_ids[:1]
+        sr = self._active_spend_request()
         if sr:
             return sr
         if create_if_missing:
@@ -1928,19 +1937,32 @@ class FundExpedient(models.Model):
         if mode in ("preventiva", "final"):
             phase = "preventiva" if mode == "preventiva" else "definitiva"
             doc_label = self._spend_request_doc_label()
-            sr = self.spend_request_ids[:1]
+            sr = self._active_spend_request()
             if not sr or not sr.is_phase_generated(phase):
                 pending.append(
                     _("generar la %(doc)s %(phase)s", doc=doc_label, phase=phase)
                 )
             elif not sr.is_phase_approved(phase):
-                pending.append(
-                    _(
-                        "esperar la aprobación de la %(doc)s %(phase)s",
-                        doc=doc_label,
-                        phase=phase,
+                # Distinguimos si la aprobación ya está en curso o todavía hay que
+                # pedirla (caso típico: se reinició la validación). Así el cartel
+                # dice de qué lado está la pelota.
+                _users, reason, _label = self._get_pending_approval_info()
+                if reason == "spend_request_approval":
+                    pending.append(
+                        _(
+                            "esperar la aprobación de la %(doc)s %(phase)s",
+                            doc=doc_label,
+                            phase=phase,
+                        )
                     )
-                )
+                else:
+                    pending.append(
+                        _(
+                            "solicitar la aprobación de la %(doc)s %(phase)s",
+                            doc=doc_label,
+                            phase=phase,
+                        )
+                    )
 
         # Primera etapa del flujo: sin monto estimado no tiene sentido avanzar.
         if not (self.amount_estimated and self.amount_estimated > 0):
@@ -1973,7 +1995,7 @@ class FundExpedient(models.Model):
         mode = self.stage_id.spend_request_mode
         if mode not in ("preventiva", "final"):
             return
-        sr = self.spend_request_ids[:1]
+        sr = self._active_spend_request()
         if not sr:
             raise UserError(
                 _("Debe generar la Solicitud de Gasto antes de salir de la etapa «%s».")
@@ -2043,8 +2065,13 @@ class FundExpedient(models.Model):
         self.ensure_one()
         if not self.stage_id or self.stage_id.spend_request_mode != "preventiva":
             raise UserError("La etapa actual no permite crear Solicitud de Gasto preventiva.")
-        if self.spend_request_ids:
-            raise UserError(_("Ya existe una Solicitud de Gasto para este expediente."))
+        if self._active_spend_request():
+            raise UserError(
+                _(
+                    "Ya existe una Solicitud vigente para este expediente. "
+                    "Cancélela desde la solapa de Solicitudes si necesita generar una nueva."
+                )
+            )
         sr = self._get_spend_request(create_if_missing=True)
         sr.action_generate_initial()
         return {

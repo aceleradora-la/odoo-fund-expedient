@@ -158,6 +158,15 @@ class FundExpedientSpendRequest(models.Model):
         copy=False,
         default="/",
     )
+    cancelled = fields.Boolean(
+        string="Cancelada",
+        readonly=True,
+        copy=False,
+        index=True,
+        help="Una solicitud cancelada queda como historial: no cuenta para los "
+        "requisitos de la etapa y permite generar una nueva en su lugar.",
+    )
+    cancel_date = fields.Date(string="Fecha de cancelación", readonly=True, copy=False)
 
     # ------------------------------------------------------------------
     # Variación entre preventivo y definitivo
@@ -209,7 +218,7 @@ class FundExpedientSpendRequest(models.Model):
     )
     display_name = fields.Char(compute="_compute_display_name", store=True)
 
-    @api.depends("expedient_id.number", "number", "spend_state", "operation_type")
+    @api.depends("expedient_id.number", "number", "spend_state", "operation_type", "cancelled")
     def _compute_display_name(self):
         for rec in self:
             exp = rec.expedient_id.number if rec.expedient_id and rec.expedient_id.number else ""
@@ -224,7 +233,10 @@ class FundExpedientSpendRequest(models.Model):
             is_income = rec.operation_type == "income"
             prefix = "SI" if is_income else "SG"
             fallback = _("Solicitud de Ingreso") if is_income else _("Solicitud de Gasto")
-            rec.display_name = f"{prefix} {exp} {label}".strip() if exp or label else fallback
+            name = f"{prefix} {exp} {label}".strip() if exp or label else fallback
+            # La marca de cancelada viaja en el nombre: aparece en el o2m del
+            # expediente, en «Mis aprobaciones» y en cualquier referencia.
+            rec.display_name = "%s (%s)" % (name, _("Cancelada")) if rec.cancelled else name
 
     def _search_expedient_type_number(self, operator, value):
         """Buscar por el número por tipo sin almacenarlo en la SG."""
@@ -234,23 +246,83 @@ class FundExpedientSpendRequest(models.Model):
         """Buscar por tipo de expediente sin duplicar el dato en la SG."""
         return [("expedient_id.type_id", operator, value)]
 
-    _sql_constraints = [
-        (
-            "expedient_unique",
-            "unique(expedient_id)",
-            "Ya existe una Solicitud de Gasto para este expediente.",
+    def init(self):
+        """Unicidad por expediente, pero solo entre las solicitudes vigentes.
+
+        Antes había un `unique(expedient_id)` que impedía para siempre tener más
+        de una solicitud por expediente. Ahora una solicitud puede cancelarse y
+        generarse otra, así que la unicidad se limita a las no canceladas con un
+        índice parcial (no se puede expresar con `_sql_constraints`).
+        """
+        self.env.cr.execute(
+            """
+            ALTER TABLE fund_expedient_spend_request
+            DROP CONSTRAINT IF EXISTS fund_expedient_spend_request_expedient_unique
+            """
         )
-    ]
+        self.env.cr.execute(
+            """
+            CREATE UNIQUE INDEX IF NOT EXISTS fund_expedient_spend_request_active_uniq
+                ON fund_expedient_spend_request (expedient_id)
+             WHERE cancelled IS NOT TRUE
+            """
+        )
 
     @api.model_create_multi
     def create(self, vals_list):
         for vals in vals_list:
             exp_id = vals.get("expedient_id")
-            if exp_id and self.search_count([("expedient_id", "=", exp_id)]):
+            if exp_id and self.search_count(
+                [("expedient_id", "=", exp_id), ("cancelled", "=", False)]
+            ):
                 raise UserError(
-                    _("Ya existe una Solicitud de Gasto para este expediente.")
+                    _(
+                        "Ya existe una Solicitud vigente para este expediente. "
+                        "Cancélela si necesita generar una nueva."
+                    )
                 )
         return super().create(vals_list)
+
+    def action_cancel(self):
+        """Cancela la solicitud para poder generar otra en su lugar.
+
+        No se borra: queda como historial (con su número y sus aprobaciones) y
+        deja de contar para los requisitos de la etapa y para la unicidad.
+        """
+        for rec in self:
+            if rec.cancelled:
+                raise UserError(_("La solicitud %s ya está cancelada.") % (rec.number or ""))
+            if not rec.expedient_id.can_edit_in_stage:
+                raise UserError(
+                    _(
+                        "Solo los usuarios asignados a la etapa actual del expediente "
+                        "pueden cancelar la solicitud."
+                    )
+                )
+            rec._cancel_pending_approvals()
+            rec.with_context(skip_validation_check=True).write(
+                {
+                    "cancelled": True,
+                    "cancel_date": fields.Date.context_today(rec),
+                }
+            )
+            rec.expedient_id.message_post(
+                body=_(
+                    "Se canceló la solicitud <b>%s</b>. Puede generarse una nueva.",
+                    rec.number or "",
+                ),
+                subtype_xmlid="mail.mt_note",
+            )
+        return True
+
+    def _cancel_pending_approvals(self):
+        """Hook: al cancelar, limpiar aprobaciones abiertas.
+
+        En el módulo base no hay validaciones; `expedient_tier_validation` lo
+        sobreescribe para eliminar las revisiones pendientes y que la solicitud
+        cancelada no siga apareciendo en «Mis aprobaciones».
+        """
+        return True
 
     def _sequence_code(self):
         """Código de secuencia según la operación: gasto (SG-) o ingreso (SI-)."""

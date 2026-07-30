@@ -107,6 +107,22 @@ class FundExpedientSpendRequest(models.Model):
                     rec._get_active_spend_phase()
                 )
 
+    def _cancel_pending_approvals(self):
+        """Al cancelar la solicitud, quitar las validaciones abiertas.
+
+        Se eliminan solo las que están esperando acción (waiting/pending): las
+        ya aprobadas o rechazadas se conservan como historial de lo actuado.
+        Sin esto, una solicitud cancelada seguiría figurando en «Mis aprobaciones».
+        """
+        res = super()._cancel_pending_approvals()
+        for rec in self:
+            open_reviews = rec.review_ids.filtered(
+                lambda r: r.status in ("waiting", "pending")
+            )
+            if open_reviews:
+                open_reviews.sudo().unlink()
+        return res
+
     def action_generate_preventiva(self):
         res = super().action_generate_preventiva()
         for rec in self:

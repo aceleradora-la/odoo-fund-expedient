@@ -79,7 +79,7 @@ class ExpedientTierPortalMixin:
         values["expedient_tier"] = self._prepare_tier_portal_values(expedient)
         values["sg_tier_map"] = {
             sg.id: self._prepare_tier_portal_values(sg)
-            for sg in expedient.spend_request_ids
+            for sg in expedient.spend_request_ids.filtered(lambda s: not s.cancelled)
         }
         values["disp_tier_map"] = {
             disp.id: self._prepare_tier_portal_values(disp)

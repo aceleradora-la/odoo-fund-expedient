@@ -151,7 +151,7 @@ class FundExpedient(models.Model):
         mode = self.stage_id.spend_request_mode
         if mode not in ("preventiva", "final"):
             return ""
-        sr = self.spend_request_ids[:1]
+        sr = self._active_spend_request()
         if not sr:
             return _(
                 "Debe generar la Solicitud de Gasto antes de salir de esta etapa."

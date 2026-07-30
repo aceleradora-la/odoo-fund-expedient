@@ -632,7 +632,7 @@ class FundExpedient(models.Model):
         aprobada, la pelota vuelve a los asignados de la etapa.
         """
         self.ensure_one()
-        sr = self.spend_request_ids[:1]
+        sr = self._active_spend_request()
         if not sr:
             return self.env["tier.review"]
         phase = sr._get_active_spend_phase()
@@ -659,7 +659,7 @@ class FundExpedient(models.Model):
             )
         sr_reviews = self._pending_spend_request_reviews()
         if sr_reviews:
-            sr = self.spend_request_ids[:1]
+            sr = self._active_spend_request()
             phase_label = dict(
                 sr._fields["spend_state"].selection
             ).get(sr._get_active_spend_phase(), "")
@@ -743,6 +743,32 @@ class FundExpedient(models.Model):
         el cartel se refresque al solicitar, aprobar o rechazar una validación.
         """
         return super()._compute_holder()
+
+    @api.depends(
+        "stage_id",
+        "type_id",
+        "amount_estimated",
+        "document_ids.document_type_id",
+        "document_ids.file_data",
+        "document_ids.stage_id",
+        "document_ids.disposition_id",
+        "document_ids.resolution_id",
+        "disposition_ids.stage_id",
+        "resolution_ids.stage_id",
+        "spend_request_ids.preventiva_state",
+        "spend_request_ids.definitiva_state",
+        "spend_request_ids.review_ids.status",
+        "spend_request_ids.review_ids.spend_phase",
+    )
+    def _compute_stage_requirements(self):
+        """Igual que el base, sumando las dependencias de las validaciones.
+
+        El texto distingue «solicitar» de «esperar» la aprobación de la
+        Solicitud según haya o no reviews abiertas, así que el cartel tiene que
+        recalcularse también cuando esas reviews cambian (p. ej. al reiniciar
+        la validación).
+        """
+        return super()._compute_stage_requirements()
 
     @api.depends_context("uid")
     @api.depends(
