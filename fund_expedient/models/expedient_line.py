@@ -162,10 +162,12 @@ class ExpedientLine(models.Model):
         help="Proveedores de las órdenes de compra vinculadas al expediente.",
     )
     expedient_amount_real = fields.Monetary(
-        string="Facturas reales",
+        string="Facturas reales (expediente)",
         currency_field="currency_id",
         compute="_compute_contract_report_fields",
-        help="Total real facturado del expediente (facturas de proveedor o de venta según la operación).",
+        help="Total real facturado del EXPEDIENTE completo (facturas de proveedor o de venta "
+        "según la operación), no de esta línea: no existe imputación de facturas por línea. "
+        "Por eso el mismo importe se repite en todas las líneas del expediente y no debe sumarse.",
     )
 
     @api.depends(

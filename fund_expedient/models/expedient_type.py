@@ -68,6 +68,14 @@ class ExpedientTypeStageAssign(models.Model):
         help="Si está activo, se pueden cargar importes definitivos en las líneas del expediente "
         "y el total confirmado manual en esta etapa.",
     )
+    committed_from_expedient = fields.Boolean(
+        string="Comprometido desde el expediente (sin cotizaciones)",
+        help="Si está activo, en esta etapa el Total Comprometido se toma de los importes "
+        "definitivos del expediente (suma de líneas o total confirmado manual) e IGNORA las "
+        "órdenes de compra. Úselo cuando no se generan solicitudes de cotización. "
+        "Normalmente se combina con «Permitir editar importe definitivo (líneas)» para poder "
+        "cargar esos importes en la misma etapa.",
+    )
     hide_encuadre_id = fields.Boolean(string="Ocultar Encuadre")
     hide_estimated_need_date = fields.Boolean(string="Ocultar Fecha estimada")
     hide_recommended_supplier_id = fields.Boolean(string="Ocultar Proveedor recomendado")
@@ -95,18 +103,15 @@ class ExpedientTypeStageAssign(models.Model):
         string="Archivo obligatorio en resolución",
         help="Si está activo, la resolución requerida debe tener un archivo subido.",
     )
-    require_technical_spec_document = fields.Boolean(
-        string="Especificación técnica obligatoria",
+    required_document_type_ids = fields.Many2many(
+        "fund.expedient.document.type",
+        "fund_expedient_stage_assign_doc_type_rel",
+        "assign_id",
+        "document_type_id",
+        string="Tipos de documento obligatorios",
         help=(
-            "Si está activo, al salir de esta etapa el expediente debe tener al menos "
-            "un documento marcado como Especificación técnica con archivo subido."
-        ),
-    )
-    require_particular_conditions_document = fields.Boolean(
-        string="Condiciones particulares obligatorias",
-        help=(
-            "Si está activo, al salir de esta etapa el expediente debe tener al menos "
-            "un documento marcado como Condiciones particulares con archivo subido."
+            "Para salir de esta etapa debe existir, por cada tipo listado, un documento "
+            "de ese tipo con archivo subido y cargado en esta misma etapa."
         ),
     )
     default_resolution_notes = fields.Html(

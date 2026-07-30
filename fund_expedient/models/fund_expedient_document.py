@@ -33,26 +33,16 @@ class FundExpedientDocument(models.Model):
     )
     name = fields.Char(string="Documento")
     delivered = fields.Boolean(string="Entregado")
-    # Marca para identificar documentos que forman parte del pliego/especificación técnica
-    # del expediente. El wizard de notificación a oferentes los preselecciona como adjuntos.
-    is_technical_spec = fields.Boolean(
-        string="Especificación técnica",
+    # Tipo de documento (catálogo configurable). Reemplaza a los antiguos booleanos
+    # `is_technical_spec` / `is_particular_conditions`, que ahora son atributos del
+    # tipo. Queda opcional porque hay documentos históricos sin tipo asignado.
+    document_type_id = fields.Many2one(
+        "fund.expedient.document.type",
+        string="Tipo de documento",
         index=True,
-        help=(
-            "Marcar si este documento integra la especificación técnica del expediente. "
-            "Al notificar a oferentes, estos documentos se adjuntan automáticamente al correo."
-        ),
-    )
-    # Igual que la especificación técnica, pero para condiciones particulares del pliego
-    # (cláusulas comerciales, plazos, garantías). Se adjuntan en la invitación a cotizar.
-    is_particular_conditions = fields.Boolean(
-        string="Condiciones particulares",
-        index=True,
-        help=(
-            "Marcar si este documento contiene las condiciones particulares del pliego "
-            "(plazos, garantías, formas de pago). Al notificar a oferentes, se adjuntan "
-            "automáticamente al correo."
-        ),
+        ondelete="restrict",
+        help="Tipo del documento. Las etapas del tipo de expediente pueden exigir "
+        "que se suba un documento de determinados tipos para poder avanzar.",
     )
     notes = fields.Html(string="Observaciones")
     stage_id = fields.Many2one(
@@ -93,6 +83,13 @@ class FundExpedientDocument(models.Model):
         compute="_compute_stage_permissions",
         store=False,
     )
+    can_edit_document = fields.Boolean(
+        compute="_compute_stage_permissions",
+        store=False,
+        help="True solo si el documento pertenece a la etapa actual del expediente y el "
+        "usuario está asignado a esa etapa. Si es False, el documento es de consulta: "
+        "no puede modificarse ningún dato.",
+    )
 
     @api.depends("expedient_id", "expedient_id.stage_id", "expedient_id.can_edit_in_stage", "stage_id")
     @api.depends_context("uid")
@@ -100,12 +97,14 @@ class FundExpedientDocument(models.Model):
         for rec in self:
             rec.can_download_file = False
             rec.can_unlink_file = False
+            rec.can_edit_document = False
             if not rec.expedient_id or not rec.stage_id:
                 continue
             is_current_stage = rec.expedient_id.stage_id == rec.stage_id
             can_manage = bool(is_current_stage and rec.expedient_id.can_edit_in_stage)
             rec.can_download_file = can_manage
             rec.can_unlink_file = can_manage
+            rec.can_edit_document = can_manage
 
     @api.onchange("file_name")
     def _onchange_file_name_set_name(self):
@@ -206,6 +205,30 @@ class FundExpedientDocument(models.Model):
                 vals["number"] = f"{exp_number}-{next_seq:03d}" if exp_number else f"{next_seq:03d}"
 
         return super().create(vals_list)
+
+    def write(self, vals):
+        """Un documento solo puede modificarse desde su propia etapa.
+
+        Al abrirlo estando el expediente en otra etapa (o sin ser usuario asignado)
+        queda de consulta: ningún campo puede cambiarse. El `readonly` de la vista
+        ya lo refleja, pero el guard acá cubre importaciones, RPC y escrituras desde
+        otras vistas. El contexto `skip_document_stage_check` lo saltea para
+        escrituras internas del propio flujo (autovínculos, migraciones).
+        """
+        if not self.env.context.get("skip_document_stage_check"):
+            for rec in self:
+                if not rec.can_edit_document:
+                    raise UserError(
+                        _(
+                            "El documento «%(doc)s» pertenece a la etapa «%(stage)s» y no "
+                            "puede modificarse: el expediente está en la etapa «%(current)s». "
+                            "Los documentos solo se editan desde su propia etapa.",
+                            doc=rec.name or rec.number or "",
+                            stage=rec.stage_id.name or "",
+                            current=rec.expedient_id.stage_id.name or "",
+                        )
+                    )
+        return super().write(vals)
 
     def unlink(self):
         for rec in self:

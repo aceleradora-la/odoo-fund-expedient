@@ -72,6 +72,9 @@
                                     <field name="user_ids" widget="many2many_tags" readonly="use_requestor"/>
                                     <field name="allow_edit_type_id" optional="show"/>
                                     <field name="allow_edit_line_amount_final" optional="show"/>
+                                    <field name="required_document_type_ids" widget="many2many_tags"
+                                           optional="hide"/>
+                                    <field name="committed_from_expedient" optional="hide"/>
                                     <field name="is_final_stage" optional="show"/>
                                     <field name="require_notification" optional="show"/>
                                 </list>
@@ -120,9 +123,20 @@
                                                invisible="not require_resolution"
                                                placeholder="Observaciones predeterminadas para Resolución en esta etapa... Admite {{ object.campo }} del expediente."/>
                                     </group>
+                                    <!--
+                                        Documentos obligatorios: se eligen tipos del catálogo
+                                        (Configuración › Tipos de documento). Para avanzar de
+                                        etapa hay que subir, en esta misma etapa, un documento
+                                        con archivo de cada tipo listado.
+                                    -->
                                     <group string="Documentos del expediente (por etapa)">
-                                        <field name="require_technical_spec_document"/>
-                                        <field name="require_particular_conditions_document"/>
+                                        <field name="required_document_type_ids"
+                                               widget="many2many_tags"
+                                               options="{'no_quick_create': True}"
+                                               placeholder="Escriba para buscar tipos de documento..."/>
+                                    </group>
+                                    <group string="Importes (por etapa)">
+                                        <field name="committed_from_expedient"/>
                                     </group>
                                     <group string="Flujo">
                                         <field name="is_final_stage"/>

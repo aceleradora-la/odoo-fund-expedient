@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!--
+        Tipos base: son los que reemplazan a los dos checks que antes tenía cada
+        documento (`is_technical_spec` / `is_particular_conditions`). El
+        post_init_hook los usa para migrar los documentos y las exigencias por
+        etapa que ya existían, así que sus xmlid no deben cambiar.
+    -->
+    <data noupdate="1">
+        <record id="document_type_technical_spec" model="fund.expedient.document.type">
+            <field name="name">Especificación técnica</field>
+            <field name="sequence">10</field>
+            <field name="is_technical_spec">True</field>
+        </record>
+        <record id="document_type_particular_conditions" model="fund.expedient.document.type">
+            <field name="name">Condiciones particulares</field>
+            <field name="sequence">20</field>
+            <field name="is_particular_conditions">True</field>
+        </record>
+    </data>
+</odoo>

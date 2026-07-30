@@ -6,8 +6,15 @@
         <field name="inherit_id" ref="account.view_move_form"/>
         <field name="arch" type="xml">
             <xpath expr="//field[@name='partner_id']" position="after">
+                <!--
+                    El selector se limita a los expedientes del partner de la factura
+                    (proveedor recomendado o con OC suya; para ventas, expedientes de
+                    ingreso). `allowed_expedient_ids` lo calcula el modelo.
+                -->
+                <field name="allowed_expedient_ids" invisible="1"/>
                 <field name="expedient_ids" widget="many2many_tags"
                        options="{'no_create': True}"
+                       domain="[('id', 'in', allowed_expedient_ids)]"
                        invisible="move_type not in ('in_invoice', 'in_refund', 'out_invoice', 'out_refund')"/>
                 <field name="payment_date" readonly="1"
                        invisible="move_type != 'in_invoice' or not payment_date"/>

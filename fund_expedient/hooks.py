@@ -300,3 +300,89 @@ def post_init_hook(cr_or_env, registry=None):
     # Vistas de etapas generadas por código: crearlas si faltan y reescribir el
     # arch cuando se agregan campos nuevos (p. ej. `final_outcome`).
     env["fund.expedient.stage"].init_expedient_stage_view()
+
+    _migrate_document_flags_to_types(cr, env)
+    _recompute_expedient_commercial_amounts(env)
+
+
+def _migrate_document_flags_to_types(cr, env):
+    """Migrar los booleanos de pliego al catálogo de tipos de documento.
+
+    Antes, cada documento tenía `is_technical_spec` / `is_particular_conditions` y
+    cada etapa del tipo exigía esos dos documentos con
+    `require_technical_spec_document` / `require_particular_conditions_document`.
+    Ahora ambas cosas se expresan con `fund.expedient.document.type`.
+
+    Los campos viejos ya no existen en los modelos, pero sus columnas siguen en la
+    base (Odoo no las borra), así que se leen por SQL. Las columnas se conservan
+    por si hiciera falta revertir.
+    """
+    spec_type = env.ref("fund_expedient.document_type_technical_spec", raise_if_not_found=False)
+    cond_type = env.ref(
+        "fund_expedient.document_type_particular_conditions", raise_if_not_found=False
+    )
+    if not spec_type or not cond_type:
+        return
+
+    # 1) Documentos: asignar el tipo según la marca que tuvieran.
+    #    Si un documento tuviera ambas marcas, gana especificación técnica
+    #    (el ORDER BY del CASE lo resuelve al elegir un único tipo por fila).
+    if _table_exists(cr, "fund_expedient_document") and _column_exists(
+        cr, "fund_expedient_document", "is_technical_spec"
+    ):
+        cr.execute(
+            """
+            UPDATE fund_expedient_document
+               SET document_type_id = CASE
+                       WHEN is_technical_spec THEN %s
+                       ELSE %s
+                   END
+             WHERE document_type_id IS NULL
+               AND (is_technical_spec OR is_particular_conditions)
+            """,
+            (spec_type.id, cond_type.id),
+        )
+
+    # 2) Etapas del tipo de expediente: convertir cada booleano en una fila del M2M.
+    if _table_exists(cr, "fund_expedient_type_stage_assign") and _column_exists(
+        cr, "fund_expedient_type_stage_assign", "require_technical_spec_document"
+    ):
+        for column, doc_type in (
+            ("require_technical_spec_document", spec_type),
+            ("require_particular_conditions_document", cond_type),
+        ):
+            cr.execute(
+                """
+                INSERT INTO fund_expedient_stage_assign_doc_type_rel
+                            (assign_id, document_type_id)
+                SELECT a.id, %%s
+                  FROM fund_expedient_type_stage_assign a
+                 WHERE a.%s IS TRUE
+                ON CONFLICT DO NOTHING
+                """
+                % column,
+                (doc_type.id,),
+            )
+
+
+def _recompute_expedient_commercial_amounts(env):
+    """Recalcular comprometido/real de todos los expedientes.
+
+    Esos campos son `store=True` pero sin dependencias sobre OC ni facturas: se
+    invalidan a mano (`_invalidate_commercial_computes`). Hasta ahora `account.move`
+    no tenía hook en `create`, por lo que las facturas creadas ya vinculadas dejaban
+    el total desactualizado (se veía como columna «Facturas reales» vacía). Este
+    recálculo pone al día los datos existentes; el hook nuevo evita que se repita.
+    """
+    expedients = env["fund.expedient"].search([])
+    if not expedients:
+        return
+    fields_to_refresh = [
+        "amount_committed",
+        "amount_real",
+        "amount_committed_unit",
+        "amount_real_unit",
+    ]
+    expedients.invalidate_recordset(fields_to_refresh)
+    expedients.modified(fields_to_refresh)
+    expedients.flush_recordset(fields_to_refresh)

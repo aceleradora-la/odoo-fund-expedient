@@ -267,28 +267,18 @@ class FundExpedient(models.Model):
         return values
 
     def _portal_required_documents_block_reason_leave(self):
+        """Motivo de bloqueo por documentos obligatorios (misma regla que el backend).
+
+        Reutiliza `_missing_required_document_types()` del modelo base para no
+        duplicar el criterio (tipo exigido + archivo + cargado en la etapa actual).
+        """
         self.ensure_one()
-        assign = self._current_stage_assign()
-        if not assign:
-            return ""
-        if assign.require_technical_spec_document:
-            tech_docs = self.document_ids.filtered(
-                lambda doc: doc.is_technical_spec and doc.file_data
-            )
-            if not tech_docs:
-                return _(
-                    "Debe adjuntar al menos un documento de Especificación técnica "
-                    "con archivo antes de cambiar de etapa."
-                )
-        if assign.require_particular_conditions_document:
-            cond_docs = self.document_ids.filtered(
-                lambda doc: doc.is_particular_conditions and doc.file_data
-            )
-            if not cond_docs:
-                return _(
-                    "Debe adjuntar al menos un documento de Condiciones particulares "
-                    "con archivo antes de cambiar de etapa."
-                )
+        missing = self._missing_required_document_types()
+        if missing:
+            return _(
+                "Debe adjuntar en esta etapa un documento con archivo de cada uno de "
+                "estos tipos antes de cambiar de etapa: %s."
+            ) % ", ".join(missing.mapped("name"))
         return ""
 
     def _portal_can_advance_stage(self):

@@ -481,8 +481,7 @@
                                                 <field name="file_name"/>
                                                 <field name="name"/>
                                                 <field name="delivered"/>
-                                                <field name="is_technical_spec" optional="show"/>
-                                                <field name="is_particular_conditions" optional="show"/>
+                                                <field name="document_type_id" optional="show"/>
                                                 <button type="object"
                                                         name="action_open_document"
                                                         string="Abrir"
@@ -524,8 +523,7 @@
                                                 <field name="file_name"/>
                                                 <field name="name"/>
                                                 <field name="delivered"/>
-                                                <field name="is_technical_spec" optional="show"/>
-                                                <field name="is_particular_conditions" optional="show"/>
+                                                <field name="document_type_id" optional="show"/>
                                                 <button type="object"
                                                         name="action_open_document"
                                                         string="Abrir"
@@ -553,16 +551,24 @@
                                 <list create="1" delete="1" edit="1">
                                     <field name="sequence" widget="handle"/>
                                     <field name="number" readonly="1"/>
-                                    <field name="file_name" string="Archivo"/>
-                                    <field name="delivered"/>
-                                    <field name="is_technical_spec" optional="show"/>
-                                    <field name="is_particular_conditions" optional="show"/>
-                                    <field name="notes"/>
+                                    <field name="file_name" string="Archivo" readonly="1"/>
+                                    <!--
+                                        Solo se editan las filas de la etapa actual: los
+                                        documentos de etapas anteriores quedan de consulta
+                                        (`can_edit_document`).
+                                    -->
+                                    <field name="delivered" readonly="not can_edit_document"/>
+                                    <field name="document_type_id" optional="show"
+                                           readonly="not can_edit_document"/>
+                                    <field name="notes" readonly="not can_edit_document"/>
                                     <field name="stage_id" optional="hide" readonly="1"/>
-                                    <field name="disposition_id" optional="hide"/>
-                                    <field name="resolution_id" optional="hide"/>
+                                    <field name="disposition_id" optional="hide"
+                                           readonly="not can_edit_document"/>
+                                    <field name="resolution_id" optional="hide"
+                                           readonly="not can_edit_document"/>
                                     <field name="can_download_file" column_invisible="1"/>
                                     <field name="can_unlink_file" column_invisible="1"/>
+                                    <field name="can_edit_document" column_invisible="1"/>
                                     <button type="object"
                                             name="action_preview_file"
                                             string="Previsualizar"
@@ -574,20 +580,34 @@
                                             invisible="not can_download_file"/>
                                 </list>
                                 <form string="Documento por etapa">
+                                    <!--
+                                        Documento de consulta: si el expediente ya no está en
+                                        la etapa donde se subió (o el usuario no opera esa
+                                        etapa), `can_edit_document` es False y todos los
+                                        campos quedan readonly. El modelo además lo valida en
+                                        `write()`, para cubrir importaciones y RPC.
+                                    -->
+                                    <div class="alert alert-info" role="status"
+                                         invisible="can_edit_document">
+                                        <i class="fa fa-lock me-2" aria-hidden="true"/>
+                                        Documento de solo consulta: pertenece a otra etapa del
+                                        expediente y no puede modificarse.
+                                    </div>
                                     <group>
                                         <group>
                                             <field name="expedient_id" readonly="1"/>
                                             <field name="number" readonly="1"/>
                                             <field name="stage_id" readonly="1" options="{'no_create': True}"/>
-                                            <field name="disposition_id"/>
-                                            <field name="resolution_id"/>
-                                            <field name="delivered"/>
-                                            <field name="is_technical_spec"/>
-                                            <field name="is_particular_conditions"/>
+                                            <field name="disposition_id" readonly="not can_edit_document"/>
+                                            <field name="resolution_id" readonly="not can_edit_document"/>
+                                            <field name="delivered" readonly="not can_edit_document"/>
+                                            <field name="document_type_id" options="{'no_create_edit': True}"
+                                                   readonly="not can_edit_document"/>
                                         </group>
                                         <group>
                                             <field name="can_download_file" invisible="1"/>
                                             <field name="can_unlink_file" invisible="1"/>
+                                            <field name="can_edit_document" invisible="1"/>
                                             <!-- Subida: solo en etapa actual y asignado -->
                                             <field name="file_data" filename="file_name" widget="binary"
                                                    invisible="not can_download_file or file_data"
@@ -608,7 +628,7 @@
                                         </group>
                                     </group>
                                     <group>
-                                        <field name="notes"/>
+                                        <field name="notes" readonly="not can_edit_document"/>
                                     </group>
                                 </form>
                             </field>

@@ -62,8 +62,9 @@ class FundExpedientNotificationSendWizard(models.TransientModel):
             if exp:
                 # Preseleccionar:
                 #   1) documentos vinculados a disposición/resolución de la etapa actual.
-                #   2) documentos marcados como "Especificación técnica" en cualquier etapa
-                #      del expediente (sirven a todas las notificaciones a oferentes).
+                #   2) documentos cuyo tipo integra el pliego (especificación técnica o
+                #      condiciones particulares), de cualquier etapa del expediente:
+                #      sirven a todas las notificaciones a oferentes.
                 dispo_ids = exp.disposition_ids.filtered(lambda d: d.stage_id.id == stage_id).ids
                 reso_ids = exp.resolution_ids.filtered(lambda r: r.stage_id.id == stage_id).ids
                 stage_docs = exp.document_ids.filtered(
@@ -75,9 +76,13 @@ class FundExpedientNotificationSendWizard(models.TransientModel):
                     and bool(doc.file_data)
                 )
                 # Documentos del "pliego" que se adjuntan en toda invitación
-                # a cotizar: especificaciones técnicas y condiciones particulares.
+                # a cotizar: los de tipos marcados como especificación técnica o
+                # condiciones particulares (esas marcas viven en el tipo de documento).
                 pliego_docs = exp.document_ids.filtered(
-                    lambda doc: (doc.is_technical_spec or doc.is_particular_conditions)
+                    lambda doc: (
+                        doc.document_type_id.is_technical_spec
+                        or doc.document_type_id.is_particular_conditions
+                    )
                     and bool(doc.file_data)
                 )
                 docs = stage_docs | pliego_docs

@@ -27,7 +27,8 @@
                 <field name="date_start"/>
                 <field name="date_end"/>
                 <field name="contracted_supplier_ids" widget="many2many_tags" string="Proveedor (OC)"/>
-                <field name="expedient_amount_real" string="Facturas reales"/>
+                <!-- Total del expediente, no de la línea: no se suma (ver help del campo). -->
+                <field name="expedient_amount_real" string="Facturas reales (expediente)"/>
                 <field name="analytic_account_id" optional="show"/>
             </list>
         </field>

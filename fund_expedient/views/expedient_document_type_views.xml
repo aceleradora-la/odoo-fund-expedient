@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_expedient_document_type_list" model="ir.ui.view">
+        <field name="name">fund.expedient.document.type.list</field>
+        <field name="model">fund.expedient.document.type</field>
+        <field name="type">list</field>
+        <field name="arch" type="xml">
+            <list string="Tipos de documento" create="1" delete="1" edit="1">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="is_technical_spec"/>
+                <field name="is_particular_conditions"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_expedient_document_type_form" model="ir.ui.view">
+        <field name="name">fund.expedient.document.type.form</field>
+        <field name="model">fund.expedient.document.type</field>
+        <field name="type">form</field>
+        <field name="arch" type="xml">
+            <form string="Tipo de documento">
+                <sheet>
+                    <widget name="web_ribbon" title="Archivado" bg_color="text-bg-danger"
+                            invisible="active"/>
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="sequence"/>
+                            <field name="active"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                        </group>
+                        <!--
+                            Estas dos marcas antes vivían en cada documento. Ahora son
+                            atributos del tipo: los documentos cuyo tipo las tenga se
+                            adjuntan solos al notificar oferentes (pliego).
+                        -->
+                        <group string="Pliego (adjuntos a oferentes)">
+                            <field name="is_technical_spec"/>
+                            <field name="is_particular_conditions"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_expedient_document_type_search" model="ir.ui.view">
+        <field name="name">fund.expedient.document.type.search</field>
+        <field name="model">fund.expedient.document.type</field>
+        <field name="arch" type="xml">
+            <search string="Buscar tipos de documento">
+                <field name="name"/>
+                <filter string="Especificación técnica" name="technical_spec"
+                        domain="[('is_technical_spec', '=', True)]"/>
+                <filter string="Condiciones particulares" name="particular_conditions"
+                        domain="[('is_particular_conditions', '=', True)]"/>
+                <separator/>
+                <filter string="Archivados" name="inactive" domain="[('active', '=', False)]"/>
+            </search>
+        </field>
+    </record>
+</odoo>

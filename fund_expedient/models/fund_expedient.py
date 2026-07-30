@@ -1263,11 +1263,14 @@ class FundExpedient(models.Model):
 
     @api.depends(
         "amount_estimated",
+        "amount_estimated_confirmed",
         "request_date",
         "company_id",
         "currency_id",
         "approval_currency_id",
         "operation_type",
+        "stage_id",
+        "type_id.stage_assign_ids.committed_from_expedient",
     )
     @api.depends_context("uid")
     def _compute_amounts_unit(self):
@@ -1290,22 +1293,32 @@ class FundExpedient(models.Model):
             else:
                 rec.amount_estimated_unit = 0.0
 
-            # Comprometido: mismo criterio del compute actual, pero convertido a moneda del tipo.
-            pos_committed = rec._purchase_orders_data().filtered(
-                lambda po: po.state in ("purchase", "done") and po.invoice_status != "invoiced"
-            )
-            committed_unit = 0.0
-            for po in pos_committed:
-                po_date = po.date_order.date()
-                ordered_cc = po.currency_id._convert(po.amount_total, company_currency, company, po_date)
-                invoiced_cc = 0.0
-                for inv in po.invoice_ids.filtered(lambda m: m.state == "posted"):
-                    inv_date = inv.invoice_date or inv.date
-                    signed = -inv.amount_total_signed
-                    invoiced_cc += inv.currency_id._convert(signed, company_currency, company, inv_date)
-                pending_cc = max(0.0, ordered_cc - invoiced_cc)
-                committed_unit += company_currency._convert(pending_cc, unit_currency, company, po_date)
-            rec.amount_committed_unit = committed_unit
+            # Comprometido: si la etapa lo toma del expediente, se convierte el
+            # definitivo (misma regla que `_compute_amounts`); si no, se recorren
+            # las OC igual que siempre, convirtiendo a moneda del tipo.
+            if rec._committed_from_expedient():
+                if rec.amount_estimated_confirmed and rec.request_date:
+                    rec.amount_committed_unit = company_currency._convert(
+                        rec.amount_estimated_confirmed, unit_currency, company, rec.request_date
+                    )
+                else:
+                    rec.amount_committed_unit = 0.0
+            else:
+                pos_committed = rec._purchase_orders_data().filtered(
+                    lambda po: po.state in ("purchase", "done") and po.invoice_status != "invoiced"
+                )
+                committed_unit = 0.0
+                for po in pos_committed:
+                    po_date = po.date_order.date()
+                    ordered_cc = po.currency_id._convert(po.amount_total, company_currency, company, po_date)
+                    invoiced_cc = 0.0
+                    for inv in po.invoice_ids.filtered(lambda m: m.state == "posted"):
+                        inv_date = inv.invoice_date or inv.date
+                        signed = -inv.amount_total_signed
+                        invoiced_cc += inv.currency_id._convert(signed, company_currency, company, inv_date)
+                    pending_cc = max(0.0, ordered_cc - invoiced_cc)
+                    committed_unit += company_currency._convert(pending_cc, unit_currency, company, po_date)
+                rec.amount_committed_unit = committed_unit
 
             # Real: facturas posteadas convertidas a moneda del tipo por fecha de factura.
             # Signo según operación (ver _compute_amounts): ingreso +, gasto −.
@@ -1338,35 +1351,60 @@ class FundExpedient(models.Model):
                 rec.amount_estimated_confirmed, unit_currency, company, rec.request_date
             )
 
-    @api.depends("company_id", "operation_type")
+    def _committed_from_expedient(self):
+        """True si la etapa actual toma el comprometido del propio expediente.
+
+        Se configura por etapa en el tipo de expediente
+        (`fund.expedient.type.stage.assign.committed_from_expedient`) y sirve para
+        los circuitos sin solicitudes de cotización: el compromiso sale de los
+        importes definitivos cargados en el expediente en lugar de las OC.
+        """
+        self.ensure_one()
+        assign = self._current_stage_assign()
+        return bool(assign and assign.committed_from_expedient)
+
+    @api.depends(
+        "company_id",
+        "operation_type",
+        "amount_estimated_confirmed",
+        "stage_id",
+        "type_id.stage_assign_ids.committed_from_expedient",
+    )
     @api.depends_context("uid")
     def _compute_amounts(self):
         for rec in self:
             company_currency = rec.company_id.currency_id
 
-            # Total Comprometido: OC confirmadas menos facturado (posteado).
-            # Nota: con "facturación al recibir", qty_to_invoice puede ser 0 hasta recibir, pero el
-            # compromiso debería reflejar el total ordenado desde la confirmación.
-            pos_committed = rec._purchase_orders_data().filtered(
-                lambda po: po.state in ("purchase", "done")
-                and po.invoice_status != "invoiced"
-            )
-            amount_committed = 0.0
-            for po in pos_committed:
-                po_date = po.date_order.date()
-                ordered_cc = po.currency_id._convert(
-                    po.amount_total, company_currency, rec.company_id, po_date
+            if rec._committed_from_expedient():
+                # Etapa sin cotizaciones: el compromiso es el importe definitivo
+                # del expediente (suma de líneas o total confirmado manual), ya
+                # expresado en moneda compañía. Reemplaza al de las OC para no
+                # contar dos veces el mismo compromiso.
+                rec.amount_committed = rec.amount_estimated_confirmed or 0.0
+            else:
+                # Total Comprometido: OC confirmadas menos facturado (posteado).
+                # Nota: con "facturación al recibir", qty_to_invoice puede ser 0 hasta recibir, pero el
+                # compromiso debería reflejar el total ordenado desde la confirmación.
+                pos_committed = rec._purchase_orders_data().filtered(
+                    lambda po: po.state in ("purchase", "done")
+                    and po.invoice_status != "invoiced"
                 )
-                invoiced_cc = 0.0
-                for inv in po.invoice_ids.filtered(lambda m: m.state == "posted"):
-                    inv_date = inv.invoice_date or inv.date
-                    signed = -inv.amount_total_signed
-                    invoiced_cc += inv.currency_id._convert(
-                        signed, company_currency, rec.company_id, inv_date
+                amount_committed = 0.0
+                for po in pos_committed:
+                    po_date = po.date_order.date()
+                    ordered_cc = po.currency_id._convert(
+                        po.amount_total, company_currency, rec.company_id, po_date
                     )
-                pending_cc = max(0.0, ordered_cc - invoiced_cc)
-                amount_committed += pending_cc
-            rec.amount_committed = amount_committed
+                    invoiced_cc = 0.0
+                    for inv in po.invoice_ids.filtered(lambda m: m.state == "posted"):
+                        inv_date = inv.invoice_date or inv.date
+                        signed = -inv.amount_total_signed
+                        invoiced_cc += inv.currency_id._convert(
+                            signed, company_currency, rec.company_id, inv_date
+                        )
+                    pending_cc = max(0.0, ordered_cc - invoiced_cc)
+                    amount_committed += pending_cc
+                rec.amount_committed = amount_committed
 
             # Total Real: facturas posteadas.
             #  - Gasto: facturas de proveedor (amount_total_signed negativo) → magnitud positiva con -signed.
@@ -1792,36 +1830,38 @@ class FundExpedient(models.Model):
             _("No existe Solicitud de Gasto para este expediente. Genérela desde la etapa correspondiente.")
         )
 
-    def _check_required_documents_before_leave_stage(self):
-        """Valida documentos de pliego obligatorios configurados en la etapa."""
+    def _missing_required_document_types(self):
+        """Tipos de documento exigidos por la etapa actual que aún no se subieron.
+
+        Un tipo se considera cumplido si existe un documento de ese tipo, con
+        archivo cargado y cuya etapa origen es la etapa actual del expediente
+        (los documentos de etapas anteriores no cuentan).
+        """
         self.ensure_one()
         assign = self._current_stage_assign()
-        if not assign:
-            return
-        if assign.require_technical_spec_document:
-            tech_docs = self.document_ids.filtered(
-                lambda doc: doc.is_technical_spec and doc.file_data
-            )
-            if not tech_docs:
-                raise UserError(
-                    _(
-                        "Para salir de la etapa «%s» debe adjuntar al menos un "
-                        "documento marcado como Especificación técnica con archivo."
-                    )
-                    % (self.stage_id.name or "")
+        if not assign or not assign.required_document_type_ids:
+            return self.env["fund.expedient.document.type"]
+        stage_docs = self.document_ids.filtered(
+            lambda doc: doc.stage_id == self.stage_id and doc.file_data
+        )
+        uploaded_types = stage_docs.mapped("document_type_id")
+        return assign.required_document_type_ids - uploaded_types
+
+    def _check_required_documents_before_leave_stage(self):
+        """Valida los tipos de documento obligatorios configurados en la etapa."""
+        self.ensure_one()
+        missing = self._missing_required_document_types()
+        if missing:
+            # Un solo error con todos los faltantes: evita que el usuario tenga
+            # que reintentar el avance una vez por cada documento que falta.
+            raise UserError(
+                _(
+                    "Para salir de la etapa «%(stage)s» debe adjuntar en esta etapa un "
+                    "documento con archivo de cada uno de estos tipos: %(types)s.",
+                    stage=self.stage_id.name or "",
+                    types=", ".join(missing.mapped("name")),
                 )
-        if assign.require_particular_conditions_document:
-            cond_docs = self.document_ids.filtered(
-                lambda doc: doc.is_particular_conditions and doc.file_data
             )
-            if not cond_docs:
-                raise UserError(
-                    _(
-                        "Para salir de la etapa «%s» debe adjuntar al menos un "
-                        "documento marcado como Condiciones particulares con archivo."
-                    )
-                    % (self.stage_id.name or "")
-                )
 
     def _check_spend_request_before_leave_stage(self):
         """Valida SG al salir de etapa preventiva o definitiva."""
