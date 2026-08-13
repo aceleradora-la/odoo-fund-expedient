@@ -76,6 +76,14 @@ class FundExpedientDisposition(models.Model):
         flujo sigue su curso normal y este botón no está disponible.
         """
         for rec in self:
+            if rec.cancelled:
+                raise UserError(
+                    _(
+                        "La disposición %s está anulada: no puede aplicarse para "
+                        "cerrar el expediente."
+                    )
+                    % (rec.number or "")
+                )
             if rec.disposition_type == "adjudicacion":
                 raise UserError(
                     _(
