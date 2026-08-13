@@ -26,16 +26,14 @@ class ExpedientStage(models.Model):
         required=True,
         help="Determina el estado del expediente cuando está en esta etapa (para validación por niveles).",
     )
-    final_outcome = fields.Selection(
-        selection=[
-            ("desierto", "Declarar Desierto"),
-            ("sin_efecto", "Dejar sin efecto"),
-            ("fracasado", "Declarar Fracasado"),
-        ],
+    final_outcome_type_id = fields.Many2one(
+        "fund.expedient.disposition.type",
         string="Resultado final",
-        help="Marca esta etapa como cierre alternativo del flujo. El expediente llega a ella "
-        "únicamente aplicando una Disposición del tipo correspondiente (Desierto/Sin efecto/"
-        "Fracasado); queda fuera del avance secuencial de etapas.",
+        domain=[("closes_expedient", "=", True)],
+        ondelete="restrict",
+        help="Marca esta etapa como cierre alternativo del flujo. El expediente llega a "
+        "ella únicamente aplicando una Disposición de este tipo; queda fuera del avance "
+        "secuencial de etapas.",
     )
     fold = fields.Boolean(
         default=False,
@@ -76,7 +74,7 @@ class ExpedientStage(models.Model):
     <field name="sequence" widget="handle"/>
     <field name="name"/>
     <field name="state_type"/>
-    <field name="final_outcome" optional="show"/>
+    <field name="final_outcome_type_id" optional="show"/>
     <field name="spend_request_mode" optional="hide"/>
     <field name="fold"/>
     <field name="report_id" optional="show"/>
@@ -90,7 +88,7 @@ class ExpedientStage(models.Model):
                 <field name="name"/>
                 <field name="sequence"/>
                 <field name="state_type"/>
-                <field name="final_outcome"/>
+                <field name="final_outcome_type_id"/>
                 <field name="fold"/>
             </group>
             <group>
@@ -126,7 +124,7 @@ class ExpedientStage(models.Model):
         else:
             view = View.browse(md_list.res_id)
             # Si el campo nuevo no está en la vista, actualizar el arch (sin depender de upgrades manuales).
-            if view and "final_outcome" not in (view.arch_db or ""):
+            if view and "final_outcome_type_id" not in (view.arch_db or ""):
                 view.write({"arch": list_arch})
         # Vista formulario para editar etapas
         md_form = IrModelData.search(
@@ -152,5 +150,5 @@ class ExpedientStage(models.Model):
             )
         else:
             form_view = View.browse(md_form.res_id)
-            if form_view and "final_outcome" not in (form_view.arch_db or ""):
+            if form_view and "final_outcome_type_id" not in (form_view.arch_db or ""):
                 form_view.write({"arch": form_arch})

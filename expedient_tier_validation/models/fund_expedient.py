@@ -338,7 +338,7 @@ class FundExpedient(models.Model):
                     "Solo los usuarios asignados a la etapa actual pueden pasar a la siguiente."
                 )
             )
-        if self.stage_id.final_outcome:
+        if self.stage_id.final_outcome_type_id:
             raise UserError(
                 _(
                     "El expediente está cerrado como «%s»; no puede avanzar de etapa. "

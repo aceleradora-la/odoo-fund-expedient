@@ -66,19 +66,21 @@ class FundExpedientDisposition(models.Model):
         default=fields.Date.context_today,
         help="Fecha asociada a la disposición. Por defecto se propone la fecha de hoy.",
     )
-    disposition_type = fields.Selection(
-        selection=[
-            ("adjudicacion", "Adjudicación"),
-            ("desierto", "Declarar Desierto"),
-            ("sin_efecto", "Dejar sin efecto"),
-            ("fracasado", "Declarar Fracasado"),
-        ],
+    disposition_type_id = fields.Many2one(
+        "fund.expedient.disposition.type",
         string="Tipo de disposición",
-        default="adjudicacion",
         required=True,
-        help="Adjudicación: el proceso continúa con las etapas siguientes. "
-        "Desierto / Sin efecto / Fracasado: al aplicar la disposición, el expediente "
-        "se cierra en la etapa final correspondiente a ese resultado.",
+        ondelete="restrict",
+        default=lambda self: self.env.ref(
+            "fund_expedient.disposition_type_adjudicacion", raise_if_not_found=False
+        ),
+        help="Los tipos que NO cierran el expediente (p. ej. Adjudicación) dejan que el "
+        "proceso siga con las etapas siguientes. Los que sí cierran llevan el expediente "
+        "a la etapa del flujo marcada con ese mismo resultado final.",
+    )
+    disposition_closes_expedient = fields.Boolean(
+        related="disposition_type_id.closes_expedient",
+        string="Cierra el expediente",
     )
     outcome_applied = fields.Boolean(
         string="Resultado aplicado",
@@ -86,14 +88,19 @@ class FundExpedientDisposition(models.Model):
         help="True si el expediente ya está en la etapa final que corresponde a esta disposición.",
     )
 
-    @api.depends("disposition_type", "expedient_id.stage_id", "expedient_id.stage_id.final_outcome")
+    @api.depends(
+        "disposition_type_id",
+        "disposition_type_id.closes_expedient",
+        "expedient_id.stage_id",
+        "expedient_id.stage_id.final_outcome_type_id",
+    )
     def _compute_outcome_applied(self):
         for rec in self:
             rec.outcome_applied = bool(
-                rec.disposition_type
-                and rec.disposition_type != "adjudicacion"
+                rec.disposition_type_id.closes_expedient
                 and rec.expedient_id
-                and rec.expedient_id.stage_id.final_outcome == rec.disposition_type
+                and rec.expedient_id.stage_id.final_outcome_type_id
+                == rec.disposition_type_id
             )
 
     def action_apply_disposition(self):
@@ -119,15 +126,16 @@ class FundExpedientDisposition(models.Model):
                     )
                     % (rec.number or "")
                 )
-            if rec.disposition_type == "adjudicacion":
+            if not rec.disposition_type_id.closes_expedient:
                 raise UserError(
                     _(
-                        "La disposición de Adjudicación no cierra el expediente: "
-                        "el proceso continúa con las etapas siguientes."
+                        "El tipo «%s» no cierra el expediente: el proceso continúa "
+                        "con las etapas siguientes."
                     )
+                    % (rec.disposition_type_id.name or "")
                 )
             rec.expedient_id._apply_disposition_outcome(
-                rec.disposition_type, disposition=rec
+                rec.disposition_type_id, disposition=rec
             )
         return True
     name = fields.Char(

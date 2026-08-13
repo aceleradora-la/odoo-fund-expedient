@@ -52,6 +52,22 @@
         </field>
     </record>
 
+    <record id="action_fund_expedient_disposition_type" model="ir.actions.act_window">
+        <field name="name">Tipos de disposición</field>
+        <field name="res_model">fund.expedient.disposition.type</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Cree un tipo de disposición
+            </p>
+            <p>
+                Los tipos que «cierran el expediente» lo llevan a la etapa del flujo
+                marcada con ese mismo Resultado final. Los demás dejan que el proceso
+                continúe con las etapas siguientes.
+            </p>
+        </field>
+    </record>
+
     <record id="action_fund_expedient_type" model="ir.actions.act_window">
         <field name="name">Tipos de expediente</field>
         <field name="res_model">fund.expedient.type</field>
@@ -169,6 +185,13 @@
               parent="menu_fund_expedient_config"
               action="action_fund_expedient_page"
               sequence="23"
+              groups="fund_expedient.group_fund_expedient_manager"/>
+
+    <menuitem id="menu_expedient_disposition_type"
+              name="Tipos de disposición"
+              parent="menu_fund_expedient_config"
+              action="action_fund_expedient_disposition_type"
+              sequence="24"
               groups="fund_expedient.group_fund_expedient_manager"/>
 
     <menuitem id="menu_expedient_type"

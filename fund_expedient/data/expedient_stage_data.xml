@@ -44,28 +44,28 @@
             <field name="name">Declarar Desierto</field>
             <field name="sequence">16</field>
             <field name="state_type">no_award</field>
-            <field name="final_outcome">desierto</field>
+            <field name="final_outcome_type_id" ref="disposition_type_desierto"/>
             <field name="fold">True</field>
         </record>
         <record id="stage_expedient_sin_efecto" model="fund.expedient.stage">
             <field name="name">Dejar sin efecto</field>
             <field name="sequence">17</field>
             <field name="state_type">no_award</field>
-            <field name="final_outcome">sin_efecto</field>
+            <field name="final_outcome_type_id" ref="disposition_type_sin_efecto"/>
             <field name="fold">True</field>
         </record>
         <record id="stage_expedient_fracasado" model="fund.expedient.stage">
             <field name="name">Declarar Fracasado</field>
             <field name="sequence">18</field>
             <field name="state_type">no_award</field>
-            <field name="final_outcome">fracasado</field>
+            <field name="final_outcome_type_id" ref="disposition_type_fracasado"/>
             <field name="fold">True</field>
         </record>
     </data>
     <!--
         Fuera de noupdate: se ejecuta en cada actualización del módulo para
         crear/reescribir las vistas de etapas generadas por código (agrega
-        campos nuevos como `final_outcome` sin intervención manual).
+        campos nuevos como `final_outcome_type_id` sin intervención manual).
     -->
     <data>
         <function model="fund.expedient.stage" name="init_expedient_stage_view"/>

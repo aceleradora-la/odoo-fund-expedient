@@ -944,7 +944,7 @@ class FundExpedient(models.Model):
         "type_id",
         "type_id.stage_assign_ids",
         "type_id.stage_assign_ids.stage_id",
-        "type_id.stage_assign_ids.stage_id.final_outcome",
+        "type_id.stage_assign_ids.stage_id.final_outcome_type_id",
         "type_id.stage_assign_ids.is_final_stage",
         "stage_id",
         "company_id",
@@ -980,14 +980,14 @@ class FundExpedient(models.Model):
                 # no se ofrecen en el statusbar: se llega a ellas solo con la
                 # Disposición. Si el expediente YA está en una, se muestra.
                 rec.allowed_stage_ids = allowed.filtered(
-                    lambda s: not s.final_outcome or s == rec.stage_id
+                    lambda s: not s.final_outcome_type_id or s == rec.stage_id
                 )
             else:
                 stages = Stage.search(
                     [("company_id", "in", [False, rec.company_id.id])], order="sequence, id"
                 )
                 rec.allowed_stage_ids = stages.filtered(
-                    lambda s: not s.final_outcome or s == rec.stage_id
+                    lambda s: not s.final_outcome_type_id or s == rec.stage_id
                 )
 
     @api.onchange("type_id")
@@ -1121,7 +1121,8 @@ class FundExpedient(models.Model):
     def _get_allowed_stages(self):
         """Etapas del flujo SECUENCIAL del expediente según su tipo.
 
-        Excluye las etapas con `final_outcome` (Desierto/Sin efecto/Fracasado):
+        Excluye las etapas marcadas con un «Resultado final» (Desierto, Sin
+        efecto, Fracasado o cualquier otro tipo de disposición que cierre):
         son cierres alternativos a los que solo se llega aplicando una
         Disposición; nunca por "Siguiente etapa" ni por el avance del portal.
         """
@@ -1129,14 +1130,14 @@ class FundExpedient(models.Model):
         for rec in self:
             if rec.type_id and rec.type_id.stage_assign_ids:
                 allowed = rec.type_id.stage_assign_ids.mapped("stage_id").filtered(
-                    lambda s: not s.final_outcome
+                    lambda s: not s.final_outcome_type_id
                 )
                 yield rec, allowed.sorted(key=lambda s: (s.sequence, s.id))
             else:
                 all_stages = Stage.search(
                     [
                         ("company_id", "in", [False, rec.company_id.id]),
-                        ("final_outcome", "=", False),
+                        ("final_outcome_type_id", "=", False),
                     ],
                     order="sequence, id",
                 )
@@ -1247,7 +1248,7 @@ class FundExpedient(models.Model):
                         "Solo los usuarios asignados a la etapa actual pueden pasar a la siguiente."
                     )
                 )
-            if rec.stage_id.final_outcome:
+            if rec.stage_id.final_outcome_type_id:
                 raise UserError(
                     _(
                         "El expediente está cerrado como «%s»; no puede avanzar de etapa. "
@@ -2304,31 +2305,32 @@ class FundExpedient(models.Model):
             raise UserError("No existe una etapa de tipo 'Cancelado' configurada.")
         return self.write({"stage_id": cancel_stage.id})
 
-    def _find_outcome_stage(self, outcome):
-        """Etapa final del flujo para un resultado (desierto/sin_efecto/fracasado).
+    def _find_outcome_stage(self, disposition_type):
+        """Etapa de cierre del flujo para un tipo de disposición.
 
-        Si el tipo define asignaciones por etapa, la etapa debe estar en el flujo
-        del tipo (igual criterio que el resto de las etapas). Sin tipo/asignaciones,
-        se busca globalmente por compañía.
+        Si el tipo de expediente define asignaciones por etapa, la etapa debe
+        estar en ese flujo (igual criterio que el resto de las etapas). Así cada
+        tipo de expediente puede cerrar en su propia etapa aunque compartan el
+        tipo de disposición. Sin tipo/asignaciones, se busca por compañía.
         """
         self.ensure_one()
         if self.type_id and self.type_id.stage_assign_ids:
             stages = (
                 self.type_id.stage_assign_ids.mapped("stage_id")
-                .filtered(lambda s: s.final_outcome == outcome)
+                .filtered(lambda s: s.final_outcome_type_id == disposition_type)
                 .sorted(key=lambda s: (s.sequence, s.id))
             )
             return stages[:1]
         return self.env["fund.expedient.stage"].search(
             [
-                ("final_outcome", "=", outcome),
+                ("final_outcome_type_id", "=", disposition_type.id),
                 ("company_id", "in", [False, self.company_id.id]),
             ],
             order="sequence, id",
             limit=1,
         )
 
-    def _apply_disposition_outcome(self, outcome, disposition=None):
+    def _apply_disposition_outcome(self, disposition_type, disposition=None):
         """Cierra el expediente en la etapa final del resultado indicado.
 
         Se invoca desde la Disposición (botón «Aplicar disposición»). El salto
@@ -2345,17 +2347,15 @@ class FundExpedient(models.Model):
                     "la disposición y cerrar el expediente."
                 )
             )
-        target = self._find_outcome_stage(outcome)
+        target = self._find_outcome_stage(disposition_type)
         if not target:
             raise UserError(
                 _(
-                    "No hay una etapa final configurada para el resultado «%s». "
-                    "Cree una etapa con ese Resultado final y agréguela a las "
-                    "Asignaciones por etapa del tipo de expediente."
+                    "No hay una etapa de cierre configurada para «%s». Cree una etapa "
+                    "con ese «Resultado final» y agréguela a las Asignaciones por etapa "
+                    "del tipo de expediente."
                 )
-                % dict(
-                    self.env["fund.expedient.stage"]._fields["final_outcome"].selection
-                ).get(outcome, outcome)
+                % (disposition_type.name or "")
             )
         if self.stage_id == target:
             return True

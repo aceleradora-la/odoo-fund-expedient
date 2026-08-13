@@ -298,7 +298,7 @@ def post_init_hook(cr_or_env, registry=None):
             moves.flush_recordset(["payment_date", "payment_delay_days"])
 
     # Vistas de etapas generadas por código: crearlas si faltan y reescribir el
-    # arch cuando se agregan campos nuevos (p. ej. `final_outcome`).
+    # arch cuando se agregan campos nuevos (p. ej. `final_outcome_type_id`).
     env["fund.expedient.stage"].init_expedient_stage_view()
 
     _migrate_document_flags_to_types(cr, env)

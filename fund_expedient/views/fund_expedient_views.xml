@@ -499,25 +499,27 @@
                                     <field name="stage_id" options="{'no_create': True}"/>
                                     <field name="number" readonly="1"/>
                                     <field name="disposition_date"/>
-                                    <field name="disposition_type"/>
+                                    <field name="disposition_type_id" options="{'no_create_edit': True}"/>
                                     <field name="cancelled"/>
                                     <field name="outcome_applied" column_invisible="1"/>
+                                    <field name="disposition_closes_expedient" column_invisible="1"/>
                                     <button name="action_apply_disposition" type="object"
                                             string="Aplicar disposición"
                                             class="btn-warning"
                                             confirm="El expediente se cerrará en la etapa final correspondiente al resultado de esta disposición. ¿Continuar?"
-                                            invisible="cancelled or disposition_type == 'adjudicacion' or outcome_applied"/>
+                                            invisible="cancelled or not disposition_closes_expedient or outcome_applied"/>
                                 </list>
                                 <form string="Disposición">
                                     <header>
                                         <field name="outcome_applied" invisible="1"/>
                                         <field name="cancelled" invisible="1"/>
+                                        <field name="disposition_closes_expedient" invisible="1"/>
                                         <field name="expedient_stage_editable" invisible="1"/>
                                         <button name="action_apply_disposition" type="object"
                                                 string="Aplicar disposición"
                                                 class="btn-warning"
                                                 confirm="El expediente se cerrará en la etapa final correspondiente al resultado de esta disposición. ¿Continuar?"
-                                                invisible="cancelled or disposition_type == 'adjudicacion' or outcome_applied"/>
+                                                invisible="cancelled or not disposition_closes_expedient or outcome_applied"/>
                                         <button name="action_cancel" type="object"
                                                 string="Anular disposición" class="btn-secondary"
                                                 confirm="La disposición quedará anulada como historial y podrá crearse otra. ¿Continuar?"
@@ -536,7 +538,7 @@
                                             <field name="sequence"/>
                                             <field name="number" readonly="1"/>
                                             <field name="disposition_date"/>
-                                            <field name="disposition_type"/>
+                                            <field name="disposition_type_id" options="{'no_create_edit': True}"/>
                                         </group>
                                         <group>
                                             <field name="file_data" filename="file_name"
