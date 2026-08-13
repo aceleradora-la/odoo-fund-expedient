@@ -1851,6 +1851,7 @@ class FundExpedient(models.Model):
                         ),
                         subtype_xmlid="mail.mt_note",
                     )
+                    rec._send_stage_assigned_mail(partners)
                 except Exception as e:
                     # No bloquear el avance/cambio de etapa por falta de configuración de email.
                     _logger.warning(
@@ -1859,6 +1860,37 @@ class FundExpedient(models.Model):
                         rec.id,
                         e,
                     )
+
+    def _send_stage_assigned_mail(self, partners):
+        """Correo a los asignados cuando el expediente entra en la etapa.
+
+        El `message_post` de arriba es una nota interna (`mail.mt_note`) y no
+        genera ningún correo; este método es el envío real. Se activa por etapa
+        con `notify_stage_assignees`, y la plantilla se toma de la configuración
+        de la compañía.
+
+        `force_send=False` deja el despacho al cron estándar de correo: el
+        cambio de etapa no debe esperar al servidor SMTP.
+        """
+        self.ensure_one()
+        assign = self._current_stage_assign()
+        if not assign or not assign.notify_stage_assignees:
+            return False
+        template = self.env["fund.expedient.config"].get_stage_assigned_template(
+            self.company_id
+        )
+        if not template:
+            return False
+        recipients = partners.filtered(lambda p: p.email)
+        if not recipients:
+            return False
+        # Un mail.mail con varios destinatarios genera un correo por partner.
+        template.send_mail(
+            self.id,
+            force_send=False,
+            email_values={"recipient_ids": [(6, 0, recipients.ids)]},
+        )
+        return True
 
     @api.model_create_multi
     def create(self, vals_list):

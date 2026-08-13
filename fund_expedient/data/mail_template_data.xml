@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!--
+        Plantillas del módulo. `noupdate="1"`: se pueden editar desde
+        Ajustes › Técnico › Plantillas de correo sin que una actualización
+        pise los cambios.
+    -->
+    <data noupdate="1">
+
+        <!-- ============================================================
+             Aviso a los asignados cuando el expediente entra en su etapa.
+             Se activa por etapa (Tipos de expediente › Asignaciones por
+             etapa › «Avisar por correo a los asignados»).
+             ============================================================ -->
+        <record id="mail_template_stage_assigned" model="mail.template">
+            <field name="name">Expediente: etapa asignada</field>
+            <field name="model_id" ref="fund_expedient.model_fund_expedient"/>
+            <field name="subject">Expediente {{ object.number or '' }}: etapa {{ object.stage_id.name or '' }}</field>
+            <field name="email_from">{{ (object.company_id.email or user.email_formatted) }}</field>
+            <field name="auto_delete" eval="True"/>
+            <field name="body_html" type="html">
+                <div style="margin: 0px; padding: 0px;">
+                    <p>Hola,</p>
+                    <p>
+                        El expediente <strong t-out="object.number or ''">EXP-0000</strong>
+                        pasó a la etapa
+                        <strong t-out="object.stage_id.name or ''">Etapa</strong>
+                        y está a la espera de tu gestión.
+                    </p>
+                    <table style="border-collapse: collapse; margin: 16px 0;">
+                        <tr>
+                            <td style="padding: 4px 12px 4px 0;"><strong>Tipo</strong></td>
+                            <td style="padding: 4px 0;" t-out="object.type_id.name or ''">Tipo</td>
+                        </tr>
+                        <tr t-if="object.type_number">
+                            <td style="padding: 4px 12px 4px 0;"><strong>Número por tipo</strong></td>
+                            <td style="padding: 4px 0;" t-out="object.type_number or ''">TIPO-0000</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 4px 12px 4px 0;"><strong>Solicitante</strong></td>
+                            <td style="padding: 4px 0;" t-out="object.requestor_id.name or ''">Solicitante</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 4px 12px 4px 0;"><strong>Objeto</strong></td>
+                            <td style="padding: 4px 0;" t-out="object.contract_object or ''">Objeto</td>
+                        </tr>
+                    </table>
+                    <!-- Pendientes de la etapa: el mismo texto del cartel de la ficha. -->
+                    <p t-if="object.stage_requirements_pending">
+                        <span t-out="object.stage_requirements_pending or ''">Para avanzar falta...</span>
+                    </p>
+                    <div style="margin: 24px 0;">
+                        <a t-attf-href="{{ object.get_base_url() }}/odoo/fund.expedient/{{ object.id }}"
+                           style="background-color: #714B67; padding: 10px 18px; text-decoration: none;
+                                  color: #fff; border-radius: 4px; display: inline-block;">
+                            Ver expediente
+                        </a>
+                    </div>
+                </div>
+            </field>
+            <field name="lang">{{ object.company_id.partner_id.lang }}</field>
+        </record>
+
+        <!-- ============================================================
+             Resumen periódico de pendientes. Se envía a cada usuario
+             (modelo res.users), con la frecuencia configurada en
+             Configuración de expedientes.
+             ============================================================ -->
+        <record id="mail_template_pending_digest" model="mail.template">
+            <field name="name">Expedientes: resumen de pendientes</field>
+            <field name="model_id" ref="base.model_res_users"/>
+            <field name="subject">Tenés expedientes y aprobaciones pendientes</field>
+            <field name="email_from">{{ (object.company_id.email or user.email_formatted) }}</field>
+            <field name="email_to">{{ object.email_formatted }}</field>
+            <field name="auto_delete" eval="True"/>
+            <field name="body_html" type="html">
+                <div style="margin: 0px; padding: 0px;">
+                    <p>Hola <t t-out="object.name or ''">Usuario</t>,</p>
+                    <p>Este es el resumen de lo que tenés pendiente:</p>
+
+                    <t t-set="expedients" t-value="object._fund_digest_expedients()"/>
+                    <t t-if="expedients">
+                        <h3 style="margin-bottom: 4px;">Expedientes en tu poder</h3>
+                        <table style="border-collapse: collapse; width: 100%; margin-bottom: 24px;">
+                            <tr style="background-color: #f1f1f1;">
+                                <th style="padding: 6px; text-align: left;">Número</th>
+                                <th style="padding: 6px; text-align: left;">Tipo</th>
+                                <th style="padding: 6px; text-align: left;">Etapa</th>
+                                <th style="padding: 6px; text-align: left;">Situación</th>
+                            </tr>
+                            <tr t-foreach="expedients" t-as="exp"
+                                style="border-bottom: 1px solid #e6e6e6;">
+                                <td style="padding: 6px;">
+                                    <a t-attf-href="{{ exp.get_base_url() }}/odoo/fund.expedient/{{ exp.id }}"
+                                       t-out="exp.number or ''">EXP-0000</a>
+                                </td>
+                                <td style="padding: 6px;" t-out="exp.type_id.name or ''">Tipo</td>
+                                <td style="padding: 6px;" t-out="exp.stage_id.name or ''">Etapa</td>
+                                <td style="padding: 6px;" t-out="exp.stage_requirements_pending or ''"></td>
+                            </tr>
+                        </table>
+                    </t>
+
+                    <t t-set="approvals" t-value="object._fund_digest_approvals()"/>
+                    <t t-if="approvals">
+                        <h3 style="margin-bottom: 4px;">Aprobaciones pendientes</h3>
+                        <table style="border-collapse: collapse; width: 100%; margin-bottom: 24px;">
+                            <tr style="background-color: #f1f1f1;">
+                                <th style="padding: 6px; text-align: left;">Número</th>
+                                <th style="padding: 6px; text-align: left;">Tipo</th>
+                                <th style="padding: 6px; text-align: left;">Etapa</th>
+                                <th style="padding: 6px; text-align: left;">Espera</th>
+                            </tr>
+                            <tr t-foreach="approvals" t-as="exp"
+                                style="border-bottom: 1px solid #e6e6e6;">
+                                <td style="padding: 6px;">
+                                    <a t-attf-href="{{ exp.get_base_url() }}/odoo/fund.expedient/{{ exp.id }}"
+                                       t-out="exp.number or ''">EXP-0000</a>
+                                </td>
+                                <td style="padding: 6px;" t-out="exp.type_id.name or ''">Tipo</td>
+                                <td style="padding: 6px;" t-out="exp.stage_id.name or ''">Etapa</td>
+                                <td style="padding: 6px;" t-out="exp.holder_summary or ''"></td>
+                            </tr>
+                        </table>
+                    </t>
+                </div>
+            </field>
+            <field name="lang">{{ object.lang }}</field>
+        </record>
+
+    </data>
+</odoo>

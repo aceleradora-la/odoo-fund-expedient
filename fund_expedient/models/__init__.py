@@ -19,6 +19,7 @@ from . import expedient_config
 from . import purchase_order
 from . import purchase_requisition_create_alternative
 from . import project_project
+from . import res_users
 from . import account_move
 from . import account_move_line
 from . import account_payment

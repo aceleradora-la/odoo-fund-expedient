@@ -23,6 +23,33 @@
                         <field name="expedient_service_product_id"/>
                         <field name="analytic_plan_id"/>
                     </group>
+                    <group string="Avisos por correo">
+                        <field name="stage_assigned_template_id"
+                               options="{'no_create': True}"/>
+                        <div class="text-muted" colspan="2">
+                            El aviso de etapa asignada se activa etapa por etapa, en
+                            Tipos de expediente › Asignaciones por etapa ›
+                            «Avisar por correo a los asignados».
+                        </div>
+                    </group>
+                    <group string="Resumen de pendientes">
+                        <field name="digest_active"/>
+                        <field name="digest_frequency" invisible="not digest_active"
+                               required="digest_active"/>
+                        <field name="digest_weekday"
+                               invisible="not digest_active or digest_frequency != 'weekly'"/>
+                        <field name="digest_monthday"
+                               invisible="not digest_active or digest_frequency != 'monthly'"/>
+                        <field name="digest_hour" widget="float_time"
+                               invisible="not digest_active"/>
+                        <field name="digest_template_id" options="{'no_create': True}"
+                               invisible="not digest_active" required="digest_active"/>
+                        <field name="digest_last_sent" invisible="not digest_active"/>
+                        <div class="text-muted" colspan="2" invisible="not digest_active">
+                            Cada usuario recibe solo lo suyo, y únicamente si tiene
+                            expedientes en su poder o aprobaciones pendientes.
+                        </div>
+                    </group>
                 </sheet>
             </form>
         </field>

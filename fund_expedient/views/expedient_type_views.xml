@@ -78,6 +78,7 @@
                                            optional="hide"/>
                                     <field name="committed_from_expedient" optional="hide"/>
                                     <field name="is_final_stage" optional="show"/>
+                                    <field name="notify_stage_assignees" optional="hide"/>
                                     <field name="require_notification" optional="show"/>
                                 </list>
                                 <form string="Asignaciones por etapa">
@@ -148,6 +149,9 @@
                                     </group>
                                     <group string="Flujo">
                                         <field name="is_final_stage"/>
+                                    </group>
+                                    <group string="Aviso a los asignados (por etapa)">
+                                        <field name="notify_stage_assignees"/>
                                     </group>
                                     <group string="Notificación a oferentes (por etapa)">
                                         <field name="require_notification"/>

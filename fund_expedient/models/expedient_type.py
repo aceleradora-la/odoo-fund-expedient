@@ -103,6 +103,12 @@ class ExpedientTypeStageAssign(models.Model):
         string="Archivo obligatorio en resolución",
         help="Si está activo, la resolución requerida debe tener un archivo subido.",
     )
+    notify_stage_assignees = fields.Boolean(
+        string="Avisar por correo a los asignados",
+        help="Si está activo, cuando el expediente ENTRA en esta etapa se envía un "
+        "correo a los usuarios que la operan, con un botón para abrir el expediente. "
+        "La plantilla se elige en Configuración de expedientes.",
+    )
     visible_page_ids = fields.Many2many(
         "fund.expedient.page",
         "fund_expedient_stage_assign_page_rel",

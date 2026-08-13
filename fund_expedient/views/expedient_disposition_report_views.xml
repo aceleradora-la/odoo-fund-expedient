@@ -5,13 +5,18 @@
         <field name="model">fund.expedient.disposition</field>
         <field name="type">list</field>
         <field name="arch" type="xml">
-            <list string="Disposiciones" create="0" delete="0" edit="0"
+            <!--
+                Se puede crear desde acá: una disposición puede existir suelta,
+                sin expediente (trámite administrativo que se vincula después).
+            -->
+            <list string="Disposiciones" create="1" delete="0" edit="1"
                   decoration-muted="cancelled">
                 <field name="number"/>
                 <field name="expedient_id"/>
                 <field name="stage_id"/>
                 <field name="disposition_date"/>
                 <field name="disposition_type"/>
+                <field name="file_name" string="Archivo" optional="show"/>
                 <field name="cancelled" optional="show"/>
                 <field name="company_id" groups="base.group_multi_company"/>
             </list>
@@ -30,7 +35,7 @@
         <field name="model">fund.expedient.disposition</field>
         <field name="type">form</field>
         <field name="arch" type="xml">
-            <form string="Disposición" create="0" delete="0">
+            <form string="Disposición" create="1" delete="0">
                 <header>
                     <field name="outcome_applied" invisible="1"/>
                     <field name="cancelled" invisible="1"/>
@@ -53,12 +58,24 @@
                     </div>
                     <group>
                         <group>
-                            <field name="expedient_id" readonly="1"/>
-                            <field name="stage_id" options="{'no_create': True}" readonly="1"/>
+                            <!--
+                                Editables: la disposición puede nacer suelta y
+                                vincularse a un expediente más adelante. La etapa
+                                se limita a las del expediente elegido.
+                            -->
+                            <field name="expedient_id"
+                                   options="{'no_create': True, 'no_create_edit': True}"/>
+                            <field name="stage_id" options="{'no_create': True}"
+                                   domain="[('id', 'in', expedient_allowed_stage_ids)]"
+                                   invisible="not expedient_id"/>
+                            <field name="expedient_allowed_stage_ids" invisible="1"/>
                             <field name="disposition_date"/>
                             <field name="disposition_type"/>
                         </group>
                         <group>
+                            <field name="file_data" filename="file_name" widget="binary"
+                                   string="Archivo"/>
+                            <field name="file_name" invisible="1"/>
                             <field name="sequence"/>
                             <field name="company_id" groups="base.group_multi_company"/>
                         </group>

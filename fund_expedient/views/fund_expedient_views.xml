@@ -538,6 +538,11 @@
                                             <field name="disposition_date"/>
                                             <field name="disposition_type"/>
                                         </group>
+                                        <group>
+                                            <field name="file_data" filename="file_name"
+                                                   widget="binary" string="Archivo"/>
+                                            <field name="file_name" invisible="1"/>
+                                        </group>
                                     </group>
                                     <group>
                                         <field name="notes" widget="html" placeholder="Observaciones..." nolabel="1"/>

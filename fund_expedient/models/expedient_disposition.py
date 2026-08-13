@@ -10,21 +10,48 @@ class FundExpedientDisposition(models.Model):
     _description = "Disposición del expediente"
     _order = "sequence, id"
 
+    # Expediente y etapa son OPCIONALES: una disposición puede cargarse suelta
+    # desde su propio menú (trámite administrativo que todavía no corresponde a
+    # un expediente) y vincularse más adelante. Dentro de un expediente el
+    # circuito no cambia.
     expedient_id = fields.Many2one(
         "fund.expedient",
         string="Expediente",
-        required=True,
         ondelete="cascade",
         index=True,
     )
     stage_id = fields.Many2one(
         "fund.expedient.stage",
         string="Etapa",
-        required=True,
         ondelete="restrict",
         index=True,
         default=lambda self: self.env.context.get("default_stage_id"),
     )
+    file_data = fields.Binary(string="Archivo", attachment=True)
+    file_name = fields.Char(string="Nombre archivo")
+    expedient_allowed_stage_ids = fields.Many2many(
+        "fund.expedient.stage",
+        compute="_compute_expedient_allowed_stage_ids",
+        string="Etapas del expediente",
+        help="Campo técnico: acota el selector de etapa a las del expediente elegido.",
+    )
+
+    @api.depends("expedient_id", "expedient_id.type_id")
+    def _compute_expedient_allowed_stage_ids(self):
+        Stage = self.env["fund.expedient.stage"]
+        for rec in self:
+            if not rec.expedient_id:
+                rec.expedient_allowed_stage_ids = Stage
+                continue
+            expedient_type = rec.expedient_id.type_id
+            if expedient_type and expedient_type.stage_assign_ids:
+                rec.expedient_allowed_stage_ids = expedient_type.stage_assign_ids.mapped(
+                    "stage_id"
+                )
+            else:
+                rec.expedient_allowed_stage_ids = Stage.search(
+                    [("company_id", "in", [False, rec.expedient_id.company_id.id])]
+                )
     sequence = fields.Integer(default=10, help="Orden visual en listas.")
     number = fields.Char(
         string="Número",
@@ -76,6 +103,14 @@ class FundExpedientDisposition(models.Model):
         flujo sigue su curso normal y este botón no está disponible.
         """
         for rec in self:
+            if not rec.expedient_id:
+                raise UserError(
+                    _(
+                        "La disposición %s no está vinculada a ningún expediente: "
+                        "no hay nada que cerrar. Asigne el expediente primero."
+                    )
+                    % (rec.number or "")
+                )
             if rec.cancelled:
                 raise UserError(
                     _(
@@ -108,9 +143,14 @@ class FundExpedientDisposition(models.Model):
         string="Documentos relacionados",
         readonly=True,
     )
+    # Campo propio (ya no related): una disposición suelta no tiene expediente
+    # del cual heredar la compañía. Cuando hay expediente, `create` la toma de él.
     company_id = fields.Many2one(
-        related="expedient_id.company_id",
-        store=True,
+        "res.company",
+        string="Compañía",
+        required=True,
+        default=lambda self: self.env.company,
+        index=True,
     )
 
     # Quién puede operar este registro: se hereda de la etapa actual del
@@ -125,9 +165,13 @@ class FundExpedientDisposition(models.Model):
     @api.depends_context("uid")
     def _compute_expedient_stage_editable(self):
         for rec in self:
-            rec.expedient_stage_editable = bool(
-                rec.expedient_id and rec.expedient_id.can_edit_in_stage
-            )
+            if not rec.expedient_id:
+                # Disposición suelta: no hay etapa que gobierne el permiso, así
+                # que se rige solo por los permisos del modelo. Si diera False
+                # quedaría imposible de anular o de enviar a aprobación.
+                rec.expedient_stage_editable = True
+                continue
+            rec.expedient_stage_editable = bool(rec.expedient_id.can_edit_in_stage)
 
     cancelled = fields.Boolean(
         string="Anulada",
@@ -159,10 +203,14 @@ class FundExpedientDisposition(models.Model):
             rec.with_context(skip_validation_check=True).write(
                 {"cancelled": True, "cancel_date": fields.Date.context_today(rec)}
             )
-            rec.expedient_id.message_post(
-                body=_("Se anuló la disposición <b>%s</b>. Puede crearse otra.", rec.number or ""),
-                subtype_xmlid="mail.mt_note",
-            )
+            if rec.expedient_id:
+                rec.expedient_id.message_post(
+                    body=_(
+                        "Se anuló la disposición <b>%s</b>. Puede crearse otra.",
+                        rec.number or "",
+                    ),
+                    subtype_xmlid="mail.mt_note",
+                )
         return True
 
     def _cancel_pending_approvals(self):
@@ -172,8 +220,6 @@ class FundExpedientDisposition(models.Model):
         sobreescribe para eliminar las revisiones pendientes.
         """
         return True
-
-
 
     _sql_constraints = [
         (
@@ -193,6 +239,13 @@ class FundExpedientDisposition(models.Model):
                 vals["expedient_id"] = exp_id
             if stage_id and not vals.get("stage_id"):
                 vals["stage_id"] = stage_id
+
+            # Con expediente, la compañía se hereda de él; sin expediente queda
+            # la de la sesión (default del campo).
+            if exp_id and not vals.get("company_id"):
+                exp_company = self.env["fund.expedient"].browse(exp_id).company_id
+                if exp_company:
+                    vals["company_id"] = exp_company.id
 
             if exp_id and stage_id:
                 exp = self.env["fund.expedient"].browse(exp_id)
