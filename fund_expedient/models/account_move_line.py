@@ -40,6 +40,11 @@ class AccountMoveLine(models.Model):
             return False
         if move.move_type not in ("in_invoice", "in_refund"):
             return False
+        # sudo en toda la travesía: inferir la analítica es un cálculo interno que
+        # se dispara al escribir CUALQUIER línea de asiento sin distribución. Sin
+        # esto, un usuario de Contabilidad sin permisos de Expedientes no puede
+        # conciliar ni pagar una factura vinculada a un expediente.
+        move = move.sudo()
         analytics = move.expedient_ids.mapped("analytic_account_id").filtered(lambda a: a)
         if not analytics:
             po_expedients = move.invoice_line_ids.purchase_line_id.order_id.mapped("expedient_ids")

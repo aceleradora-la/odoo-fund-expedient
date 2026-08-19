@@ -19,6 +19,13 @@ class AccountMove(models.Model):
         "del proveedor de la factura: debe figurar como proveedor recomendado del "
         "expediente o tener una orden de compra suya.",
     )
+    expedient_names = fields.Char(
+        string="Expedientes",
+        compute="_compute_expedient_names",
+        help="Números de los expedientes vinculados, en texto. Permite que quien "
+        "trabaja en Contabilidad sepa a qué expediente corresponde la factura "
+        "aunque no tenga permisos sobre el módulo de Expedientes.",
+    )
     allowed_expedient_ids = fields.Many2many(
         "fund.expedient",
         compute="_compute_allowed_expedient_ids",
@@ -26,6 +33,32 @@ class AccountMove(models.Model):
         help="Campo técnico: alimenta el domain del selector de expedientes según el "
         "proveedor/cliente de la factura.",
     )
+
+    def _expedients_for_display(self):
+        """Expedientes a los que corresponde la factura.
+
+        Incluye los vinculados directamente y los que llegan por la orden de
+        compra de las líneas: una factura generada desde una OC no tiene el
+        vínculo directo, y es justamente el caso más habitual.
+        """
+        self.ensure_one()
+        move = self.sudo()
+        expedients = move.expedient_ids
+        for order in move.invoice_line_ids.purchase_line_id.order_id:
+            expedients |= order.expedient_ids
+        return expedients
+
+    @api.depends("expedient_ids", "invoice_line_ids")
+    def _compute_expedient_names(self):
+        """Números de los expedientes, legibles sin permisos de Expedientes.
+
+        `sudo` deliberado y acotado: se expone únicamente el número, que es lo
+        que Contabilidad necesita para saber a qué expediente corresponde la
+        factura. El expediente en sí sigue protegido por su ACL.
+        """
+        for move in self:
+            names = move._expedients_for_display().mapped("display_name")
+            move.expedient_names = ", ".join(name for name in names if name)
 
     @api.depends("partner_id", "move_type", "company_id")
     def _compute_allowed_expedient_ids(self):
@@ -36,7 +69,9 @@ class AccountMove(models.Model):
         - Factura/nota de cliente: expedientes de ingreso (el expediente no tiene un
           campo de cliente, así que ahí el filtro es solo por tipo de operación).
         """
-        Expedient = self.env["fund.expedient"]
+        # sudo: se usa para acotar el selector; el usuario no ve estos registros
+        # salvo que tenga permisos, porque el campo solo se renderiza para ellos.
+        Expedient = self.env["fund.expedient"].sudo()
         for move in self:
             if move.move_type not in (
                 "in_invoice",
@@ -70,16 +105,16 @@ class AccountMove(models.Model):
                     ("line_ids.recommended_supplier_ids", "in", partner_ids),
                 ]
             )
-            # `purchase_order_ids` está restringido al grupo de Compras: se lee con
-            # sudo para que el filtro funcione también para usuarios de Contabilidad.
-            by_order = Expedient.sudo().search(
+            # `purchase_order_ids` está restringido al grupo de Compras; el sudo
+            # de arriba también cubre ese caso.
+            by_order = Expedient.search(
                 company_domain
                 + [
                     ("operation_type", "=", "expense"),
                     ("purchase_order_ids.partner_id", "in", partner_ids),
                 ]
             )
-            move.allowed_expedient_ids = by_recommended | Expedient.browse(by_order.ids)
+            move.allowed_expedient_ids = by_recommended | by_order
     payment_date = fields.Date(
         string="Fecha de pago",
         compute="_compute_payment_delay",
@@ -133,7 +168,9 @@ class AccountMove(models.Model):
         """Si todos los expedientes apuntan a la misma cuenta analítica,
         se sugiere para las líneas de factura sin distribución cargada."""
         for move in self.filtered(lambda m: m.move_type in ("in_invoice", "in_refund")):
-            analytics = move.expedient_ids.mapped("analytic_account_id").filtered(lambda a: a)
+            analytics = move.sudo().expedient_ids.mapped("analytic_account_id").filtered(
+                lambda a: a
+            )
             if len(analytics) == 1:
                 analytic = analytics[0]
                 for line in move.invoice_line_ids.filtered(lambda l: not l.display_type):
@@ -145,7 +182,9 @@ class AccountMove(models.Model):
         for move in self.filtered(lambda m: m.move_type in ("in_invoice", "in_refund")):
             if not move.expedient_ids:
                 continue
-            analytics = move.expedient_ids.mapped("analytic_account_id").filtered(lambda a: a)
+            analytics = move.sudo().expedient_ids.mapped("analytic_account_id").filtered(
+                lambda a: a
+            )
             if len(analytics) != 1:
                 continue
             analytic = analytics[0]
@@ -161,8 +200,12 @@ class AccountMove(models.Model):
         Incluye los vinculados directamente y los que llegan por la orden de compra
         de las líneas (una factura de OC impacta el expediente de esa orden).
         """
-        expedients = self.mapped("expedient_ids")
-        for move in self:
+        # sudo en toda la travesía: es un recálculo interno de totales. Sin esto,
+        # un usuario de Contabilidad sin permisos de Expedientes (o sin permisos
+        # de Compras, por el `groups` de `purchase_order_ids`) no puede siquiera
+        # guardar la factura.
+        expedients = self.sudo().mapped("expedient_ids")
+        for move in self.sudo():
             if move.move_type in ("in_invoice", "in_refund"):
                 for po in move.invoice_line_ids.purchase_line_id.order_id:
                     if po.expedient_ids:

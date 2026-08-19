@@ -11,11 +11,22 @@
                     (proveedor recomendado o con OC suya; para ventas, expedientes de
                     ingreso). `allowed_expedient_ids` lo calcula el modelo.
                 -->
-                <field name="allowed_expedient_ids" invisible="1"/>
+                <field name="allowed_expedient_ids" invisible="1"
+                       groups="fund_expedient.group_fund_expedient_user"/>
                 <field name="expedient_ids" widget="many2many_tags"
                        options="{'no_create': True}"
                        domain="[('id', 'in', allowed_expedient_ids)]"
+                       groups="fund_expedient.group_fund_expedient_user"
                        invisible="move_type not in ('in_invoice', 'in_refund', 'out_invoice', 'out_refund')"/>
+                <!--
+                    Sin permisos de Expedientes: se muestra el número en texto, para
+                    que Contabilidad sepa a qué expediente corresponde la factura sin
+                    poder abrirlo. El grupo Administrador hereda del de Usuario, así
+                    que la negación cubre exactamente a quien no tiene ninguno.
+                -->
+                <field name="expedient_names" readonly="1"
+                       groups="!fund_expedient.group_fund_expedient_user"
+                       invisible="move_type not in ('in_invoice', 'in_refund', 'out_invoice', 'out_refund') or not expedient_names"/>
                 <field name="payment_date" readonly="1"
                        invisible="move_type != 'in_invoice' or not payment_date"/>
                 <field name="payment_delay_days" readonly="1"

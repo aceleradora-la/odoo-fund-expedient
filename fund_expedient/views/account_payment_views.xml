@@ -7,7 +7,12 @@
         <field name="arch" type="xml">
             <xpath expr="//field[@name='partner_id']" position="after">
                 <field name="expedient_ids" widget="many2many_tags"
-                       options="{'no_create': True}"/>
+                       options="{'no_create': True}"
+                       groups="fund_expedient.group_fund_expedient_user"/>
+                <!-- Sin permisos de Expedientes: solo el número, en texto. -->
+                <field name="expedient_names" readonly="1"
+                       groups="!fund_expedient.group_fund_expedient_user"
+                       invisible="not expedient_names"/>
             </xpath>
         </field>
     </record>
