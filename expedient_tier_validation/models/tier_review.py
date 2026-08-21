@@ -1,6 +1,8 @@
 # Copyright 2026
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 
+import inspect
+
 from odoo import api, fields, models
 
 _FUND_EXPEDIENT_MODELS = (
@@ -183,6 +185,29 @@ class TierReview(models.Model):
         res = super().write(vals)
         self._backfill_missing_context()
         return res
+
+    def _notify_pending_review(self):
+        """Avisar al revisor de que la revisión pasó a «pendiente».
+
+        Equivale a lo que hace `_update_review_status` del estándar, para las
+        versiones de `base_tier_validation` que no tienen ese método. El aviso
+        se resuelve de forma defensiva —tanto el campo de la definición como la
+        firma del método cambiaron entre versiones—: si no está disponible, la
+        revisión igual queda en «pendiente» y solo se pierde el correo.
+        """
+        self.ensure_one()
+        definition = self.definition_id
+        if "notify_on_pending" not in definition._fields:
+            return
+        if not definition.notify_on_pending:
+            return
+        notify = getattr(self, "_notify_pending_status", None)
+        if not notify:
+            return
+        if inspect.signature(notify).parameters:
+            notify(self)
+        else:
+            notify()
 
     def _pending_reviews_same_context(self, resource):
         """Reviews pendientes del mismo contexto (etapa/fase), tolerando filas sin contexto."""
