@@ -152,6 +152,26 @@ class ExpedientLine(models.Model):
             if rec.product_qty:
                 rec.price_unit_final = rec.amount_final_line / rec.product_qty
 
+    # Sector requirente y su responsable viven en el expediente (salen del
+    # solicitante). Se traen almacenados para poder filtrarlos, agruparlos y
+    # sumarlos en el reporte de contrataciones sin recorrer el expediente.
+    requestor_department_id = fields.Many2one(
+        "hr.department",
+        string="Sector requirente",
+        related="expedient_id.requestor_department_id",
+        store=True,
+        readonly=True,
+        index=True,
+    )
+    requestor_department_manager_id = fields.Many2one(
+        "hr.employee",
+        string="Responsable del sector",
+        related="expedient_id.requestor_department_manager_id",
+        store=True,
+        readonly=True,
+        index=True,
+    )
+
     # Campos auxiliares para el reporte de contratación (Locación). El proveedor
     # contratado y las facturas reales se vinculan a nivel expediente (no de
     # línea), por eso los traemos como computados desde el expediente.
