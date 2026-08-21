@@ -28,6 +28,12 @@ class FundExpedientContractProjection(models.Model):
         "account.analytic.account", string="Cuenta analítica", readonly=True
     )
     partner_id = fields.Many2one("res.partner", string="Proveedor contratado", readonly=True)
+    requestor_department_id = fields.Many2one(
+        "hr.department", string="Sector requirente", readonly=True
+    )
+    requestor_department_manager_id = fields.Many2one(
+        "hr.employee", string="Responsable del sector", readonly=True
+    )
     contract_kind = fields.Selection(
         [
             ("service_lease", "Locación de Servicios"),
@@ -62,6 +68,8 @@ class FundExpedientContractProjection(models.Model):
                         l.analytic_account_id,
                         l.product_id,
                         e.contract_kind,
+                        e.requestor_department_id,
+                        e.requestor_department_manager_id,
                         l.date_start,
                         l.date_end,
                         (
@@ -90,6 +98,8 @@ class FundExpedientContractProjection(models.Model):
                     b.analytic_account_id,
                     b.product_id,
                     b.contract_kind,
+                    b.requestor_department_id,
+                    b.requestor_department_manager_id,
                     b.date_start,
                     b.date_end,
                     b.month_count,

@@ -120,6 +120,7 @@
         <field name="type">pivot</field>
         <field name="arch" type="xml">
             <pivot string="Proyección mensual (Locación)">
+                <field name="requestor_department_id" type="row"/>
                 <field name="expedient_id" type="row"/>
                 <field name="partner_id" type="row"/>
                 <field name="month" interval="month" type="col"/>
@@ -136,6 +137,8 @@
             <list string="Proyección mensual (Locación)" create="0" delete="0" edit="0">
                 <field name="expedient_id"/>
                 <field name="partner_id"/>
+                <field name="requestor_department_id"/>
+                <field name="requestor_department_manager_id"/>
                 <field name="product_id"/>
                 <field name="contract_kind"/>
                 <field name="currency_id" column_invisible="1"/>
@@ -158,6 +161,8 @@
                 <field name="expedient_id"/>
                 <field name="partner_id"/>
                 <field name="analytic_account_id"/>
+                <field name="requestor_department_id"/>
+                <field name="requestor_department_manager_id"/>
                 <filter string="Locación de Servicios" name="service_lease"
                         domain="[('contract_kind', '=', 'service_lease')]"/>
                 <filter string="Locación de Obra" name="work_lease"
@@ -167,6 +172,10 @@
                             context="{'group_by': 'expedient_id'}"/>
                     <filter string="Proveedor" name="group_partner"
                             context="{'group_by': 'partner_id'}"/>
+                    <filter string="Sector requirente" name="group_projection_department"
+                            context="{'group_by': 'requestor_department_id'}"/>
+                    <filter string="Responsable del sector" name="group_projection_department_manager"
+                            context="{'group_by': 'requestor_department_manager_id'}"/>
                     <filter string="Cuenta analítica" name="group_analytic"
                             context="{'group_by': 'analytic_account_id'}"/>
                     <filter string="Mes" name="group_month"
