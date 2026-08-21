@@ -605,46 +605,15 @@ class FundExpedient(models.Model):
         return created_trs
 
     def _promote_created_reviews(self, reviews):
-        """Pasar a «pendiente» las revisiones recién creadas que ya pueden atenderse.
+        """Promover las revisiones recién creadas de la etapa actual.
 
-        Sin esto quedan en «esperando»: no se avisa al revisor de que le llegó
-        algo y la lista de aprobaciones muestra un estado que no refleja la
-        realidad. `_update_counter` lo hace, pero solo lo llamamos cuando quien
-        pide la validación es además revisor.
-
-        `base_tier_validation` resuelve esto con `_update_review_status`, que no
-        existe en todas las versiones. Cuando no está, se replica el mismo
-        criterio: promover la revisión de menor secuencia —y todas las demás si
-        la definición no exige orden—. Si la versión instalada ya crea las
-        revisiones en «pendiente», no hay nada que promover y no se toca nada.
+        Ver `tier.review._fund_promote_to_pending`.
         """
-        if not reviews:
-            return
-        promote = getattr(reviews, "_update_review_status", None)
-        if promote:
-            promote()
-            return
         for rec in self:
-            waiting = reviews.filtered(
-                lambda r, rec=rec: r.model == rec._name
-                and r.res_id == rec.id
-                and r.status == "waiting"
+            rec_reviews = reviews.filtered(
+                lambda r, rec=rec: r.model == rec._name and r.res_id == rec.id
             )
-            if not waiting:
-                continue
-            # La secuencia se compara contra todas las revisiones abiertas de la
-            # etapa, no solo contra las recién creadas: acá se crean únicamente
-            # las que faltaban, así que una anterior sin resolver tiene que
-            # seguir bloqueando a las nuevas.
-            open_reviews = rec._current_stage_reviews().filtered(
-                lambda r: r.status in ("waiting", "pending")
-            )
-            next_seq = min(open_reviews.mapped("sequence"), default=0)
-            for review in waiting:
-                if review.approve_sequence and review.sequence != next_seq:
-                    continue
-                review.status = "pending"
-                review._notify_pending_review()
+            rec_reviews._fund_promote_to_pending(rec._current_stage_reviews())
 
     def restart_validation(self):
         """Reiniciar solo la validación de la etapa actual (mantiene historial de otras etapas)."""

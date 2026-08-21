@@ -276,17 +276,22 @@ class TierValidationFundMixin(models.AbstractModel):
         if not vals_list:
             return tr_obj.browse()
         created_trs = tr_obj.create(vals_list)
-        # Promover a «pendiente» las revisiones que ya pueden atenderse, igual
-        # que hace `request_validation` del estándar. Sin esto quedan todas en
-        # «esperando»: no se dispara `notify_on_pending` (aviso al revisor de
-        # que le llegó algo) y la lista de aprobaciones muestra un estado que no
-        # refleja la realidad. `_update_counter` lo hace, pero solo lo llamamos
-        # cuando quien pide la validación es además revisor.
-        created_trs._update_review_status()
+        self._promote_created_reviews(created_trs)
         if any(self.mapped("can_review")):
             self._update_counter({"review_created": True})
         self._notify_review_requested(created_trs)
         return created_trs
+
+    def _promote_created_reviews(self, reviews):
+        """Promover las revisiones recién creadas del contexto activo.
+
+        Ver `tier.review._fund_promote_to_pending`.
+        """
+        for rec in self:
+            rec_reviews = reviews.filtered(
+                lambda r, rec=rec: r.model == rec._name and r.res_id == rec.id
+            )
+            rec_reviews._fund_promote_to_pending(rec._current_context_reviews())
 
     def restart_validation(self):
         """Reiniciar la validación borra las revisiones del contexto.

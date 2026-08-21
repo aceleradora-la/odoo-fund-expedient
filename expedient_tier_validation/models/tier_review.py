@@ -186,6 +186,42 @@ class TierReview(models.Model):
         self._backfill_missing_context()
         return res
 
+    def _fund_promote_to_pending(self, open_context_reviews=None):
+        """Pasar a «pendiente» las revisiones de `self` que ya pueden atenderse.
+
+        Sin esto quedan en «esperando»: no se avisa al revisor de que le llegó
+        algo y la lista de aprobaciones muestra un estado que no refleja la
+        realidad. `_update_counter` lo hace, pero solo cuando quien pide la
+        validación es además revisor.
+
+        `base_tier_validation` lo resuelve con `_update_review_status`, que no
+        existe en todas las versiones. Cuando no está, se replica el criterio:
+        promover la revisión de menor secuencia —y todas, si la definición no
+        exige orden—. `open_context_reviews` son todas las revisiones del mismo
+        contexto (etapa del expediente o fase de la solicitud): la secuencia se
+        compara contra ellas y no solo contra las recién creadas, porque acá se
+        crean únicamente las que faltaban y una anterior sin resolver tiene que
+        seguir bloqueando. Si la versión instalada ya las crea en «pendiente»,
+        no hay nada que promover y no se toca nada.
+        """
+        if not self:
+            return
+        promote = getattr(self, "_update_review_status", None)
+        if promote:
+            promote()
+            return
+        waiting = self.filtered(lambda r: r.status == "waiting")
+        if not waiting:
+            return
+        scope = self if open_context_reviews is None else open_context_reviews
+        open_reviews = scope.filtered(lambda r: r.status in ("waiting", "pending"))
+        next_seq = min(open_reviews.mapped("sequence"), default=0)
+        for review in waiting:
+            if review.approve_sequence and review.sequence != next_seq:
+                continue
+            review.status = "pending"
+            review._notify_pending_review()
+
     def _notify_pending_review(self):
         """Avisar al revisor de que la revisión pasó a «pendiente».
 
