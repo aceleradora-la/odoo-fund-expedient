@@ -559,13 +559,18 @@ class FundExpedient(models.Model):
             # Preventiva: solo si no hay ninguna solicitud vigente (una cancelada
             # no cuenta, justamente para poder generar la nueva).
             rec.can_create_spend_request_preventiva = mode == "preventiva" and not sr
-            # Definitiva: requiere la preventiva aprobada y que la definitiva no
-            # se haya generado ya (regenerarla borraría su aprobación).
+            # Definitiva: no debe estar ya generada (regenerarla borraría su
+            # aprobación) ni quedar una preventiva a medio aprobar. Que NO exista
+            # solicitud es válido: hay tipos cuyo flujo no tiene etapa preventiva
+            # y arranca directo en la definitiva.
             rec.can_create_spend_request_final = bool(
                 mode == "final"
-                and sr
-                and sr.is_phase_approved("preventiva")
-                and not sr.is_phase_generated("definitiva")
+                and not (sr and sr.is_phase_generated("definitiva"))
+                and not (
+                    sr
+                    and sr.is_phase_generated("preventiva")
+                    and not sr.is_phase_approved("preventiva")
+                )
             )
 
     stage_requirements_ok = fields.Boolean(
@@ -2297,7 +2302,9 @@ class FundExpedient(models.Model):
         self.ensure_one()
         if not self.stage_id or self.stage_id.spend_request_mode != "final":
             raise UserError("La etapa actual no permite crear Solicitud de Gasto definitiva.")
-        sr = self._get_spend_request()
+        # `create_if_missing`: el flujo puede no haber pasado por una etapa
+        # preventiva, en cuyo caso la solicitud todavía no existe.
+        sr = self._get_spend_request(create_if_missing=True)
         sr.action_generate_final()
         return {
             "type": "ir.actions.act_window",

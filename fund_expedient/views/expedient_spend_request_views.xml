@@ -122,6 +122,8 @@
                             invisible="cancelled or not expedient_stage_editable or not number or number == '/'"/>
                     <field name="cancelled" invisible="1"/>
                     <field name="expedient_stage_editable" invisible="1"/>
+                    <!-- Necesario para que `parent.contract_kind` resuelva en las líneas. -->
+                    <field name="contract_kind" invisible="1"/>
                 </header>
                 <sheet>
                     <widget name="web_ribbon" title="Cancelada" bg_color="text-bg-danger"
@@ -209,6 +211,12 @@
                                 <field name="amount_estimated_line"/>
                                 <field name="price_unit_final" optional="show"/>
                                 <field name="amount_final_line"/>
+                                <!-- Locación: el período contratado de cada línea, tal
+                                     como quedó en el momento de generar la solicitud. -->
+                                <field name="date_start"
+                                       column_invisible="parent.contract_kind in ('none', False)"/>
+                                <field name="date_end"
+                                       column_invisible="parent.contract_kind in ('none', False)"/>
                             </list>
                         </field>
                     </group>

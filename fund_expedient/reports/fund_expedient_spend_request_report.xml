@@ -143,6 +143,14 @@
                     </div>
                 </div>
 
+                <!--
+                    `is_lease`: en Locación de Servicios/Obra cada línea lleva el
+                    período contratado, así que se agregan dos columnas al detalle.
+                    `colspan` de secciones y notas se ajusta en consecuencia.
+                -->
+                <t t-set="is_lease" t-value="o.contract_kind in ('service_lease', 'work_lease')"/>
+                <t t-set="line_colspan" t-value="12 if is_lease else 10"/>
+
                 <h4 class="mt-4" style="font-size: 13px;">Totales</h4>
                 <table class="table table-sm">
                     <thead>
@@ -153,7 +161,9 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr>
+                        <!-- Sin etapa preventiva la solicitud nace definitiva:
+                             una fila en cero solo confundiría. -->
+                        <tr t-if="o.preventiva_state != 'draft'">
                             <td>Preventivo</td>
                             <td class="text-end">
                                 <span t-field="o.amount_preventiva"
@@ -196,17 +206,19 @@
                             <th class="text-end">Estimado</th>
                             <th class="text-end">P. unitario def.</th>
                             <th class="text-end">Definitivo</th>
+                            <th t-if="is_lease">Fecha inicio</th>
+                            <th t-if="is_lease">Fecha fin</th>
                         </tr>
                     </thead>
                     <tbody>
                         <t t-foreach="o.line_ids.sorted(key=lambda l: (l.sequence, l.id))" t-as="line">
                             <tr t-if="line.display_type == 'line_section'">
-                                <td colspan="10">
+                                <td t-att-colspan="line_colspan">
                                     <strong t-field="line.name"/>
                                 </td>
                             </tr>
                             <tr t-elif="line.display_type == 'line_note'">
-                                <td colspan="10">
+                                <td t-att-colspan="line_colspan">
                                     <em t-field="line.name"/>
                                 </td>
                             </tr>
@@ -233,6 +245,8 @@
                                     <span t-field="line.amount_final_line"
                                           t-options='{"widget": "monetary", "display_currency": o.currency_id}'/>
                                 </td>
+                                <td t-if="is_lease"><span t-field="line.date_start"/></td>
+                                <td t-if="is_lease"><span t-field="line.date_end"/></td>
                             </tr>
                         </t>
                     </tbody>

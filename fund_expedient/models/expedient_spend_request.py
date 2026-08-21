@@ -233,6 +233,14 @@ class FundExpedientSpendRequest(models.Model):
         string="Líneas",
         copy=False,
     )
+    contract_kind = fields.Selection(
+        related="expedient_id.contract_kind",
+        string="Locación",
+        readonly=True,
+        help="Tipo de contratación heredado del expediente. Gobierna la visibilidad "
+        "de las fechas de inicio y fin de las líneas: solo tienen sentido en una "
+        "Locación de Servicios o de Obra.",
+    )
     display_name = fields.Char(compute="_compute_display_name", store=True)
 
     @api.depends("expedient_id.number", "number", "spend_state", "operation_type", "cancelled")
@@ -419,19 +427,31 @@ class FundExpedientSpendRequest(models.Model):
         return self.action_generate_preventiva()
 
     def action_generate_final(self):
-        """Pasa a definitiva: mismo número, snapshot actualizado desde expediente."""
+        """Pasa a definitiva: mismo número, snapshot actualizado desde expediente.
+
+        Si no hubo preventiva, la solicitud nace acá y toma el número en este
+        momento (misma secuencia, para que la numeración no tenga huecos ni
+        dependa de qué fases recorrió el expediente).
+        """
         self.ensure_one()
         exp = self.expedient_id
         if not exp:
             raise UserError(_("La Solicitud de Gasto debe estar vinculada a un expediente."))
         if exp.stage_id.spend_request_mode != "final":
             raise UserError(_("La etapa actual no permite pasar a Solicitud de Gasto definitiva."))
-        if self.preventiva_state != "approved":
+        # La preventiva puede no existir: hay tipos de expediente cuyo flujo no
+        # tiene etapa preventiva y arranca directo en la definitiva. La
+        # aprobación solo se exige cuando la preventiva llegó a generarse:
+        # dejarla a medio aprobar y saltar a la definitiva sí sería saltear
+        # una aprobación.
+        if self.is_phase_generated("preventiva") and not self.is_phase_approved(
+            "preventiva"
+        ):
             raise UserError(
                 _("La Solicitud de Gasto preventiva debe estar aprobada antes de generar la definitiva.")
             )
         if not self.number or self.number == "/":
-            raise UserError(_("Primero debe existir la Solicitud de Gasto preventiva con número asignado."))
+            self.number = self._next_number()
         if not exp.amount_estimated_confirmed:
             raise UserError(
                 _(
@@ -449,7 +469,11 @@ class FundExpedientSpendRequest(models.Model):
                 "amount_definitiva_unit": exp.amount_estimated_confirmed_unit or 0.0,
             }
         )
-        self._sync_lines_from_expedient(exp)
+        if self.line_ids:
+            self._sync_lines_from_expedient(exp)
+        else:
+            # Sin preventiva no hay snapshot previo que actualizar.
+            self._snapshot_lines_from_expedient(exp, replace=True)
         return True
 
     def _mark_phase_approved(self, phase):
