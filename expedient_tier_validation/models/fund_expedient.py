@@ -775,6 +775,7 @@ class FundExpedient(models.Model):
         "review_ids.status",
         "review_ids.stage_id",
         "review_ids.reviewer_ids",
+        "spend_request_ids.cancelled",
         "spend_request_ids.preventiva_state",
         "spend_request_ids.definitiva_state",
         "spend_request_ids.spend_state",
@@ -802,6 +803,7 @@ class FundExpedient(models.Model):
         "document_ids.resolution_id",
         "disposition_ids.stage_id",
         "resolution_ids.stage_id",
+        "spend_request_ids.cancelled",
         "spend_request_ids.preventiva_state",
         "spend_request_ids.definitiva_state",
         "spend_request_ids.review_ids.status",
@@ -824,6 +826,7 @@ class FundExpedient(models.Model):
         "review_ids.stage_id",
         "review_ids.reviewer_ids",
         "stage_id",
+        "spend_request_ids.cancelled",
         "spend_request_ids.review_ids.status",
         "spend_request_ids.review_ids.reviewer_ids",
     )

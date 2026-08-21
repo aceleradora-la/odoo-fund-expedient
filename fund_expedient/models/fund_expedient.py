@@ -1144,17 +1144,29 @@ class FundExpedient(models.Model):
                 yield rec, all_stages
 
     def _stage_change_is_forward(self, new_stage):
-        """True si la etapa destino está después de la actual en el flujo del tipo."""
+        """True si la etapa destino está después de la actual en el flujo del tipo.
+
+        Salir del flujo secuencial nunca es avanzar: cancelar y cerrar por
+        resultado final (Desierto/Sin efecto/Fracasado) son cierres
+        administrativos. Tampoco lo es un movimiento donde alguna de las dos
+        etapas quedó fuera del flujo del tipo —por configuración o porque el
+        expediente ya está en una etapa de cierre—: ahí no hay secuencia contra
+        la cual comparar, y darlo por avance dejaba el expediente trabado, sin
+        poder volver atrás ni cancelar.
+        """
         self.ensure_one()
         new_stage_id = new_stage.id if hasattr(new_stage, "id") else int(new_stage)
         if not new_stage_id or not self.stage_id or new_stage_id == self.stage_id.id:
             return False
+        target = self.env["fund.expedient.stage"].browse(new_stage_id)
+        if target.state_type == "cancel" or target.final_outcome_type_id:
+            return False
         for _rec, stages in self._get_allowed_stages():
             ordered_ids = stages.ids
             if self.stage_id.id not in ordered_ids or new_stage_id not in ordered_ids:
-                return True
+                return False
             return ordered_ids.index(new_stage_id) > ordered_ids.index(self.stage_id.id)
-        return True
+        return False
 
     def _current_stage_assign(self):
         self.ensure_one()
@@ -1669,6 +1681,16 @@ class FundExpedient(models.Model):
                 and new_vals.get("stage_id")
                 and new_vals.get("stage_id") != rec.stage_id.id
             )
+            # Los requisitos de la etapa (solicitud, documentos, disposición,
+            # resolución, notificación) solo se exigen al AVANZAR. Volver a la
+            # etapa anterior, cancelar o cerrar por resultado final son salidas
+            # administrativas: se sale de la etapa justamente para corregir lo
+            # que falta, así que exigirlo ahí deja el expediente sin salida.
+            stage_change_is_forward = bool(
+                stage_will_change
+                and rec.stage_id
+                and rec._stage_change_is_forward(new_vals.get("stage_id"))
+            )
 
             if (
                 "amount_estimated_confirmed_manual" in new_vals
@@ -1682,24 +1704,20 @@ class FundExpedient(models.Model):
                     % (rec.stage_id.name or "")
                 )
 
-            if (
-                stage_will_change
-                and rec.stage_id
-                and not self.env.context.get("skip_spend_request_check")
-                and rec._stage_change_is_forward(new_vals.get("stage_id"))
+            if stage_change_is_forward and not self.env.context.get(
+                "skip_spend_request_check"
             ):
                 rec._check_spend_request_before_leave_stage()
 
             if (
-                stage_will_change
+                stage_change_is_forward
                 and rec.type_id
-                and rec.stage_id
                 and not self.env.context.get("skip_document_check")
             ):
                 rec._check_required_documents_before_leave_stage()
 
             # Reglas de disposición: al salir de la etapa actual, validar requisitos configurados.
-            if stage_will_change and rec.type_id and rec.stage_id and not self.env.context.get(
+            if stage_change_is_forward and rec.type_id and not self.env.context.get(
                 "skip_disposition_check"
             ):
                 assign_cur = Assign.search(
@@ -1735,7 +1753,7 @@ class FundExpedient(models.Model):
                             )
 
             # Reglas de resolución: al salir de la etapa actual, validar requisitos configurados.
-            if stage_will_change and rec.type_id and rec.stage_id and not self.env.context.get(
+            if stage_change_is_forward and rec.type_id and not self.env.context.get(
                 "skip_resolution_check"
             ):
                 assign_cur = Assign.search(
@@ -1770,7 +1788,7 @@ class FundExpedient(models.Model):
                                 )
                             )
 
-            if stage_will_change and rec.type_id and rec.stage_id and not self.env.context.get(
+            if stage_change_is_forward and rec.type_id and not self.env.context.get(
                 "skip_notification_check"
             ):
                 assign_cur = Assign.search(
@@ -2297,13 +2315,27 @@ class FundExpedient(models.Model):
         )
 
     def action_cancel(self):
-        """Mover expediente a estado Cancelado."""
+        """Mover expediente a estado Cancelado.
+
+        Se omiten las validaciones de salida de etapa (solicitud, documentos,
+        disposición, resolución, notificación y tier), igual que al cerrar por
+        resultado final: cancelar es un cierre administrativo y exigir los
+        requisitos de la etapa dejaría sin salida justo a los expedientes que
+        se cancelan porque no se pudieron completar.
+        """
         cancel_stage = self.env["fund.expedient.stage"].search(
             [("state_type", "=", "cancel")], limit=1
         )
         if not cancel_stage:
             raise UserError("No existe una etapa de tipo 'Cancelado' configurada.")
-        return self.write({"stage_id": cancel_stage.id})
+        return self.with_context(
+            skip_validation_check=True,
+            skip_spend_request_check=True,
+            skip_document_check=True,
+            skip_disposition_check=True,
+            skip_resolution_check=True,
+            skip_notification_check=True,
+        ).write({"stage_id": cancel_stage.id})
 
     def _find_outcome_stage(self, disposition_type):
         """Etapa de cierre del flujo para un tipo de disposición.
@@ -2645,6 +2677,10 @@ class FundExpedient(models.Model):
         "disposition_ids.cancelled",
         "resolution_ids.stage_id",
         "resolution_ids.cancelled",
+        # `cancelled`: los requisitos se miden sobre la Solicitud vigente y una
+        # cancelada deja de serlo. Sin esta dependencia el cartel y los botones
+        # seguían mostrando el estado previo a la cancelación.
+        "spend_request_ids.cancelled",
         "spend_request_ids.preventiva_state",
         "spend_request_ids.definitiva_state",
     )
