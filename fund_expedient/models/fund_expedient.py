@@ -277,6 +277,42 @@ class FundExpedient(models.Model):
         compute="_compute_allowed_stage_ids",
         string="Etapas permitidas",
     )
+    stage_is_final = fields.Boolean(
+        string="En la etapa final del flujo",
+        compute="_compute_stage_is_final",
+        store=True,
+        index=True,
+        help="El expediente llegó a la etapa marcada como «Etapa final del flujo» en "
+        "las asignaciones por etapa de su tipo, es decir que la contratación quedó "
+        "cerrada. Los cierres alternativos (Desierto, Sin efecto, Fracasado) y la "
+        "cancelación no cuentan: ahí el expediente terminó, pero sin contratación. "
+        "Se usa para acotar los reportes de contratación a lo efectivamente "
+        "adjudicado.",
+    )
+
+    @api.depends(
+        "stage_id",
+        "stage_id.final_outcome_type_id",
+        "type_id",
+        "type_id.stage_assign_ids.stage_id",
+        "type_id.stage_assign_ids.is_final_stage",
+    )
+    def _compute_stage_is_final(self):
+        Assign = self.env["fund.expedient.type.stage.assign"]
+        for rec in self:
+            rec.stage_is_final = False
+            if not rec.stage_id or not rec.type_id:
+                continue
+            if rec.stage_id.final_outcome_type_id or rec.stage_id.state_type == "cancel":
+                continue
+            assign = Assign.search(
+                [
+                    ("type_id", "=", rec.type_id.id),
+                    ("stage_id", "=", rec.stage_id.id),
+                ],
+                limit=1,
+            )
+            rec.stage_is_final = bool(assign and assign.is_final_stage)
     state = fields.Selection(
         selection=[
             ("draft", "Borrador"),

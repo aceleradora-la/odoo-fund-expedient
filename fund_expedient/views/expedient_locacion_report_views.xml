@@ -26,7 +26,7 @@
                 <field name="amount_estimated_line" string="Total estimado" optional="hide"/>
                 <field name="date_start"/>
                 <field name="date_end"/>
-                <field name="contracted_supplier_ids" widget="many2many_tags" string="Proveedor (OC)"/>
+                <field name="contracted_supplier_ids" widget="many2many_tags" string="Proveedor contratado"/>
                 <!-- Total del expediente, no de la línea: no se suma (ver help del campo). -->
                 <field name="expedient_amount_real" string="Facturas reales (expediente)"/>
                 <field name="analytic_account_id" optional="show"/>
@@ -85,13 +85,16 @@
         <field name="view_mode">list,pivot</field>
         <field name="view_id" ref="view_expedient_locacion_line_list"/>
         <field name="search_view_id" ref="view_expedient_locacion_line_search"/>
-        <field name="domain">[('contract_kind', 'in', ('service_lease', 'work_lease')), ('display_type', '=', False)]</field>
+        <!-- `stage_is_final`: solo expedientes cerrados en la etapa final del
+             flujo. Un expediente en trámite todavía no es una contratación. -->
+        <field name="domain">[('contract_kind', 'in', ('service_lease', 'work_lease')), ('display_type', '=', False), ('expedient_id.stage_is_final', '=', True)]</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">
                 Contrataciones de Locación de Servicios y de Obra
             </p>
             <p>
-                Se listan las líneas de expedientes marcados como Locación, con cantidad, unidad,
+                Se listan las líneas de los expedientes de Locación que llegaron a la etapa
+                final de su flujo, con cantidad, unidad,
                 precios, fechas de inicio/fin, el proveedor contratado (según la orden de compra)
                 y el total real facturado del expediente.
             </p>

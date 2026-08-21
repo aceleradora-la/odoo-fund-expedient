@@ -157,9 +157,12 @@ class ExpedientLine(models.Model):
     # línea), por eso los traemos como computados desde el expediente.
     contracted_supplier_ids = fields.Many2many(
         "res.partner",
-        string="Proveedor contratado (OC)",
+        string="Proveedor contratado",
         compute="_compute_contract_report_fields",
-        help="Proveedores de las órdenes de compra vinculadas al expediente.",
+        help="Proveedores de las órdenes de compra vinculadas al expediente. Si el "
+        "expediente no tiene orden de compra, se usan los proveedores cargados a "
+        "mano: primero los de la línea y, si no hay, los generales del expediente "
+        "(la misma precedencia que aplica el resto del módulo).",
     )
     expedient_amount_real = fields.Monetary(
         string="Facturas reales (expediente)",
@@ -173,6 +176,8 @@ class ExpedientLine(models.Model):
     @api.depends(
         "expedient_id.purchase_order_ids.partner_id",
         "expedient_id.amount_real",
+        "recommended_supplier_ids",
+        "expedient_id.recommended_supplier_ids",
     )
     def _compute_contract_report_fields(self):
         for rec in self:
@@ -184,7 +189,13 @@ class ExpedientLine(models.Model):
             # sudo: `purchase_order_ids` está restringido al grupo de compras;
             # este campo es informativo (reporte) y debe poder leerse aunque el
             # usuario no tenga permisos de Compras, sin romper la ficha.
-            rec.contracted_supplier_ids = exp.sudo().purchase_order_ids.mapped("partner_id")
+            partners = exp.sudo().purchase_order_ids.mapped("partner_id")
+            if not partners:
+                # No toda contratación pasa por una orden de compra. Cuando no
+                # hay, el proveedor es el que se cargó a mano en la línea y, si
+                # la línea no define ninguno, el general del expediente.
+                partners = rec.recommended_supplier_ids or exp.recommended_supplier_ids
+            rec.contracted_supplier_ids = partners
             rec.expedient_amount_real = exp.amount_real
 
     @api.constrains("date_start", "date_end")

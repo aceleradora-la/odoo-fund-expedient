@@ -73,6 +73,9 @@ class FundExpedientContractProjection(models.Model):
                     FROM fund_expedient_line l
                     JOIN fund_expedient e ON e.id = l.expedient_id
                     WHERE e.contract_kind IN ('service_lease', 'work_lease')
+                      -- Solo expedientes cerrados en la etapa final del flujo:
+                      -- lo que todavía está en trámite no es una contratación.
+                      AND e.stage_is_final
                       AND l.display_type IS NULL
                       AND l.date_start IS NOT NULL
                       AND l.date_end IS NOT NULL
@@ -93,7 +96,10 @@ class FundExpedientContractProjection(models.Model):
                     b.amount_total,
                     (date_trunc('month', b.date_start) + (gs.n || ' month')::interval)::date AS month,
                     CASE WHEN b.month_count > 0 THEN b.amount_total / b.month_count ELSE b.amount_total END AS amount_month,
-                    po.partner_id
+                    -- Mismo criterio que `contracted_supplier_ids` de la línea:
+                    -- la orden de compra manda y, si no hay, vale el proveedor
+                    -- cargado a mano (primero el de la línea, luego el general).
+                    COALESCE(po.partner_id, line_sup.partner_id, exp_sup.partner_id) AS partner_id
                 FROM base b
                 JOIN res_company rc ON rc.id = b.company_id
                 JOIN LATERAL generate_series(0, b.month_count - 1) AS gs(n) ON TRUE
@@ -105,6 +111,20 @@ class FundExpedientContractProjection(models.Model):
                     LIMIT 1
                 ) first_po ON TRUE
                 LEFT JOIN purchase_order po ON po.id = first_po.order_id
+                LEFT JOIN LATERAL (
+                    SELECT rel.partner_id
+                    FROM fund_expedient_line_recommended_supplier_rel rel
+                    WHERE rel.line_id = b.line_id
+                    ORDER BY rel.partner_id
+                    LIMIT 1
+                ) line_sup ON TRUE
+                LEFT JOIN LATERAL (
+                    SELECT rel.partner_id
+                    FROM fund_expedient_recommended_supplier_rel rel
+                    WHERE rel.expedient_id = b.expedient_id
+                    ORDER BY rel.partner_id
+                    LIMIT 1
+                ) exp_sup ON TRUE
             )
             """
         )
