@@ -768,6 +768,23 @@
                                  una fila. -->
                             <field name="parent_id" domain="[('id', '!=', id)]"
                                    options="{'no_create': True, 'no_create_edit': True}"/>
+                            <!--
+                                «Crear hijo» es el camino que numera: el expediente
+                                nace con el padre puesto y toma su número con sufijo
+                                (EXP-0001-1). Vincular uno existente conserva el suyo,
+                                para no dejar huecos en la secuencia ni invalidar lo
+                                ya emitido con el número viejo.
+                            -->
+                            <div class="mt-2 mb-3">
+                                <button name="action_create_child_expedient" type="object"
+                                        string="Crear expediente hijo" class="btn-primary"
+                                        icon="fa-plus"
+                                        invisible="not id"/>
+                                <span class="text-muted ms-2">
+                                    Toma el número de este expediente con un sufijo
+                                    correlativo.
+                                </span>
+                            </div>
                             <group string="Agregar relacionado existente">
                                 <field name="child_picker_id"
                                        domain="[('id', '!=', id), ('parent_id', '=', False)]"

@@ -24,6 +24,9 @@ class FundExpedient(models.Model):
         copy=False,
         readonly=True,
         index=True,
+        help="Numeración general. Un expediente creado como hijo de otro toma el "
+        "número del padre con un sufijo correlativo (EXP-0001-1) y no consume la "
+        "secuencia general: así la relación queda visible en el número mismo.",
     )
     type_number = fields.Char(
         string="Número por tipo",
@@ -1362,6 +1365,54 @@ class FundExpedient(models.Model):
                 rec.stage_id = target
         return True
 
+    def _next_child_number(self, parent, taken=None):
+        """Número de un expediente hijo: el del padre con un sufijo correlativo.
+
+        `EXP-2026-00001` → `EXP-2026-00001-1`. El hijo no consume la secuencia
+        general, de modo que la numeración corrida no se saltea y la relación
+        queda visible en el número.
+
+        El sufijo sale del mayor ya usado entre los hermanos y no de contarlos:
+        si se desvincula un hijo, contar volvería a entregar un número que ya
+        estuvo en uso. `taken` acumula lo entregado dentro de un mismo `create`
+        por lotes.
+
+        Solo se numera así al CREAR con el padre ya elegido. Vincular un
+        expediente que ya existe (`action_link_child_expedient`) no lo renumera:
+        cambiarle el número dejaría un hueco en la secuencia general y las
+        referencias ya emitidas —disposiciones, correos, la Solicitud— apuntando
+        a un número que dejó de existir.
+        """
+        if not parent or not parent.number or parent.number == "/":
+            return False
+        prefix = "%s-" % parent.number
+        used = set() if taken is None else taken.setdefault(parent.id, set())
+        for child in parent.child_ids:
+            if not child.number or not child.number.startswith(prefix):
+                continue
+            suffix = child.number[len(prefix):]
+            if suffix.isdigit():
+                used.add(int(suffix))
+        nxt = max(used, default=0) + 1
+        used.add(nxt)
+        return "%s%d" % (prefix, nxt)
+
+    def action_create_child_expedient(self):
+        """Abre un expediente nuevo con este como padre.
+
+        Es el camino que numera: el hijo creado así toma el número del padre con
+        sufijo. Vincular uno existente conserva el suyo (ver `_next_child_number`).
+        """
+        self.ensure_one()
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Nuevo expediente hijo"),
+            "res_model": "fund.expedient",
+            "view_mode": "form",
+            "target": "current",
+            "context": {"default_parent_id": self.id},
+        }
+
     def action_link_child_expedient(self):
         """Vincula como hijo el expediente elegido en `child_picker_id`.
 
@@ -1955,10 +2006,18 @@ class FundExpedient(models.Model):
     @api.model_create_multi
     def create(self, vals_list):
         Type = self.env["fund.expedient.type"]
+        # Sufijos ya entregados en este mismo lote: los hermanos creados en la
+        # misma llamada todavía no están en la base y no los vería `child_ids`.
+        child_suffixes = {}
         for vals in vals_list:
             if vals.get("number", "/") == "/":
-                seq = self.env["ir.sequence"].next_by_code("fund.expedient") or "/"
-                vals["number"] = seq
+                parent = (
+                    self.browse(vals["parent_id"]) if vals.get("parent_id") else None
+                )
+                number = self._next_child_number(parent, child_suffixes)
+                if not number:
+                    number = self.env["ir.sequence"].next_by_code("fund.expedient") or "/"
+                vals["number"] = number
             if vals.get("type_id") and not vals.get("type_number"):
                 expedient_type = Type.browse(vals["type_id"])
                 if expedient_type.sequence_id:
