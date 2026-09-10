@@ -37,6 +37,7 @@
                         <th>Etapa</th>
                         <th>Fecha solicitud</th>
                         <th>Solicitante</th>
+                        <th>En poder de</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -48,8 +49,19 @@
                         </td>
                         <td><t t-esc="exp.type_id.name or ''"/></td>
                         <td><span class="badge text-bg-secondary" t-esc="exp.stage_id.name or ''"/></td>
-                        <td><t t-esc="exp.request_date or ''"/></td>
+                        <td><span t-field="exp.request_date"/></td>
                         <td><t t-esc="exp.requestor_id.name or ''"/></td>
+                        <td>
+                            <t t-if="exp.holder_reason in ('expedient_approval', 'spend_request_approval')">
+                                <span class="badge text-bg-warning">Esperando aprobación</span>
+                            </t>
+                            <t t-foreach="exp.holder_user_ids[:3]" t-as="holder">
+                                <span class="badge text-bg-light" t-esc="holder.name"/>
+                            </t>
+                            <span t-if="len(exp.holder_user_ids) > 3" class="text-muted small">
+                                +<t t-esc="len(exp.holder_user_ids) - 3"/>
+                            </span>
+                        </td>
                     </tr>
                 </tbody>
             </t>
@@ -79,11 +91,33 @@
                         </h2>
                         <div class="d-flex flex-wrap gap-2">
                             <span class="badge text-bg-primary" t-esc="expedient.stage_id.name or 'Sin etapa'"/>
-                            <span class="badge text-bg-secondary" t-esc="expedient.state or ''"/>
+                            <span t-if="expedient_state_label" class="badge text-bg-secondary" t-esc="expedient_state_label"/>
                             <span class="badge text-bg-light" t-if="expedient.type_number" t-esc="expedient.type_number"/>
+                            <span class="badge text-bg-light" t-if="expedient.parent_id">
+                                Hijo de <t t-esc="expedient.parent_id.number"/>
+                            </span>
                         </div>
                     </div>
                 </div>
+
+                <!--
+                    Carteles de situación: los mismos dos del backend. Quién tiene
+                    el expediente ahora (amarillo si espera aprobación, azul si
+                    está en manos de la etapa) y, para quien opera la etapa, qué
+                    falta para poder avanzar.
+                -->
+                <t t-if="expedient.holder_summary">
+                    <div t-attf-class="alert #{'alert-warning' if expedient.holder_reason in ('expedient_approval', 'spend_request_approval') else 'alert-info'} d-flex align-items-center" role="alert">
+                        <i t-attf-class="fa #{'fa-hourglass-half' if expedient.holder_reason in ('expedient_approval', 'spend_request_approval') else 'fa-user'} me-2"/>
+                        <span t-esc="expedient.holder_summary"/>
+                    </div>
+                </t>
+                <t t-if="portal_can_operate and expedient.stage_requirements_pending">
+                    <div class="alert alert-secondary d-flex align-items-center" role="alert">
+                        <i class="fa fa-list-ul me-2"/>
+                        <span t-esc="expedient.stage_requirements_pending"/>
+                    </div>
+                </t>
 
                 <div class="row mb-4">
                     <div class="col-lg-8">
@@ -97,9 +131,14 @@
                                     <dt class="col-sm-4">Solicitante</dt>
                                     <dd class="col-sm-8"><t t-esc="expedient.requestor_id.name or ''"/></dd>
 
-                                    <dt class="col-sm-4" t-if="expedient.requestor_department_id">Sector</dt>
+                                    <dt class="col-sm-4" t-if="expedient.requestor_department_id">Sector requirente</dt>
                                     <dd class="col-sm-8" t-if="expedient.requestor_department_id">
                                         <t t-esc="expedient.requestor_department_id.name"/>
+                                    </dd>
+
+                                    <dt class="col-sm-4" t-if="expedient.requestor_department_manager_id">Responsable del sector</dt>
+                                    <dd class="col-sm-8" t-if="expedient.requestor_department_manager_id">
+                                        <t t-esc="expedient.requestor_department_manager_id.name"/>
                                     </dd>
 
                                     <dt class="col-sm-4" t-if="expedient.company_id">Compañía</dt>
@@ -108,10 +147,13 @@
                                     </dd>
 
                                     <dt class="col-sm-4">Fecha solicitud</dt>
-                                    <dd class="col-sm-8"><t t-esc="expedient.request_date or ''"/></dd>
+                                    <dd class="col-sm-8"><span t-field="expedient.request_date"/></dd>
 
                                     <dt class="col-sm-4">Fecha estimada necesidad</dt>
-                                    <dd class="col-sm-8"><t t-esc="expedient.estimated_need_date or '—'"/></dd>
+                                    <dd class="col-sm-8">
+                                        <span t-if="expedient.estimated_need_date" t-field="expedient.estimated_need_date"/>
+                                        <t t-else="">—</t>
+                                    </dd>
 
                                     <dt class="col-sm-4" t-if="expedient.encuadre_id">Encuadre</dt>
                                     <dd class="col-sm-8" t-if="expedient.encuadre_id">
@@ -139,6 +181,13 @@
                                     <dd class="col-sm-8" t-if="expedient.delivery_location">
                                         <t t-esc="expedient.delivery_location"/>
                                     </dd>
+
+                                    <dt class="col-sm-4" t-if="expedient.child_ids">Expedientes relacionados</dt>
+                                    <dd class="col-sm-8" t-if="expedient.child_ids">
+                                        <t t-foreach="expedient.child_ids" t-as="child">
+                                            <a t-att-href="child.get_portal_url()" class="badge text-bg-light text-decoration-none me-1 mb-1" t-esc="child.number"/>
+                                        </t>
+                                    </dd>
                                 </dl>
                             </div>
                         </div>
@@ -163,7 +212,7 @@
                                             </td>
                                         </tr>
                                         <tr t-if="expedient.amount_estimated_confirmed">
-                                            <th>Estimado confirmado</th>
+                                            <th>Definitivo confirmado</th>
                                             <td class="text-end">
                                                 <span t-field="expedient.amount_estimated_confirmed" t-options="{'widget': 'monetary', 'display_currency': expedient.currency_id}"/>
                                             </td>
@@ -195,6 +244,8 @@
                                             <th class="text-end">Cant.</th>
                                             <th class="text-end">Importe est.</th>
                                             <th class="text-end">Importe def.</th>
+                                            <th t-if="is_lease">Inicio</th>
+                                            <th t-if="is_lease">Fin</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -223,19 +274,38 @@
                                                     <span t-field="line.amount_final_line" t-options="{'widget': 'monetary', 'display_currency': line.currency_id}"/>
                                                 </t>
                                             </td>
+                                            <td t-if="is_lease"><span t-if="line.date_start" t-field="line.date_start"/></td>
+                                            <td t-if="is_lease"><span t-if="line.date_end" t-field="line.date_end"/></td>
                                         </tr>
                                     </tbody>
                                 </table>
                             </div>
                         </div>
 
-                        <div class="card mb-3" t-if="expedient.spend_request_ids">
-                            <div class="card-header">Solicitudes de gasto</div>
-                            <div class="card-body p-0 table-responsive">
+                        <div class="card mb-3" id="spend_requests" t-if="expedient_spend_requests or portal_can_create_sr_preventiva or portal_can_create_sr_final">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <span>Solicitudes de <t t-esc="'ingreso' if expedient.operation_type == 'income' else 'gasto'"/></span>
+                                <!-- Generar la Solicitud desde el portal: misma disponibilidad que los botones del backend. -->
+                                <div class="d-flex gap-2">
+                                    <form t-if="portal_can_create_sr_preventiva" t-att-action="'/my/expedients/%s/spend_request/preventiva' % expedient.id" method="POST">
+                                        <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                        <button type="submit" class="btn btn-sm btn-outline-primary">
+                                            Generar preventiva
+                                        </button>
+                                    </form>
+                                    <form t-if="portal_can_create_sr_final" t-att-action="'/my/expedients/%s/spend_request/definitiva' % expedient.id" method="POST">
+                                        <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                        <button type="submit" class="btn btn-sm btn-outline-primary">
+                                            Generar definitiva
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                            <div class="card-body p-0 table-responsive" t-if="expedient_spend_requests">
                                 <table class="table table-sm mb-0">
                                     <thead>
                                         <tr>
-                                            <th>SG</th>
+                                            <th>Solicitud</th>
                                             <th>Preventiva</th>
                                             <th>Definitiva</th>
                                             <th class="text-end">Monto prev.</th>
@@ -243,9 +313,10 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <tr t-foreach="expedient.spend_request_ids" t-as="sg">
+                                        <tr t-foreach="expedient_spend_requests" t-as="sg" t-att-class="'text-muted' if sg.cancelled else ''">
                                             <td>
-                                                <a t-att-href="'#sg_%s' % sg.id" t-esc="sg.display_name"/>
+                                                <a t-if="not sg.cancelled" t-att-href="'#sg_%s' % sg.id" t-esc="sg.display_name"/>
+                                                <t t-else="" t-esc="sg.display_name"/>
                                             </td>
                                             <td><span t-field="sg.preventiva_state"/></td>
                                             <td><span t-field="sg.definitiva_state"/></td>
@@ -261,6 +332,74 @@
                             </div>
                         </div>
 
+                        <!--
+                            Documentos por etapa: consulta para todos, carga para quien
+                            opera la etapa actual. La descarga pasa por /web/content con
+                            el usuario real (ACL + regla de registro del portal).
+                        -->
+                        <div class="card mb-3" id="documents" t-if="expedient_documents or portal_can_operate">
+                            <div class="card-header">Documentos</div>
+                            <div class="card-body p-0 table-responsive" t-if="expedient_documents">
+                                <table class="table table-sm mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th>Nº</th>
+                                            <th>Documento</th>
+                                            <th>Tipo</th>
+                                            <th>Etapa</th>
+                                            <th>Archivo</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr t-foreach="expedient_documents" t-as="doc">
+                                            <td><t t-esc="doc.number or ''"/></td>
+                                            <td><t t-esc="doc.name or ''"/></td>
+                                            <td><t t-esc="doc.document_type_id.name or ''"/></td>
+                                            <td><t t-esc="doc.stage_id.name or ''"/></td>
+                                            <td>
+                                                <a t-if="doc.file_data"
+                                                   t-att-href="'/web/content?model=fund.expedient.document&amp;id=%s&amp;field=file_data&amp;filename_field=file_name&amp;download=true' % doc.id">
+                                                    <i class="fa fa-download me-1"/><t t-esc="doc.file_name or 'Descargar'"/>
+                                                </a>
+                                                <span t-else="" class="text-muted">Sin archivo</span>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="card-body border-top" t-if="portal_can_operate">
+                                <p t-if="portal_required_document_types" class="small text-muted mb-2">
+                                    Tipos exigidos en esta etapa que todavía faltan:
+                                    <t t-foreach="portal_required_document_types" t-as="dtype">
+                                        <span class="badge text-bg-warning" t-esc="dtype.name"/>
+                                    </t>
+                                </p>
+                                <form t-att-action="'/my/expedients/%s/documents/upload' % expedient.id" method="POST" enctype="multipart/form-data" class="row g-2 align-items-end">
+                                    <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                    <div class="col-md-4">
+                                        <label class="form-label small mb-1">Archivo</label>
+                                        <input type="file" name="file" class="form-control form-control-sm" required="required"/>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label small mb-1">Tipo de documento</label>
+                                        <select name="document_type_id" class="form-select form-select-sm">
+                                            <option value="">— Sin tipo —</option>
+                                            <t t-foreach="document_types" t-as="dtype">
+                                                <option t-att-value="dtype.id" t-esc="dtype.name"/>
+                                            </t>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label small mb-1">Nombre (opcional)</label>
+                                        <input type="text" name="name" class="form-control form-control-sm" placeholder="Igual al archivo si se deja vacío"/>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <button type="submit" class="btn btn-sm btn-primary w-100">Subir</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+
                         <div class="row" t-if="expedient.disposition_ids or expedient.resolution_ids">
                             <div class="col-md-6 mb-3" t-if="expedient.disposition_ids">
                                 <div class="card h-100">
@@ -270,6 +409,7 @@
                                             <a t-att-href="'#disp_%s' % disp.id">
                                                 <t t-esc="disp.number or disp.name or disp.id"/>
                                             </a>
+                                            <span t-if="disp.cancelled" class="badge text-bg-danger ms-1">Anulada</span>
                                             <small class="text-muted d-block" t-esc="disp.stage_id.name"/>
                                         </li>
                                     </ul>
@@ -283,6 +423,7 @@
                                             <a t-att-href="'#resol_%s' % resol.id">
                                                 <t t-esc="resol.number or resol.name or resol.id"/>
                                             </a>
+                                            <span t-if="resol.cancelled" class="badge text-bg-danger ms-1">Anulada</span>
                                             <small class="text-muted d-block" t-esc="resol.stage_id.name"/>
                                         </li>
                                     </ul>
@@ -329,9 +470,8 @@
                         <div class="card mb-3">
                             <div class="card-header">Accesos rápidos</div>
                             <div class="card-body d-grid gap-2">
-                                <a href="/my/expedients/pending_reviews" class="btn btn-outline-primary btn-sm">
-                                    Mis aprobaciones pendientes
-                                </a>
+                                <!-- Enlace a aprobaciones: lo agrega el módulo de validación por niveles. -->
+                                <div id="portal_expedient_quick_links"/>
                                 <a href="/my/expedients" class="btn btn-outline-secondary btn-sm">
                                     Volver al listado
                                 </a>

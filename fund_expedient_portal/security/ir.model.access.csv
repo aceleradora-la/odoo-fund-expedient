@@ -7,12 +7,8 @@ access_fund_expedient_document_type_portal,fund.expedient.document.type portal,f
 access_fund_expedient_page_portal,fund.expedient.page portal,fund_expedient.model_fund_expedient_page,base.group_portal,1,0,0,0
 access_fund_expedient_disposition_type_portal,fund.expedient.disposition.type portal,fund_expedient.model_fund_expedient_disposition_type,base.group_portal,1,0,0,0
 access_fund_expedient_line_portal,fund.expedient.line portal,fund_expedient.model_fund_expedient_line,base.group_portal,1,0,0,0
+access_fund_expedient_document_portal,fund.expedient.document portal,fund_expedient.model_fund_expedient_document,base.group_portal,1,0,0,0
 access_fund_expedient_disposition_portal,fund.expedient.disposition portal,fund_expedient.model_fund_expedient_disposition,base.group_portal,1,0,0,0
 access_fund_expedient_resolution_portal,fund.expedient.resolution portal,fund_expedient.model_fund_expedient_resolution,base.group_portal,1,0,0,0
 access_fund_expedient_spend_request_portal,fund.expedient.spend.request portal,fund_expedient.model_fund_expedient_spend_request,base.group_portal,1,0,0,0
 access_fund_expedient_spend_request_line_portal,fund.expedient.spend.request.line portal,fund_expedient.model_fund_expedient_spend_request_line,base.group_portal,1,0,0,0
-access_hr_employee_portal,hr.employee portal read,hr.model_hr_employee,base.group_portal,1,0,0,0
-access_hr_department_portal,hr.department portal read,hr.model_hr_department,base.group_portal,1,0,0,0
-access_product_product_portal,product.product portal read,product.model_product_product,base.group_portal,1,0,0,0
-access_uom_uom_portal,uom.uom portal read,uom.model_uom_uom,base.group_portal,1,0,0,0
-access_account_analytic_account_portal,account.analytic.account portal read,account.model_account_analytic_account,base.group_portal,1,0,0,0

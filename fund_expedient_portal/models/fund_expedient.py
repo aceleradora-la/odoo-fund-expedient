@@ -17,167 +17,80 @@ class FundExpedient(models.Model):
         for rec in self:
             rec.access_url = f"/my/expedients/{rec.id}"
 
-    @api.model
-    def _portal_has_tier_reviews(self):
-        """True si tier validation está instalado (campo review_ids disponible)."""
-        return "review_ids" in self._fields
+    # ------------------------------------------------------------------
+    # Quién ve qué en el portal
+    #
+    # Un mismo criterio para usuarios internos y de portal: el expediente lo
+    # ven quien lo solicitó, quien opera su etapa actual y —solo para usuarios
+    # de portal— el partner seguidor o proveedor recomendado. El módulo de
+    # validación por niveles suma a los revisores vía `_portal_access_clauses`.
+    #
+    # La regla de registro (ir.rule) de `security/` repite estas cláusulas: el
+    # dominio de acá arma los listados y el chequeo puntual; la regla es lo que
+    # el ORM aplica cuando el usuario de portal lee. Tienen que decir lo mismo,
+    # si no el listado ofrece expedientes que después no se pueden abrir.
+    # ------------------------------------------------------------------
 
     @api.model
-    def _portal_or_domain(self, clauses):
-        """Construye dominio OR a partir de tuplas (campo, operador, valor)."""
-        clauses = [c for c in clauses if c]
-        if not clauses:
-            return [("id", "=", False)]
-        if len(clauses) == 1:
-            return [clauses[0]]
-        domain = ["|"] * (len(clauses) - 1)
-        domain.extend(clauses)
-        return domain
+    def _portal_is_portal_user(self, user=None):
+        user = user or self.env.user
+        return user.has_group("base.group_portal") and not user.has_group("base.group_user")
 
     @api.model
-    def _portal_expedient_base_domain(self):
-        """Dominio de visibilidad en portal: solicitante, asignado, revisor o partner."""
-        user = self.env.user
-        if user._is_public():
-            return [("id", "=", False)]
-
-        company_domain = [("company_id", "in", user.company_ids.ids + [False])]
-
-        if user.has_group("base.group_portal") and not user.has_group("base.group_user"):
+    def _portal_access_clauses(self, user):
+        """Cláusulas (en OR) que dan acceso al expediente en el portal."""
+        clauses = [
+            ("requestor_id.user_id", "=", user.id),
+            ("assignable_user_ids", "in", [user.id]),
+        ]
+        if self._portal_is_portal_user(user):
             partner = user.partner_id.commercial_partner_id
-            clauses = [
+            clauses += [
                 ("message_partner_ids", "child_of", partner.ids),
                 ("recommended_supplier_ids", "child_of", partner.ids),
             ]
-            if self._portal_has_tier_reviews():
-                clauses.append(("review_ids.reviewer_ids", "=", user.id))
-            access_domain = self._portal_or_domain(clauses)
-            return expression.AND([company_domain, access_domain])
+        return clauses
 
-        clauses = [
-            ("requestor_id.user_id", "=", user.id),
-            ("assignable_user_ids", "in", user.id),
-        ]
-        if self._portal_has_tier_reviews():
-            clauses.append(("review_ids.reviewer_ids", "=", user.id))
-        access_domain = self._portal_or_domain(clauses)
+    @api.model
+    def _portal_expedient_base_domain(self):
+        """Dominio de visibilidad en portal para el usuario actual."""
+        user = self.env.user
+        if user._is_public():
+            return [("id", "=", False)]
+        company_domain = [("company_id", "in", user.company_ids.ids + [False])]
+        access_domain = expression.OR([[c] for c in self._portal_access_clauses(user)])
         return expression.AND([company_domain, access_domain])
 
     def _portal_user_can_access(self):
-        """True si el usuario puede ver el expediente en portal."""
+        """True si el usuario actual puede ver este expediente en el portal.
+
+        Se evalúa el mismo dominio del listado acotado a este registro, con sudo
+        —el chequeo es nuestro, no del ORM— y por búsqueda, no en memoria:
+        `filtered_domain` no resuelve `child_of`. Así listado y detalle no
+        pueden discrepar.
+        """
         self.ensure_one()
         user = self.env.user
         if user._is_public():
             return False
         if user.has_group("fund_expedient.group_fund_expedient_manager"):
             return True
+        domain = [("id", "=", self.id)] + self._portal_expedient_base_domain()
+        return bool(self.sudo().search_count(domain))
 
-        if user.has_group("base.group_portal") and not user.has_group("base.group_user"):
-            partner = user.partner_id.commercial_partner_id
-            if partner in self.message_partner_ids:
-                return True
-            if partner in self.recommended_supplier_ids:
-                return True
-            if self._portal_has_tier_reviews() and user in self.review_ids.reviewer_ids:
-                return True
-            return False
-
-        if self.requestor_id.user_id == user:
-            return True
-        if user in self.assignable_user_ids:
-            return True
-        if self._portal_has_tier_reviews() and user in self.review_ids.reviewer_ids:
-            return True
-        return False
-
-    def _portal_is_internal_user(self):
-        user = self.env.user
-        return not (
-            user.has_group("base.group_portal")
-            and not user.has_group("base.group_user")
-        )
-
-    def _portal_allowed_stages(self):
-        self.ensure_one()
-        for _rec, stages in self._get_allowed_stages():
-            return stages
-        return self.env["fund.expedient.stage"]
-
-    def _portal_current_stage_index(self, stages):
-        self.ensure_one()
-        if not self.stage_id or not stages:
-            return -1
-        stage_ids = stages.ids
-        if self.stage_id.id not in stage_ids:
-            return -1
-        return stage_ids.index(self.stage_id.id)
-
-    def _portal_tier_blocks_stage_change(self):
-        """True si tier validation impide cambiar de etapa (misma regla que backend)."""
-        self.ensure_one()
-        if not hasattr(self, "_current_stage_reviews"):
-            return False
-        reviews = self._current_stage_reviews()
-        return bool(
-            reviews.filtered(lambda r: r.status in ("waiting", "pending", "rejected"))
-        )
-
-    def _portal_tier_block_reason_next(self):
-        self.ensure_one()
-        if self._portal_tier_blocks_stage_change():
-            return _(
-                "Complete la validación de la etapa actual antes de avanzar."
-            )
-        if not hasattr(self, "_get_applicable_tier_definitions"):
-            return ""
-        applicable = self._get_applicable_tier_definitions()
-        if not applicable or not hasattr(self, "_is_current_stage_tier_complete"):
-            return ""
-        if self._is_current_stage_tier_complete():
-            return ""
-        if (
-            hasattr(self, "_missing_tier_reviews_for_current_stage")
-            and self._missing_tier_reviews_for_current_stage()
-        ):
-            return _(
-                "Solicite la validación y espere su aprobación antes de avanzar."
-            )
-        return _("Complete la validación antes de avanzar.")
-
-    def _portal_spend_request_block_reason_next(self):
-        self.ensure_one()
-        if not self.stage_id:
-            return ""
-        mode = self.stage_id.spend_request_mode
-        if mode not in ("preventiva", "final"):
-            return ""
-        sr = self._active_spend_request()
-        if not sr:
-            return _(
-                "Debe generar la Solicitud de Gasto antes de salir de esta etapa."
-            )
-        if mode == "preventiva":
-            if not sr.is_phase_generated("preventiva"):
-                return _(
-                    "Debe generar la Solicitud de Gasto preventiva antes de avanzar."
-                )
-            if not sr.is_phase_approved("preventiva"):
-                return _(
-                    "La Solicitud de Gasto preventiva debe estar aprobada antes de avanzar."
-                )
-        if mode == "final":
-            if not sr.is_phase_generated("definitiva"):
-                return _(
-                    "Debe generar la Solicitud de Gasto definitiva antes de avanzar."
-                )
-            if not sr.is_phase_approved("definitiva"):
-                return _(
-                    "La Solicitud de Gasto definitiva debe estar aprobada antes de avanzar."
-                )
-        return ""
+    # ------------------------------------------------------------------
+    # Botones de etapa en el portal
+    #
+    # Mismas condiciones que la cabecera del formulario del backend, leídas de
+    # los mismos campos (`can_edit_in_stage`, `has_previous_stage`,
+    # `has_next_stage`, `stage_requirements_ok`, `holder_reason`). Antes el
+    # portal reimplementaba cada requisito por su cuenta y quedaba desfasado en
+    # cada cambio del backend; ahora hay una sola fuente de verdad. El módulo
+    # de validación por niveles agrega su condición sobre estos valores.
+    # ------------------------------------------------------------------
 
     def _portal_stage_nav_values(self):
-        """Valores QWeb para botones etapa anterior / siguiente en portal."""
+        """Valores QWeb para «Etapa anterior» / «Siguiente etapa»."""
         self.ensure_one()
         values = {
             "portal_stage_show_panel": False,
@@ -186,9 +99,12 @@ class FundExpedient(models.Model):
             "portal_block_previous": "",
             "portal_block_next": "",
         }
-        if not self._portal_is_internal_user():
+        if self.env.user._is_public():
             return values
-
+        # El panel se muestra a quien opera la etapa, sea interno o de portal:
+        # el objetivo es que un usuario sin licencia pueda llevar el expediente.
+        if not self.can_edit_in_stage:
+            return values
         values["portal_stage_show_panel"] = True
 
         if self.state == "cancel":
@@ -197,91 +113,54 @@ class FundExpedient(models.Model):
             values["portal_block_next"] = msg
             return values
 
-        if not self.can_edit_in_stage:
-            msg = _(
-                "No está asignado a la etapa actual; solo quienes operan "
-                "esta etapa pueden cambiarla."
-            )
-            values["portal_block_previous"] = msg
-            values["portal_block_next"] = msg
-            return values
-
-        stages = self._portal_allowed_stages()
-        index = self._portal_current_stage_index(stages)
-        assign = self._current_stage_assign()
-
-        if self._portal_tier_blocks_stage_change():
-            tier_msg = _(
-                "Hay validaciones pendientes o rechazadas en esta etapa."
-            )
-            values["portal_block_previous"] = tier_msg
-            values["portal_block_next"] = tier_msg
-            return values
-
-        doc_block = self._portal_required_documents_block_reason_leave()
-        if doc_block:
-            values["portal_block_previous"] = doc_block
-            values["portal_block_next"] = doc_block
-            return values
-
-        if index <= 0:
+        awaiting_approval = self.holder_reason in (
+            "expedient_approval",
+            "spend_request_approval",
+        )
+        if not self.has_previous_stage:
             values["portal_block_previous"] = _("Ya está en la primera etapa.")
+        elif awaiting_approval:
+            values["portal_block_previous"] = _(
+                "Hay una aprobación en curso; primero hay que reiniciar esa validación."
+            )
         else:
             values["portal_can_previous"] = True
 
-        if assign and assign.is_final_stage:
-            values["portal_block_next"] = _(
-                "Esta es una etapa final del flujo; no puede avanzar."
-            )
-            return values
-
-        if index < 0 or index + 1 >= len(stages):
+        if not self.has_next_stage:
             values["portal_block_next"] = _("Ya está en la última etapa del flujo.")
-            return values
-
-        tier_reason = self._portal_tier_block_reason_next()
-        if tier_reason:
-            values["portal_block_next"] = tier_reason
-            return values
-
-        if index == 0 and not (self.amount_estimated and self.amount_estimated > 0):
-            values["portal_block_next"] = _(
-                "Debe cargar un monto estimado mayor a cero antes de avanzar "
-                "desde la primera etapa."
-            )
-            return values
-
-        if assign and assign.require_notification and not self._notification_stage_satisfied():
-            values["portal_block_next"] = _(
-                "Debe notificar a los oferentes antes de avanzar "
-                "(use «Notificar oferentes» en el expediente del backend)."
-            )
-            return values
-
-        sg_reason = self._portal_spend_request_block_reason_next()
-        if sg_reason:
-            values["portal_block_next"] = sg_reason
-            return values
-
-        values["portal_can_next"] = True
+        elif not self.stage_requirements_ok:
+            values["portal_block_next"] = self.stage_requirements_pending
+        else:
+            values["portal_can_next"] = True
         return values
 
-    def _portal_required_documents_block_reason_leave(self):
-        """Motivo de bloqueo por documentos obligatorios (misma regla que el backend).
+    def _portal_action_values(self):
+        """Acciones de etapa disponibles en el portal además de cambiar de etapa.
 
-        Reutiliza `_missing_required_document_types()` del modelo base para no
-        duplicar el criterio (tipo exigido + archivo + cargado en la etapa actual).
+        Se ofrecen las que el usuario podría completar desde el portal. Crear
+        una Disposición o una Resolución queda fuera: nacen vacías y se
+        completan editándolas en el backend, cosa que el portal no permite.
         """
         self.ensure_one()
-        missing = self._missing_required_document_types()
-        if missing:
-            return _(
-                "Debe adjuntar en esta etapa un documento con archivo de cada uno de "
-                "estos tipos antes de cambiar de etapa: %s."
-            ) % ", ".join(missing.mapped("name"))
-        return ""
+        can_operate = (
+            not self.env.user._is_public()
+            and self.state != "cancel"
+            and self.can_edit_in_stage
+        )
+        return {
+            "portal_can_operate": can_operate,
+            "portal_can_create_sr_preventiva": bool(
+                can_operate and self.can_create_spend_request_preventiva
+            ),
+            "portal_can_create_sr_final": bool(
+                can_operate and self.can_create_spend_request_final
+            ),
+            "portal_spend_request_label": self._spend_request_doc_label(),
+            "portal_required_document_types": (
+                self._missing_required_document_types() if can_operate else self.env["fund.expedient.document.type"]
+            ),
+        }
 
-    def _portal_can_advance_stage(self):
-        """Compat: True si puede usar al menos una acción de etapa."""
-        nav = self._portal_stage_nav_values()
-        return nav["portal_can_previous"] or nav["portal_can_next"]
+    def _portal_state_label(self):
+        self.ensure_one()
+        return dict(self._fields["state"]._description_selection(self.env)).get(self.state, "")

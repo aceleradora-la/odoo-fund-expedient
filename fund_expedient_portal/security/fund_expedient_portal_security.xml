@@ -1,14 +1,112 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <data noupdate="1">
-        <!-- Solo partners portal: no afecta usuarios internos del backend -->
+    <!--
+        Reglas de registro para el grupo Portal. Repiten las cláusulas de
+        `fund.expedient._portal_access_clauses` para usuarios de portal:
+        solicitante, asignado a la etapa, partner seguidor o proveedor
+        recomendado. Los módulos que suman criterios (p. ej. revisores de la
+        validación por niveles) agregan su propia regla: entre reglas del mismo
+        grupo el ORM aplica OR.
+
+        Los registros hijos (líneas, documentos, solicitudes, disposiciones,
+        resoluciones) heredan la visibilidad de su expediente. Sin estas reglas
+        el permiso de lectura del ACL alcanzaba a TODOS los registros del
+        modelo para cualquier usuario de portal.
+
+        No usa noupdate: si cambia el criterio, tiene que cambiar acá también.
+    -->
+    <data>
         <record id="fund_expedient_portal_partner_rule" model="ir.rule">
-            <field name="name">Expediente portal: partner</field>
+            <field name="name">Expediente portal: solicitante, asignado, seguidor o proveedor</field>
             <field name="model_id" ref="fund_expedient.model_fund_expedient"/>
             <field name="domain_force">[
-                '|',
+                '|', '|', '|',
+                ('requestor_id.user_id', '=', user.id),
+                ('assignable_user_ids', 'in', [user.id]),
                 ('message_partner_ids', 'child_of', [user.partner_id.commercial_partner_id.id]),
                 ('recommended_supplier_ids', 'child_of', [user.partner_id.commercial_partner_id.id])
+            ]</field>
+            <field name="groups" eval="[(4, ref('base.group_portal'))]"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="False"/>
+            <field name="perm_create" eval="False"/>
+            <field name="perm_unlink" eval="False"/>
+        </record>
+
+        <record id="fund_expedient_line_portal_rule" model="ir.rule">
+            <field name="name">Línea de expediente portal: por expediente</field>
+            <field name="model_id" ref="fund_expedient.model_fund_expedient_line"/>
+            <field name="domain_force">[
+                '|', '|', '|',
+                ('expedient_id.requestor_id.user_id', '=', user.id),
+                ('expedient_id.assignable_user_ids', 'in', [user.id]),
+                ('expedient_id.message_partner_ids', 'child_of', [user.partner_id.commercial_partner_id.id]),
+                ('expedient_id.recommended_supplier_ids', 'child_of', [user.partner_id.commercial_partner_id.id])
+            ]</field>
+            <field name="groups" eval="[(4, ref('base.group_portal'))]"/>
+        </record>
+
+        <record id="fund_expedient_document_portal_rule" model="ir.rule">
+            <field name="name">Documento de expediente portal: por expediente</field>
+            <field name="model_id" ref="fund_expedient.model_fund_expedient_document"/>
+            <field name="domain_force">[
+                '|', '|', '|',
+                ('expedient_id.requestor_id.user_id', '=', user.id),
+                ('expedient_id.assignable_user_ids', 'in', [user.id]),
+                ('expedient_id.message_partner_ids', 'child_of', [user.partner_id.commercial_partner_id.id]),
+                ('expedient_id.recommended_supplier_ids', 'child_of', [user.partner_id.commercial_partner_id.id])
+            ]</field>
+            <field name="groups" eval="[(4, ref('base.group_portal'))]"/>
+        </record>
+
+        <record id="fund_expedient_spend_request_portal_rule" model="ir.rule">
+            <field name="name">Solicitud de gasto portal: por expediente</field>
+            <field name="model_id" ref="fund_expedient.model_fund_expedient_spend_request"/>
+            <field name="domain_force">[
+                '|', '|', '|',
+                ('expedient_id.requestor_id.user_id', '=', user.id),
+                ('expedient_id.assignable_user_ids', 'in', [user.id]),
+                ('expedient_id.message_partner_ids', 'child_of', [user.partner_id.commercial_partner_id.id]),
+                ('expedient_id.recommended_supplier_ids', 'child_of', [user.partner_id.commercial_partner_id.id])
+            ]</field>
+            <field name="groups" eval="[(4, ref('base.group_portal'))]"/>
+        </record>
+
+        <record id="fund_expedient_spend_request_line_portal_rule" model="ir.rule">
+            <field name="name">Línea de solicitud portal: por expediente</field>
+            <field name="model_id" ref="fund_expedient.model_fund_expedient_spend_request_line"/>
+            <field name="domain_force">[
+                '|', '|', '|',
+                ('spend_request_id.expedient_id.requestor_id.user_id', '=', user.id),
+                ('spend_request_id.expedient_id.assignable_user_ids', 'in', [user.id]),
+                ('spend_request_id.expedient_id.message_partner_ids', 'child_of', [user.partner_id.commercial_partner_id.id]),
+                ('spend_request_id.expedient_id.recommended_supplier_ids', 'child_of', [user.partner_id.commercial_partner_id.id])
+            ]</field>
+            <field name="groups" eval="[(4, ref('base.group_portal'))]"/>
+        </record>
+
+        <record id="fund_expedient_disposition_portal_rule" model="ir.rule">
+            <field name="name">Disposición portal: por expediente</field>
+            <field name="model_id" ref="fund_expedient.model_fund_expedient_disposition"/>
+            <field name="domain_force">[
+                '|', '|', '|',
+                ('expedient_id.requestor_id.user_id', '=', user.id),
+                ('expedient_id.assignable_user_ids', 'in', [user.id]),
+                ('expedient_id.message_partner_ids', 'child_of', [user.partner_id.commercial_partner_id.id]),
+                ('expedient_id.recommended_supplier_ids', 'child_of', [user.partner_id.commercial_partner_id.id])
+            ]</field>
+            <field name="groups" eval="[(4, ref('base.group_portal'))]"/>
+        </record>
+
+        <record id="fund_expedient_resolution_portal_rule" model="ir.rule">
+            <field name="name">Resolución portal: por expediente</field>
+            <field name="model_id" ref="fund_expedient.model_fund_expedient_resolution"/>
+            <field name="domain_force">[
+                '|', '|', '|',
+                ('expedient_id.requestor_id.user_id', '=', user.id),
+                ('expedient_id.assignable_user_ids', 'in', [user.id]),
+                ('expedient_id.message_partner_ids', 'child_of', [user.partner_id.commercial_partner_id.id]),
+                ('expedient_id.recommended_supplier_ids', 'child_of', [user.partner_id.commercial_partner_id.id])
             ]</field>
             <field name="groups" eval="[(4, ref('base.group_portal'))]"/>
         </record>

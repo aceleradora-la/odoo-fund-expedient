@@ -1,17 +1,83 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <data noupdate="1">
+    <!--
+        Reglas para el grupo Portal que suman a las de fund_expedient_portal
+        (entre reglas del mismo grupo el ORM aplica OR): quien revisa —o
+        revisó— un expediente o uno de sus documentos lo puede ver, aunque no
+        sea solicitante, asignado ni partner. Es la cláusula que
+        `fund.expedient._portal_access_clauses` agrega en este módulo.
+    -->
+    <data>
         <record id="fund_expedient_tier_review_portal_rule" model="ir.rule">
             <field name="name">Tier review portal: revisor asignado</field>
             <field name="model_id" ref="base_tier_validation.model_tier_review"/>
             <field name="domain_force">[('reviewer_ids', 'in', [user.id])]</field>
             <field name="groups" eval="[(4, ref('base.group_portal'))]"/>
         </record>
-        <!-- Revisores tier externos: acceso al expediente padre -->
+
         <record id="fund_expedient_portal_partner_reviewer_rule" model="ir.rule">
-            <field name="name">Expediente portal: revisor tier</field>
+            <field name="name">Expediente portal: revisor</field>
             <field name="model_id" ref="fund_expedient.model_fund_expedient"/>
             <field name="domain_force">[('review_ids.reviewer_ids', 'in', [user.id])]</field>
+            <field name="groups" eval="[(4, ref('base.group_portal'))]"/>
+        </record>
+
+        <!-- Hijos: revisor del registro mismo o del expediente que lo contiene. -->
+        <record id="fund_expedient_spend_request_reviewer_rule" model="ir.rule">
+            <field name="name">Solicitud de gasto portal: revisor</field>
+            <field name="model_id" ref="fund_expedient.model_fund_expedient_spend_request"/>
+            <field name="domain_force">[
+                '|',
+                ('review_ids.reviewer_ids', 'in', [user.id]),
+                ('expedient_id.review_ids.reviewer_ids', 'in', [user.id])
+            ]</field>
+            <field name="groups" eval="[(4, ref('base.group_portal'))]"/>
+        </record>
+
+        <record id="fund_expedient_spend_request_line_reviewer_rule" model="ir.rule">
+            <field name="name">Línea de solicitud portal: revisor</field>
+            <field name="model_id" ref="fund_expedient.model_fund_expedient_spend_request_line"/>
+            <field name="domain_force">[
+                '|',
+                ('spend_request_id.review_ids.reviewer_ids', 'in', [user.id]),
+                ('spend_request_id.expedient_id.review_ids.reviewer_ids', 'in', [user.id])
+            ]</field>
+            <field name="groups" eval="[(4, ref('base.group_portal'))]"/>
+        </record>
+
+        <record id="fund_expedient_disposition_reviewer_rule" model="ir.rule">
+            <field name="name">Disposición portal: revisor</field>
+            <field name="model_id" ref="fund_expedient.model_fund_expedient_disposition"/>
+            <field name="domain_force">[
+                '|',
+                ('review_ids.reviewer_ids', 'in', [user.id]),
+                ('expedient_id.review_ids.reviewer_ids', 'in', [user.id])
+            ]</field>
+            <field name="groups" eval="[(4, ref('base.group_portal'))]"/>
+        </record>
+
+        <record id="fund_expedient_resolution_reviewer_rule" model="ir.rule">
+            <field name="name">Resolución portal: revisor</field>
+            <field name="model_id" ref="fund_expedient.model_fund_expedient_resolution"/>
+            <field name="domain_force">[
+                '|',
+                ('review_ids.reviewer_ids', 'in', [user.id]),
+                ('expedient_id.review_ids.reviewer_ids', 'in', [user.id])
+            ]</field>
+            <field name="groups" eval="[(4, ref('base.group_portal'))]"/>
+        </record>
+
+        <record id="fund_expedient_line_reviewer_rule" model="ir.rule">
+            <field name="name">Línea de expediente portal: revisor</field>
+            <field name="model_id" ref="fund_expedient.model_fund_expedient_line"/>
+            <field name="domain_force">[('expedient_id.review_ids.reviewer_ids', 'in', [user.id])]</field>
+            <field name="groups" eval="[(4, ref('base.group_portal'))]"/>
+        </record>
+
+        <record id="fund_expedient_document_reviewer_rule" model="ir.rule">
+            <field name="name">Documento de expediente portal: revisor</field>
+            <field name="model_id" ref="fund_expedient.model_fund_expedient_document"/>
+            <field name="domain_force">[('expedient_id.review_ids.reviewer_ids', 'in', [user.id])]</field>
             <field name="groups" eval="[(4, ref('base.group_portal'))]"/>
         </record>
     </data>

@@ -4,7 +4,7 @@
 {
     "name": "Expedientes - Validación por niveles (Portal)",
     "summary": "Aprobaciones tier validation desde el portal web",
-    "version": "18.0.1.0.0",
+    "version": "18.0.2.0.0",
     "category": "Administration",
     "website": "https://aceleradora.la",
     "author": "aceleradora.la",

@@ -1,3 +1,3 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
-access_tier_review_portal,tier.review portal,base_tier_validation.model_tier_review,base.group_portal,1,1,0,0
+access_tier_review_portal,tier.review portal,base_tier_validation.model_tier_review,base.group_portal,1,0,0,0
 access_tier_definition_portal,tier.definition portal,base_tier_validation.model_tier_definition,base.group_portal,1,0,0,0
