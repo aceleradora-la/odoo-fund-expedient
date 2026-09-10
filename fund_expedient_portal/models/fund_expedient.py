@@ -17,6 +17,19 @@ class FundExpedient(models.Model):
         for rec in self:
             rec.access_url = f"/my/expedients/{rec.id}"
 
+    def _portal_ensure_token(self):
+        """Generar el token de acceso sin pasar por el candado de etapa.
+
+        `write()` del expediente exige que quien escribe opere la etapa actual.
+        El token es un dato técnico que se escribe cuando el registro lo
+        necesita —en la instalación del módulo (con OdooBot) o al compartir el
+        enlace— y quien lo dispara no tiene por qué estar asignado a la etapa;
+        sin esto la instalación misma fallaba.
+        """
+        return super(
+            FundExpedient, self.with_context(skip_validation_check=True)
+        )._portal_ensure_token()
+
     # ------------------------------------------------------------------
     # Quién ve qué en el portal
     #
