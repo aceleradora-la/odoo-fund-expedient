@@ -54,6 +54,7 @@ class FundExpedient(models.Model):
         """Cláusulas (en OR) que dan acceso al expediente en el portal."""
         clauses = [
             ("requestor_id.user_id", "=", user.id),
+            ("responsible_user_id", "=", user.id),
             ("assignable_user_ids", "in", [user.id]),
         ]
         if self._portal_is_portal_user(user):
@@ -120,8 +121,12 @@ class FundExpedient(models.Model):
             return values
         values["portal_stage_show_panel"] = True
 
-        if self.state == "cancel":
-            msg = _("El expediente está cancelado.")
+        if self._is_closed():
+            msg = (
+                _("El expediente está finalizado.")
+                if self.state == "done"
+                else _("El expediente está cerrado.")
+            )
             values["portal_block_previous"] = msg
             values["portal_block_next"] = msg
             return values
@@ -157,7 +162,7 @@ class FundExpedient(models.Model):
         self.ensure_one()
         can_operate = (
             not self.env.user._is_public()
-            and self.state != "cancel"
+            and not self._is_closed()
             and self.can_edit_in_stage
         )
         return {

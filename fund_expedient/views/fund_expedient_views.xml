@@ -16,6 +16,7 @@
                 <field name="encuadre_id"/>
                 <field name="type_id"/>
                 <field name="stage_id"/>
+                <field name="responsible_user_id" widget="many2one_avatar_user" optional="show"/>
                 <field name="holder_user_ids" widget="many2many_tags"
                        string="En poder de" optional="show"/>
                 <field name="state" column_invisible="1"/>
@@ -107,6 +108,8 @@
                     <field name="stage_requirements_ok" invisible="1"/>
                     <field name="has_previous_stage" invisible="1"/>
                     <field name="has_next_stage" invisible="1"/>
+                    <field name="can_take_responsibility" invisible="1"/>
+                    <field name="can_manage_responsible" invisible="1"/>
                     <field name="visible_page_codes" invisible="1"/>
                     <!--
                         «Etapa anterior» no depende de los requisitos de la etapa
@@ -154,8 +157,32 @@
                             string="Crear SI Definitiva"
                             class="btn-secondary"
                             invisible="state == 'cancel' or not can_edit_in_stage or not can_create_spend_request_final or operation_type != 'income'"/>
+                    <!--
+                        Responsable de la etapa: «Asignarme» para quien opera la
+                        etapa cuando no hay responsable; reasignar y liberar solo
+                        para el responsable actual o un Administrador.
+                    -->
+                    <button name="action_take_responsibility" type="object" string="Asignarme"
+                            class="btn-secondary" icon="fa-hand-paper-o"
+                            invisible="not can_take_responsibility"/>
+                    <button name="action_open_assign_wizard" type="object" string="Asignar a…"
+                            class="btn-secondary"
+                            invisible="not can_manage_responsible"/>
+                    <button name="action_release_responsibility" type="object" string="Liberar"
+                            class="btn-secondary"
+                            invisible="not can_manage_responsible or not responsible_user_id"
+                            confirm="El expediente vuelve a estar en manos de todos los asignados de la etapa. ¿Continuar?"/>
+                    <button name="action_reopen" type="object" string="Reabrir"
+                            class="btn-secondary" icon="fa-undo"
+                            groups="fund_expedient.group_fund_expedient_manager"
+                            invisible="state != 'done'"
+                            confirm="El expediente vuelve a la etapa anterior y deja de estar finalizado. ¿Continuar?"/>
                     <button name="action_cancel" type="object" string="Cancelar"
-                            class="btn-danger" invisible="state == 'cancel' or not can_edit_in_stage"
+                            class="btn-danger" invisible="state in ('cancel', 'done', 'no_award') or not can_edit_in_stage"
+                            confirm="¿Está seguro de que desea cancelar este expediente?"/>
+                    <button name="action_cancel" type="object" string="Cancelar"
+                            class="btn-danger" groups="fund_expedient.group_fund_expedient_manager"
+                            invisible="state != 'no_award'"
                             confirm="¿Está seguro de que desea cancelar este expediente?"/>
                 </header>
                 <sheet readonly="not can_edit_in_stage">
@@ -222,6 +249,7 @@
                         </button>
                     </div>
                     <widget name="web_ribbon" title="Cancelado" bg_color="text-bg-danger" invisible="state != 'cancel'"/>
+                    <widget name="web_ribbon" title="Finalizado" bg_color="text-bg-success" invisible="state != 'done'"/>
                     <group>
                         <group string="Identificación">
                             <field name="number" readonly="1"/>
@@ -236,6 +264,11 @@
                             <field name="requestor_department_id" readonly="1"/>
                             <field name="requestor_department_manager_id" readonly="1"
                                    invisible="not requestor_department_manager_id"/>
+                            <field name="responsible_user_id" readonly="1" widget="many2one_avatar_user"
+                                   invisible="not responsible_user_id"/>
+                            <field name="date_done" readonly="1" invisible="state != 'done'"/>
+                            <field name="done_by_id" readonly="1" widget="many2one_avatar_user"
+                                   invisible="state != 'done'"/>
                             <!--
                                 Widget propio: se carga por CUIT, sin desplegable. Busca el
                                 contacto y lo agrega como burbuja; si no existe, lo crea desde
@@ -886,8 +919,9 @@
                 <field name="encuadre_id"/>
                 <field name="type_id"/>
                 <field name="project_ids"/>
+                <field name="responsible_user_id"/>
                 <filter string="Míos o asignados" name="my_or_assigned"
-                        domain="['|', ('requestor_id.user_id', '=', uid), ('assignable_user_ids', 'in', uid)]"/>
+                        domain="['|', '|', ('requestor_id.user_id', '=', uid), ('responsible_user_id', '=', uid), '&amp;', ('responsible_user_id', '=', False), ('assignable_user_ids', 'in', uid)]"/>
                 <!--
                     "En mi poder" no es lo mismo que "asignados a mí": si el
                     expediente está esperando una aprobación, el responsable son
@@ -900,7 +934,9 @@
                 <filter string="Por aprobar" name="to_approve" domain="[('state', '=', 'to_approve')]"/>
                 <filter string="Aprobados" name="approved" domain="[('state', '=', 'approved')]"/>
                 <filter string="Sin adjudicar" name="no_award" domain="[('state', '=', 'no_award')]"/>
+                <filter string="Finalizados" name="done" domain="[('state', '=', 'done')]"/>
                 <filter string="Cancelados" name="cancelled" domain="[('state', '=', 'cancel')]"/>
+                <filter string="Abiertos" name="open" domain="[('state', 'not in', ('done', 'no_award', 'cancel'))]"/>
                 <filter string="Activos (no cancelados)" name="not_cancelled" domain="[('state', '!=', 'cancel')]"/>
                 <separator/>
                 <filter string="Gasto" name="op_expense" domain="[('operation_type', '=', 'expense')]"/>

@@ -20,7 +20,8 @@
             <field name="name">Expediente portal: solicitante, asignado, seguidor o proveedor</field>
             <field name="model_id" ref="fund_expedient.model_fund_expedient"/>
             <field name="domain_force">[
-                '|', '|', '|',
+                '|', '|', '|', '|',
+                ('responsible_user_id', '=', user.id),
                 ('requestor_id.user_id', '=', user.id),
                 ('assignable_user_ids', 'in', [user.id]),
                 ('message_partner_ids', 'child_of', [user.partner_id.commercial_partner_id.id]),
@@ -37,7 +38,8 @@
             <field name="name">Línea de expediente portal: por expediente</field>
             <field name="model_id" ref="fund_expedient.model_fund_expedient_line"/>
             <field name="domain_force">[
-                '|', '|', '|',
+                '|', '|', '|', '|',
+                ('expedient_id.responsible_user_id', '=', user.id),
                 ('expedient_id.requestor_id.user_id', '=', user.id),
                 ('expedient_id.assignable_user_ids', 'in', [user.id]),
                 ('expedient_id.message_partner_ids', 'child_of', [user.partner_id.commercial_partner_id.id]),
@@ -50,7 +52,8 @@
             <field name="name">Documento de expediente portal: por expediente</field>
             <field name="model_id" ref="fund_expedient.model_fund_expedient_document"/>
             <field name="domain_force">[
-                '|', '|', '|',
+                '|', '|', '|', '|',
+                ('expedient_id.responsible_user_id', '=', user.id),
                 ('expedient_id.requestor_id.user_id', '=', user.id),
                 ('expedient_id.assignable_user_ids', 'in', [user.id]),
                 ('expedient_id.message_partner_ids', 'child_of', [user.partner_id.commercial_partner_id.id]),
@@ -63,7 +66,8 @@
             <field name="name">Solicitud de gasto portal: por expediente</field>
             <field name="model_id" ref="fund_expedient.model_fund_expedient_spend_request"/>
             <field name="domain_force">[
-                '|', '|', '|',
+                '|', '|', '|', '|',
+                ('expedient_id.responsible_user_id', '=', user.id),
                 ('expedient_id.requestor_id.user_id', '=', user.id),
                 ('expedient_id.assignable_user_ids', 'in', [user.id]),
                 ('expedient_id.message_partner_ids', 'child_of', [user.partner_id.commercial_partner_id.id]),
@@ -76,7 +80,8 @@
             <field name="name">Línea de solicitud portal: por expediente</field>
             <field name="model_id" ref="fund_expedient.model_fund_expedient_spend_request_line"/>
             <field name="domain_force">[
-                '|', '|', '|',
+                '|', '|', '|', '|',
+                ('spend_request_id.expedient_id.responsible_user_id', '=', user.id),
                 ('spend_request_id.expedient_id.requestor_id.user_id', '=', user.id),
                 ('spend_request_id.expedient_id.assignable_user_ids', 'in', [user.id]),
                 ('spend_request_id.expedient_id.message_partner_ids', 'child_of', [user.partner_id.commercial_partner_id.id]),
@@ -89,7 +94,8 @@
             <field name="name">Disposición portal: por expediente</field>
             <field name="model_id" ref="fund_expedient.model_fund_expedient_disposition"/>
             <field name="domain_force">[
-                '|', '|', '|',
+                '|', '|', '|', '|',
+                ('expedient_id.responsible_user_id', '=', user.id),
                 ('expedient_id.requestor_id.user_id', '=', user.id),
                 ('expedient_id.assignable_user_ids', 'in', [user.id]),
                 ('expedient_id.message_partner_ids', 'child_of', [user.partner_id.commercial_partner_id.id]),
@@ -102,7 +108,8 @@
             <field name="name">Resolución portal: por expediente</field>
             <field name="model_id" ref="fund_expedient.model_fund_expedient_resolution"/>
             <field name="domain_force">[
-                '|', '|', '|',
+                '|', '|', '|', '|',
+                ('expedient_id.responsible_user_id', '=', user.id),
                 ('expedient_id.requestor_id.user_id', '=', user.id),
                 ('expedient_id.assignable_user_ids', 'in', [user.id]),
                 ('expedient_id.message_partner_ids', 'child_of', [user.partner_id.commercial_partner_id.id]),

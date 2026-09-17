@@ -33,6 +33,13 @@ class ExpedientTypeStageAssign(models.Model):
         help="Si está activo, la etapa se asigna al Solicitante del expediente (requestor_id). "
         "En ese caso no se usan grupos, puestos ni usuarios.",
     )
+    assign_creator = fields.Boolean(
+        string="Quien crea queda como responsable",
+        help="Al crear el expediente en esta etapa, quien lo crea queda como responsable "
+        "aunque no esté en la asignación. Pensado para la etapa inicial: así crear no "
+        "exige poner a todos los usuarios en el pool, y el expediente no aparece «en "
+        "manos de» todo el mundo.",
+    )
     group_ids = fields.Many2many(
         "res.groups",
         "fund_expedient_type_stage_assign_group_rel",

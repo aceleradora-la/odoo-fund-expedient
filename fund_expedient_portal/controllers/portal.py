@@ -157,7 +157,13 @@ class ExpedientCustomerPortal(CustomerPortal):
             },
             "assigned": {
                 "label": _("Asignados a mí"),
-                "domain": [("assignable_user_ids", "in", request.env.user.id)],
+                "domain": [
+                    "|",
+                    ("responsible_user_id", "=", request.env.user.id),
+                    "&",
+                    ("responsible_user_id", "=", False),
+                    ("assignable_user_ids", "in", request.env.user.id),
+                ],
             },
             "holder": {
                 "label": _("En mi poder"),
@@ -165,7 +171,7 @@ class ExpedientCustomerPortal(CustomerPortal):
             },
             "open": {
                 "label": _("En curso"),
-                "domain": [("state", "not in", ("cancel", "approved", "no_award"))],
+                "domain": [("state", "not in", ("cancel", "done", "no_award"))],
             },
         }
 

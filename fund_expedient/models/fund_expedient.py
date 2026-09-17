@@ -3,12 +3,16 @@
 
 import logging
 
-from odoo import api, fields, models
+from odoo import SUPERUSER_ID, api, fields, models
 from odoo.exceptions import UserError
 from odoo import _
 from odoo.tools import html2plaintext
 
 _logger = logging.getLogger(__name__)
+
+
+# Estados en los que el expediente ya terminó: nadie lo tiene y no se edita.
+CLOSED_STATES = ("done", "no_award", "cancel")
 
 
 class FundExpedient(models.Model):
@@ -324,6 +328,7 @@ class FundExpedient(models.Model):
             ("to_approve", "Por aprobar"),
             ("approved", "Aprobado"),
             ("no_award", "Sin adjudicar"),
+            ("done", "Finalizado"),
             ("cancel", "Cancelado"),
         ],
         string="Estado",
@@ -331,6 +336,50 @@ class FundExpedient(models.Model):
         store=True,
         tracking=True,
         copy=False,
+        help="Sale de la etapa. «Finalizado» es el expediente que llegó a la etapa "
+        "marcada como final de su flujo: queda cerrado, sin nadie a cargo.",
+    )
+    date_done = fields.Date(
+        string="Fecha de cierre",
+        readonly=True,
+        copy=False,
+        help="Día en que el expediente llegó a la etapa final de su flujo.",
+    )
+    done_by_id = fields.Many2one(
+        "res.users",
+        string="Cerrado por",
+        readonly=True,
+        copy=False,
+    )
+    # ------------------------------------------------------------------
+    # Responsable de la etapa.
+    #
+    # La asignación por etapa define un POOL (quiénes pueden operarla). El
+    # responsable es quién lo tiene ahora. Con responsable, solo él opera y
+    # el cartel lo nombra a él; sin responsable, opera el pool y el cartel
+    # nombra al pool (el comportamiento de siempre). Se limpia al cambiar de
+    # etapa; se autoasigna si el pool tiene un solo usuario, y al crear queda
+    # en quien crea si la etapa inicial lo indica o si está en el pool.
+    # ------------------------------------------------------------------
+    responsible_user_id = fields.Many2one(
+        "res.users",
+        string="Responsable",
+        tracking=True,
+        copy=False,
+        index=True,
+        domain="[('share', '=', False)]",
+        help="Quién tiene el expediente en la etapa actual. Si está vacío, lo "
+        "tienen todos los asignados de la etapa.",
+    )
+    can_take_responsibility = fields.Boolean(
+        compute="_compute_responsible_permissions",
+        help="El usuario puede asignarse el expediente: no tiene responsable y él "
+        "opera la etapa (o es Administrador).",
+    )
+    can_manage_responsible = fields.Boolean(
+        compute="_compute_responsible_permissions",
+        help="El usuario puede reasignar o liberar el expediente: es el responsable "
+        "actual o Administrador.",
     )
     company_id = fields.Many2one(
         "res.company",
@@ -822,13 +871,21 @@ class FundExpedient(models.Model):
             return stages[:1]
         return self._get_default_draft_stage(company=company)
 
-    @api.depends("stage_id", "stage_id.state_type")
+    @api.depends("stage_id", "stage_id.state_type", "stage_is_final")
     def _compute_state(self):
         for rec in self:
-            if rec.stage_id:
+            if rec.stage_is_final:
+                # La etapa final del flujo cierra el expediente, sea cual sea
+                # el «tipo de estado» que tenga configurada esa etapa.
+                rec.state = "done"
+            elif rec.stage_id:
                 rec.state = rec.stage_id.state_type or "draft"
             else:
                 rec.state = "draft"
+
+    def _is_closed(self):
+        self.ensure_one()
+        return self.state in CLOSED_STATES
 
     @api.depends("state", "type_id", "type_id.unit_mode")
     def _compute_show_flags(self):
@@ -1945,13 +2002,195 @@ class FundExpedient(models.Model):
             if "description" in new_vals:
                 rec._apply_dynamic_placeholders_to_description()
             if stage_will_change:
-                rec._notify_stage_assignees()
+                rec._on_stage_changed()
+        return True
+
+    def _on_stage_changed(self):
+        """Todo lo que sigue a un cambio de etapa, por cualquier camino.
+
+        Orden: primero el responsable de la nueva etapa (para avisarle a él y
+        no a todo el pool), después el cierre si la etapa es la final, y por
+        último el aviso —que se omite si el expediente quedó cerrado, porque
+        ya no está en manos de nadie.
+        """
+        self.ensure_one()
+        self._assign_default_responsible()
+        self._stamp_done()
+        if not self._is_closed():
+            self._notify_stage_assignees()
+
+    def _stamp_done(self):
+        """Sella (o limpia) la fecha de cierre según la etapa sea la final o no."""
+        self.ensure_one()
+        rec = self.with_context(skip_validation_check=True)
+        if self.stage_is_final and not self.date_done:
+            rec.write({"date_done": fields.Date.context_today(self), "done_by_id": self.env.uid})
+            self.message_post(
+                body=_("Expediente <b>finalizado</b> al llegar a la etapa <b>%s</b>.")
+                % (self.stage_id.name or ""),
+                subtype_xmlid="mail.mt_note",
+            )
+        elif not self.stage_is_final and self.date_done:
+            rec.write({"date_done": False, "done_by_id": False})
+
+    # ------------------------------------------------------------------
+    # Responsable de la etapa
+    # ------------------------------------------------------------------
+
+    def _user_is_manager(self):
+        return self.env.user.has_group("fund_expedient.group_fund_expedient_manager")
+
+    def _responsible_candidates(self):
+        """Usuarios a los que se puede asignar el expediente en su etapa: el
+        pool; si la etapa no tiene asignación, cualquier usuario interno de
+        Expedientes."""
+        self.ensure_one()
+        pool = self._get_assignable_user_ids()
+        if pool:
+            return pool
+        group = self.env.ref("fund_expedient.group_fund_expedient_user", raise_if_not_found=False)
+        return group.users.filtered(lambda u: not u.share) if group else self.env["res.users"]
+
+    @api.depends("state", "responsible_user_id", "assignable_user_ids")
+    @api.depends_context("uid")
+    def _compute_responsible_permissions(self):
+        user = self.env.user
+        manager = self._user_is_manager()
+        for rec in self:
+            if rec.state in CLOSED_STATES:
+                rec.can_take_responsibility = False
+                rec.can_manage_responsible = False
+                continue
+            in_pool = not rec.assignable_user_ids or user in rec.assignable_user_ids
+            rec.can_take_responsibility = not rec.responsible_user_id and (manager or in_pool)
+            rec.can_manage_responsible = manager or user == rec.responsible_user_id
+
+    def _set_responsible(self, user, note=None):
+        """Escribe el responsable saltando el candado de etapa: los permisos
+        los verificó quien llama (`can_take_responsibility` /
+        `can_manage_responsible`)."""
+        self.ensure_one()
+        previous = self.responsible_user_id
+        self.with_context(skip_validation_check=True).write(
+            {"responsible_user_id": user.id if user else False}
+        )
+        if user and user != previous:
+            body = _("Expediente asignado a <b>%s</b>") % user.name
+        elif not user and previous:
+            body = _("Expediente liberado: vuelve a estar en manos de los asignados de la etapa")
+        else:
+            return
+        if note:
+            body += _(" — %s") % note
+        self.message_post(body=body + ".", subtype_xmlid="mail.mt_note")
+
+    def _assign_default_responsible(self, creating=False):
+        """Responsable por defecto al entrar a una etapa.
+
+        - Al crear: quien crea, si la etapa inicial lo indica
+          (`assign_creator`) o si él ya está en el pool. Así crear no exige
+          poner a todo el mundo en la asignación de la primera etapa.
+        - En cualquier etapa: si el pool tiene un solo usuario, ese.
+        - Si no, queda vacío y opera el pool, como siempre.
+        """
+        self.ensure_one()
+        user = self.env.user
+        responsible = self.env["res.users"]
+        if not self._is_closed():
+            pool = self._get_assignable_user_ids()
+            assign = self._current_stage_assign()
+            real_user = user and not user.share and user.id != SUPERUSER_ID
+            if creating and real_user and ((assign and assign.assign_creator) or user in pool):
+                responsible = user
+            elif len(pool) == 1:
+                responsible = pool
+        if responsible != self.responsible_user_id:
+            self.with_context(skip_validation_check=True).write(
+                {"responsible_user_id": responsible.id or False}
+            )
+
+    def action_take_responsibility(self):
+        """«Asignarme»: un usuario del pool toma un expediente sin responsable."""
+        for rec in self:
+            if not rec.can_take_responsibility:
+                raise UserError(
+                    _("No puede asignarse el expediente %s: ya tiene responsable o usted no opera la etapa «%s».")
+                    % (rec.number or "", rec.stage_id.name or "")
+                )
+            rec._set_responsible(self.env.user)
+        return True
+
+    def action_release_responsibility(self):
+        """«Liberar»: el responsable (o un Administrador) lo devuelve al pool."""
+        for rec in self:
+            if not rec.can_manage_responsible:
+                raise UserError(
+                    _("Solo el responsable actual o un Administrador pueden liberar el expediente %s.")
+                    % (rec.number or "")
+                )
+            rec._set_responsible(False)
+        return True
+
+    def action_open_assign_wizard(self):
+        self.ensure_one()
+        if not self.can_manage_responsible:
+            raise UserError(
+                _("Solo el responsable actual o un Administrador pueden reasignar el expediente.")
+            )
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Asignar responsable"),
+            "res_model": "fund.expedient.assign.wizard",
+            "view_mode": "form",
+            "target": "new",
+            "context": {"active_id": self.id},
+        }
+
+    def action_reopen(self):
+        """Reabrir un expediente finalizado: vuelve a la etapa anterior del flujo.
+
+        Solo Administrador. Omite las validaciones de salida de etapa —no se
+        está avanzando— y limpia la fecha de cierre en `_stamp_done`.
+        """
+        for rec in self:
+            if not rec._user_is_manager():
+                raise UserError(_("Solo un Administrador puede reabrir un expediente finalizado."))
+            if rec.state != "done":
+                raise UserError(_("El expediente %s no está finalizado.") % (rec.number or ""))
+            previous = rec.env["fund.expedient.stage"]
+            for _record, stages in rec._get_allowed_stages():
+                index = stages.ids.index(rec.stage_id.id) if rec.stage_id.id in stages.ids else -1
+                if index > 0:
+                    previous = stages[index - 1]
+            if not previous:
+                raise UserError(
+                    _("No hay una etapa anterior a «%s» a la que volver.") % (rec.stage_id.name or "")
+                )
+            old_stage = rec.stage_id
+            rec.with_context(
+                skip_validation_check=True,
+                skip_spend_request_check=True,
+                skip_document_check=True,
+                skip_disposition_check=True,
+                skip_resolution_check=True,
+                skip_notification_check=True,
+            ).write({"stage_id": previous.id})
+            rec.message_post(
+                body=_(
+                    "Expediente <b>reabierto</b> por %(user)s: de <b>%(old)s</b> vuelve a <b>%(new)s</b>.",
+                    user=self.env.user.name,
+                    old=old_stage.name or "",
+                    new=previous.name or "",
+                ),
+                subtype_xmlid="mail.mt_note",
+            )
         return True
 
     def _notify_stage_assignees(self):
-        """Suscribir y notificar a los usuarios asignados a la etapa actual."""
+        """Suscribir y notificar a quien tiene el expediente en la etapa actual:
+        el responsable si lo hay, si no todos los asignados."""
         for rec in self:
-            users = rec._get_assignable_user_ids()
+            users = rec.responsible_user_id or rec._get_assignable_user_ids()
             if not users:
                 continue
             partners = users.mapped("partner_id").filtered(lambda p: p)
@@ -2054,6 +2293,8 @@ class FundExpedient(models.Model):
         # Resolver placeholders dinámicos ({{ object.campo }}) ahora que el
         # expediente ya tiene id y valores persistidos.
         records._apply_dynamic_placeholders_to_description()
+        for record in records:
+            record._assign_default_responsible(creating=True)
         return records
 
     @api.depends("description")
@@ -2606,11 +2847,23 @@ class FundExpedient(models.Model):
             },
         }
 
-    @api.depends("type_id", "stage_id")
+    @api.depends("type_id", "stage_id", "state", "responsible_user_id")
     @api.depends_context("uid")
     def _compute_can_edit_in_stage(self):
-        """Solo pueden editar/cambiar etapa los usuarios asignados a la etapa (grupos, puestos, usuarios)."""
+        """Quién opera el expediente en su etapa.
+
+        Cerrado (finalizado, sin adjudicar, cancelado): nadie. Con responsable:
+        solo él. Sin responsable: los asignados a la etapa (grupos, puestos,
+        usuarios o el solicitante), y cualquiera si la etapa no tiene
+        asignación configurada.
+        """
         for rec in self:
+            if rec.state in CLOSED_STATES:
+                rec.can_edit_in_stage = False
+                continue
+            if rec.responsible_user_id:
+                rec.can_edit_in_stage = self.env.user == rec.responsible_user_id
+                continue
             if not rec.type_id or not rec.stage_id:
                 rec.can_edit_in_stage = True
                 continue
@@ -2735,9 +2988,25 @@ class FundExpedient(models.Model):
     @api.depends(
         "stage_id",
         "assignable_user_ids",
+        "responsible_user_id",
+        "state",
+        "date_done",
     )
     def _compute_holder(self):
         for rec in self:
+            # Cerrado: nadie lo tiene. Para el finalizado se deja constancia de
+            # cuándo; para los otros cierres alcanza con el estado.
+            if rec.state in CLOSED_STATES:
+                rec.holder_user_ids = [(6, 0, [])]
+                rec.holder_reason = False
+                rec.holder_summary = (
+                    _("Expediente finalizado el %s.") % (
+                        fields.Date.to_string(rec.date_done) if rec.date_done else ""
+                    )
+                    if rec.state == "done" and rec.date_done
+                    else ""
+                )
+                continue
             users, reason, label = rec._get_pending_approval_info()
             if users and reason:
                 # `label` describe qué se está aprobando (la etapa o la fase de
@@ -2751,9 +3020,18 @@ class FundExpedient(models.Model):
                 )
                 continue
 
-            # `assignable_user_ids` ya está almacenado y se calcula con
-            # `_get_assignable_user_ids()`: usarlo evita un search por registro
-            # (importante en kanban/lista, que computan por lote).
+            # Con responsable, lo tiene él. Si no, el pool: `assignable_user_ids`
+            # ya está almacenado y se calcula con `_get_assignable_user_ids()`,
+            # usarlo evita un search por registro (importante en kanban/lista).
+            if rec.responsible_user_id:
+                rec.holder_user_ids = [(6, 0, rec.responsible_user_id.ids)]
+                rec.holder_reason = "stage"
+                rec.holder_summary = _(
+                    "En la etapa «%(stage)s» el expediente está en manos de: %(user)s",
+                    stage=rec.stage_id.name or "",
+                    user=rec.responsible_user_id.name,
+                )
+                continue
             stage_users = rec.assignable_user_ids if rec.stage_id else rec.env["res.users"]
             if stage_users:
                 rec.holder_user_ids = [(6, 0, stage_users.ids)]
@@ -2816,7 +3094,18 @@ class FundExpedient(models.Model):
         user_ids = value if isinstance(value, (list, tuple)) else [value]
         users = self.env["res.users"].browse(user_ids)
         pending_all, pending_mine = self._search_ids_with_pending_approval(users)
-        assigned = self.search([("assignable_user_ids", "in", users.ids)])
+        # Con responsable cuenta solo él; sin responsable, el pool. Los
+        # cerrados no están en poder de nadie.
+        assigned = self.search(
+            [
+                ("state", "not in", list(CLOSED_STATES)),
+                "|",
+                ("responsible_user_id", "in", users.ids),
+                "&",
+                ("responsible_user_id", "=", False),
+                ("assignable_user_ids", "in", users.ids),
+            ]
+        )
         holder_ids = set(pending_mine) | (set(assigned.ids) - set(pending_all))
         negative = operator in ("not in", "!=")
         return [("id", "not in" if negative else "in", list(holder_ids))]

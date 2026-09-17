@@ -29,7 +29,7 @@ class ResUsers(models.Model):
             .search(
                 [
                     ("holder_user_ids", "in", self.id),
-                    ("state", "not in", ("cancel", "no_award")),
+                    ("state", "not in", ("cancel", "no_award", "done")),
                 ],
                 order="request_date desc, id desc",
             )
@@ -51,7 +51,7 @@ class ResUsers(models.Model):
         return Expedient.search(
             [
                 ("id", "in", list(pending_mine)),
-                ("state", "not in", ("cancel", "no_award")),
+                ("state", "not in", ("cancel", "no_award", "done")),
             ],
             order="request_date desc, id desc",
         )

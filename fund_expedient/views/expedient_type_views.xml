@@ -67,6 +67,7 @@
                                     <field name="sequence" widget="handle"/>
                                     <field name="stage_id" options="{'no_create': True}"/>
                                     <field name="use_requestor"/>
+                                    <field name="assign_creator" optional="show"/>
                                     <field name="group_ids" widget="many2many_tags" readonly="use_requestor"/>
                                     <field name="job_ids" widget="many2many_tags" readonly="use_requestor"/>
                                     <field name="user_ids" widget="many2many_tags" readonly="use_requestor"/>
@@ -87,7 +88,14 @@
                                             <field name="type_id" readonly="1"/>
                                             <field name="sequence"/>
                                             <field name="stage_id" options="{'no_create': True}"/>
-                                            <field name="use_requestor"/>
+                                            <div class="alert alert-info mb-2" role="alert" colspan="2"
+                                                 invisible="not is_final_stage">
+                                                Etapa final del flujo: al llegar, el expediente queda
+                                                <b>finalizado</b> y sin nadie a cargo. La asignación de
+                                                esta etapa no se usa.
+                                            </div>
+                                            <field name="use_requestor" invisible="is_final_stage"/>
+                                            <field name="assign_creator" invisible="is_final_stage"/>
                                         </group>
                                     </group>
                                     <group>
