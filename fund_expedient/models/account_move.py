@@ -212,6 +212,25 @@ class AccountMove(models.Model):
                         expedients |= po.expedient_ids
         return expedients
 
+    def _sync_expedients_from_purchase(self):
+        """Vincula la factura a los expedientes de sus órdenes de compra.
+
+        Una factura generada desde una OC no traía el vínculo directo: el campo
+        Expedientes quedaba vacío y había que recorrer la OC para saber a qué
+        expediente correspondía. Se completa acá; nunca se quita nada, lo
+        cargado a mano se respeta. Con sudo: `purchase_order.expedient_ids`
+        está restringido al grupo de Compras y el vínculo es un dato interno.
+        """
+        for move in self.sudo():
+            if move.move_type not in ("in_invoice", "in_refund"):
+                continue
+            po_expedients = move.invoice_line_ids.purchase_line_id.order_id.expedient_ids
+            missing = po_expedients - move.expedient_ids
+            if missing:
+                move.with_context(skip_expedient_po_sync=True).write(
+                    {"expedient_ids": [(4, expedient.id) for expedient in missing]}
+                )
+
     @api.model_create_multi
     def create(self, vals_list):
         """Igual que `write`: propagar analítica y refrescar totales del expediente.
@@ -222,6 +241,7 @@ class AccountMove(models.Model):
         expediente mostraba «real» en cero.
         """
         moves = super().create(vals_list)
+        moves._sync_expedients_from_purchase()
         moves._apply_expedient_analytic_distribution()
         expedients = moves._linked_expedients_for_recompute()
         if expedients:
@@ -230,6 +250,8 @@ class AccountMove(models.Model):
 
     def write(self, vals):
         res = super().write(vals)
+        if "invoice_line_ids" in vals and not self.env.context.get("skip_expedient_po_sync"):
+            self._sync_expedients_from_purchase()
         if "expedient_ids" in vals:
             self._apply_expedient_analytic_distribution()
         if any(

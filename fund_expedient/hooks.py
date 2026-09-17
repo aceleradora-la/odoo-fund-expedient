@@ -377,12 +377,5 @@ def _recompute_expedient_commercial_amounts(env):
     expedients = env["fund.expedient"].search([])
     if not expedients:
         return
-    fields_to_refresh = [
-        "amount_committed",
-        "amount_real",
-        "amount_committed_unit",
-        "amount_real_unit",
-    ]
-    expedients.invalidate_recordset(fields_to_refresh)
-    expedients.modified(fields_to_refresh)
-    expedients.flush_recordset(fields_to_refresh)
+    expedients._invalidate_commercial_computes()
+    expedients.flush_recordset(list(expedients.COMMERCIAL_STORED_FIELDS))

@@ -31,6 +31,8 @@ class PurchaseOrder(models.Model):
     def write(self, vals):
         before = self.mapped("expedient_ids")
         res = super().write(vals)
+        if "expedient_ids" in vals:
+            self.sudo().invoice_ids._sync_expedients_from_purchase()
         (before | self.mapped("expedient_ids"))._invalidate_commercial_computes()
         return res
 

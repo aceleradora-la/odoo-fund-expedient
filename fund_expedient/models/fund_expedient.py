@@ -1187,19 +1187,31 @@ class FundExpedient(models.Model):
             return self.direct_invoice_ids
         return AccountMove.sudo().browse(self._direct_invoice_ids_sql())
 
+    COMMERCIAL_STORED_FIELDS = (
+        "amount_committed",
+        "amount_real",
+        "amount_committed_unit",
+        "amount_real_unit",
+    )
+
     def _invalidate_commercial_computes(self):
-        """Recalcula totales y contadores al cambiar OC/facturas/pagos vinculados."""
-        self.modified(
-            [
-                "purchase_order_count",
-                "invoice_ids",
-                "payment_ids",
-                "amount_committed",
-                "amount_real",
-                "amount_committed_unit",
-                "amount_real_unit",
-            ]
-        )
+        """Recalcula totales y contadores al cambiar OC/facturas/pagos vinculados.
+
+        Comprometido y real son almacenados y no dependen de OC ni facturas
+        (se calculan recorriéndolas), así que hay que marcarlos para recálculo
+        a mano con `add_to_compute`. `modified()` no sirve para eso: marca lo
+        que DEPENDE de estos campos, no los campos mismos, y el total quedaba
+        congelado en la base hasta que cambiara la etapa —una factura de OC
+        publicada seguía mostrando real en cero—. Contadores y listas no se
+        almacenan: alcanza con sacarlos de la caché.
+        """
+        records = self.filtered(lambda r: isinstance(r.id, int))
+        if not records:
+            return
+        for name in self.COMMERCIAL_STORED_FIELDS:
+            self.env.add_to_compute(self._fields[name], records)
+        records.invalidate_recordset(["purchase_order_count", "invoice_ids", "payment_ids"])
+        records.modified(list(self.COMMERCIAL_STORED_FIELDS))
 
     @api.depends_context("uid")
     def _compute_purchase_order_count(self):
