@@ -215,19 +215,15 @@
               sequence="42"
               groups="fund_expedient.group_fund_expedient_manager"/>
 
-    <!-- Presupuesto -->
+    <!--
+        Presupuesto. El presupuesto se carga en Contabilidad (presupuestos
+        analíticos); acá solo se mira la ejecución. Los presupuestos propios
+        de Expedientes (`fund.budget` y sus ajustes) dejaron de usarse: sus
+        menús se quitan, los modelos y los datos quedan hasta confirmar que
+        nada los necesita. El reporte lo aporta fund_expedient_account_budget.
+    -->
     <menuitem id="menu_fund_budget_root"
               name="Presupuesto"
               parent="menu_fund_expedient_root"
-              sequence="20"/>
-    <menuitem id="menu_fund_budget_list"
-              name="Presupuestos"
-              parent="menu_fund_budget_root"
-              action="action_fund_budget"
-              sequence="10"/>
-    <menuitem id="menu_fund_budget_adjustment"
-              name="Ajustes"
-              parent="menu_fund_budget_root"
-              action="action_fund_budget_adjustment"
               sequence="20"/>
 </odoo>

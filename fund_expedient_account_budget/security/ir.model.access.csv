@@ -1,0 +1,3 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_fund_expedient_budget_report_user,fund.expedient.budget.report.user,model_fund_expedient_budget_report,fund_expedient.group_fund_expedient_user,1,0,0,0
+access_fund_expedient_budget_report_manager,fund.expedient.budget.report.manager,model_fund_expedient_budget_report,fund_expedient.group_fund_expedient_manager,1,0,0,0
