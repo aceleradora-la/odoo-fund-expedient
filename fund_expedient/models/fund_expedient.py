@@ -1397,6 +1397,18 @@ class FundExpedient(models.Model):
         used.add(nxt)
         return "%s%d" % (prefix, nxt)
 
+    def action_open_supplier_cuit_wizard(self):
+        """Abre el asistente «Agregar por CUIT» sobre este registro."""
+        self.ensure_one()
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Agregar proveedor por CUIT"),
+            "res_model": "fund.expedient.supplier.cuit.wizard",
+            "view_mode": "form",
+            "target": "new",
+            "context": {"active_model": self._name, "active_id": self.id},
+        }
+
     def action_create_child_expedient(self):
         """Abre un expediente nuevo con este como padre.
 

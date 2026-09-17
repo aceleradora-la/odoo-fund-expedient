@@ -236,9 +236,16 @@
                             <field name="requestor_department_id" readonly="1"/>
                             <field name="requestor_department_manager_id" readonly="1"
                                    invisible="not requestor_department_manager_id"/>
-                            <field name="recommended_supplier_ids" widget="many2many_tags" invisible="hide_recommended_supplier_ids_stage"
-                                   options="{'no_create': True, 'search_view_ref': 'fund_expedient.view_res_partner_recommended_supplier_search'}"
-                                   context="{'search_view_ref': 'fund_expedient.view_res_partner_recommended_supplier_search'}"/>
+                            <label for="recommended_supplier_ids" invisible="hide_recommended_supplier_ids_stage"/>
+                            <div class="o_row" invisible="hide_recommended_supplier_ids_stage">
+                                <field name="recommended_supplier_ids" widget="many2many_tags" nolabel="1"
+                                       options="{'no_create': True, 'search_view_ref': 'fund_expedient.view_res_partner_recommended_supplier_search'}"
+                                       context="{'search_view_ref': 'fund_expedient.view_res_partner_recommended_supplier_search'}"/>
+                                <!-- Único camino para crear un contacto desde Expedientes: por CUIT y con datos del padrón. -->
+                                <button name="action_open_supplier_cuit_wizard" type="object"
+                                        string="Agregar por CUIT" icon="fa-id-card-o" class="btn btn-link px-1"
+                                        invisible="not can_edit_in_stage"/>
+                            </div>
                         </group>
                         <group string="Clasificación">
                             <field name="analytic_plan_id" invisible="1"/>
@@ -354,6 +361,8 @@
                                             <field name="recommended_supplier_ids" widget="many2many_tags" nolabel="1"
                                                    options="{'no_create': True, 'search_view_ref': 'fund_expedient.view_res_partner_recommended_supplier_search'}"
                                                    context="{'search_view_ref': 'fund_expedient.view_res_partner_recommended_supplier_search'}"/>
+                                            <button name="action_open_supplier_cuit_wizard" type="object"
+                                                    string="Agregar por CUIT" icon="fa-id-card-o" class="btn btn-link px-0"/>
                                         </group>
                                     </sheet>
                                 </form>

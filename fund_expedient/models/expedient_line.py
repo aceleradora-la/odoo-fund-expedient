@@ -218,6 +218,18 @@ class ExpedientLine(models.Model):
             rec.contracted_supplier_ids = partners
             rec.expedient_amount_real = exp.amount_real
 
+    def action_open_supplier_cuit_wizard(self):
+        """Abre el asistente «Agregar por CUIT» sobre este registro."""
+        self.ensure_one()
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Agregar proveedor por CUIT"),
+            "res_model": "fund.expedient.supplier.cuit.wizard",
+            "view_mode": "form",
+            "target": "new",
+            "context": {"active_model": self._name, "active_id": self.id},
+        }
+
     @api.constrains("date_start", "date_end")
     def _check_contract_dates(self):
         for rec in self:

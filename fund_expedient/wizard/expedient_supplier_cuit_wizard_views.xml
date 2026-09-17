@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_fund_expedient_supplier_cuit_wizard_form" model="ir.ui.view">
+        <field name="name">fund.expedient.supplier.cuit.wizard.form</field>
+        <field name="model">fund.expedient.supplier.cuit.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Agregar proveedor por CUIT">
+                <field name="res_model" invisible="1"/>
+                <field name="res_id" invisible="1"/>
+                <field name="state" invisible="1"/>
+                <field name="padron_available" invisible="1"/>
+                <group>
+                    <field name="expedient_id" readonly="1"/>
+                    <field name="cuit" placeholder="30-71234567-8"
+                           invisible="state == 'created'"/>
+                </group>
+                <div class="alert alert-info mb-3" role="alert" invisible="not message">
+                    <field name="message" nolabel="1" class="mb-0"/>
+                </div>
+                <!-- Encontrado: mostrar quién es antes de agregarlo. -->
+                <div class="alert alert-success mb-3" role="alert" invisible="state != 'found'">
+                    <strong>Encontrado en Contactos.</strong>
+                    <group class="mt-2 mb-0">
+                        <field name="partner_id" readonly="1" options="{'no_open': True}"/>
+                        <field name="partner_vat" readonly="1"/>
+                        <field name="partner_address" readonly="1" invisible="not partner_address"/>
+                    </group>
+                </div>
+                <!-- No existe: la única salida es el padrón. -->
+                <div class="alert alert-warning mb-3" role="alert" invisible="state != 'missing'">
+                    <strong>No existe en Contactos.</strong>
+                    <span class="d-block mt-1" invisible="not padron_available">
+                        El contacto se crea con los datos del padrón de ARCA y queda marcado como
+                        proveedor. No se cargan datos a mano.
+                    </span>
+                </div>
+                <!-- Creado: confirmar con los datos que trajo el padrón. -->
+                <div class="alert alert-primary mb-3" role="alert" invisible="state != 'created'">
+                    <strong>Creado desde ARCA y agregado a los proveedores recomendados.</strong>
+                    <group class="mt-2 mb-0">
+                        <field name="partner_id" readonly="1" options="{'no_open': True}"/>
+                        <field name="partner_vat" readonly="1"/>
+                        <field name="partner_address" readonly="1" invisible="not partner_address"/>
+                    </group>
+                </div>
+                <footer>
+                    <button name="action_add" type="object" string="Agregar" class="btn-primary"
+                            invisible="state != 'found'"/>
+                    <button name="action_add_and_continue" type="object" string="Agregar y seguir"
+                            class="btn-secondary" invisible="state != 'found'"/>
+                    <button name="action_create_from_padron" type="object"
+                            string="Crear desde ARCA y agregar" class="btn-primary" icon="fa-cloud-download"
+                            invisible="state != 'missing' or not padron_available"/>
+                    <button name="action_reset" type="object" string="Agregar otro"
+                            class="btn-secondary" invisible="state != 'created'"/>
+                    <button string="Cerrar" special="cancel" class="btn-secondary"
+                            invisible="state == 'created'"/>
+                    <button string="Cerrar" special="cancel" class="btn-primary"
+                            invisible="state != 'created'"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>
