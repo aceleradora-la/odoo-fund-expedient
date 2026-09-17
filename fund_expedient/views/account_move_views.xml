@@ -6,12 +6,13 @@
         <field name="inherit_id" ref="account.view_move_form"/>
         <field name="arch" type="xml">
             <!--
-                En este bloque del formulario el partner va con etiqueta explícita
-                (`<label for>` + campo `nolabel`), y los campos que se insertan
-                después no reciben etiqueta automática: se sigue el mismo patrón,
-                si no el selector aparece suelto y no se sabe qué es.
+                Debajo de «Referencia de factura» (`ref`): después del partner el
+                campo quedaba dentro del bloque de la dirección, mezclado con
+                ella. Etiquetas explícitas (`<label for>` + `nolabel`), como hace
+                el propio formulario con el partner, para no depender de dónde
+                caiga el nodo.
             -->
-            <xpath expr="//field[@name='partner_id']" position="after">
+            <xpath expr="//field[@name='ref']" position="after">
                 <!--
                     El selector se limita a los expedientes del partner de la factura
                     (proveedor recomendado o con OC suya; para ventas, expedientes de
