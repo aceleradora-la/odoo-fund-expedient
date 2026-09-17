@@ -13,9 +13,10 @@ import {
  * Proveedores recomendados, cargados por CUIT.
  *
  * Reemplaza el autocompletado del many2many_tags por un cuadro donde se
- * escribe el CUIT: al completar los 11 dígitos busca el contacto y lo agrega
- * como burbuja. Si no existe, ofrece crearlo desde el padrón de ARCA. Las
- * burbujas y su cruz para quitar son las del widget estándar.
+ * escribe el CUIT: al completar los 11 dígitos busca el contacto y lo muestra
+ * para que el usuario confirme; recién ahí se agrega como burbuja. Si no
+ * existe, ofrece crearlo desde el padrón de ARCA. Las burbujas y su cruz para
+ * quitar son las del widget estándar.
  */
 export class SupplierCuitTagsField extends Many2ManyTagsField {
     static template = "fund_expedient.SupplierCuitTagsField";
@@ -26,6 +27,7 @@ export class SupplierCuitTagsField extends Many2ManyTagsField {
         this.state = useState({
             message: "",
             kind: "",
+            candidate: null,
             canCreate: false,
             busy: false,
             lastCuit: "",
@@ -73,22 +75,46 @@ export class SupplierCuitTagsField extends Many2ManyTagsField {
         }
     }
 
+    resetResult() {
+        this.setMessage("", "");
+        this.state.candidate = null;
+        this.state.canCreate = false;
+    }
+
     async onInput(ev) {
         const cuit = this.digits(ev.target.value);
         if (cuit.length === 11) {
             await this.lookup(cuit);
-        } else if (this.state.message) {
-            this.setMessage("", "");
-            this.state.canCreate = false;
+        } else if (this.state.message || this.state.candidate) {
+            this.resetResult();
         }
     }
 
     async onKeydown(ev) {
-        if (ev.key === "Enter") {
-            ev.preventDefault();
-            ev.stopPropagation();
-            await this.lookup(this.digits(ev.target.value));
+        if (ev.key !== "Enter") {
+            return;
         }
+        ev.preventDefault();
+        ev.stopPropagation();
+        if (this.state.candidate) {
+            await this.onConfirm();
+            return;
+        }
+        await this.lookup(this.digits(ev.target.value));
+    }
+
+    async onConfirm() {
+        const partner = this.state.candidate;
+        if (!partner) {
+            return;
+        }
+        this.state.candidate = null;
+        await this.addPartner(partner);
+    }
+
+    onDiscard() {
+        this.resetResult();
+        this.clearInput();
     }
 
     async lookup(cuit) {
@@ -97,6 +123,7 @@ export class SupplierCuitTagsField extends Many2ManyTagsField {
         }
         this.state.busy = true;
         this.state.canCreate = false;
+        this.state.candidate = null;
         try {
             const result = await this.orm.call(
                 "fund.expedient.supplier.cuit",
@@ -108,7 +135,9 @@ export class SupplierCuitTagsField extends Many2ManyTagsField {
                 return;
             }
             if (result.found) {
-                await this.addPartner(result.partner, result.message);
+                // Se muestra y el usuario decide: no se agrega solo.
+                this.state.candidate = result.partner;
+                this.setMessage(result.message, "warning");
                 return;
             }
             this.state.lastCuit = cuit;

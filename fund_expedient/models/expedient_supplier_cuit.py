@@ -63,8 +63,16 @@ class ExpedientSupplierCuit(models.AbstractModel):
         mismo. Entre varios con el mismo CUIT gana la empresa y el activo.
         """
         Partner = self.env["res.partner"].sudo().with_context(active_test=False)
+        # El número de identificación se guarda en `vat` (la localización lo
+        # normaliza a dígitos, pero puede haber cargas con guiones).
         domain = ["|", ("vat", "=", digits), ("vat", "=", self._cuit_format(digits))]
-        if "l10n_ar_vat" in Partner._fields:
+        # `l10n_ar_vat` es calculado y NO buscable: si se lo pone en un dominio,
+        # el ORM descarta la condición con un error en el log y la reemplaza
+        # por «verdadero», con lo que la búsqueda devolvía todos los contactos
+        # y se quedaba con el primero (la propia compañía). Solo se usa si la
+        # versión instalada lo hizo buscable.
+        field = Partner._fields.get("l10n_ar_vat")
+        if field and (field.store or field.search):
             domain = ["|", ("l10n_ar_vat", "=", digits)] + domain
         partners = Partner.search(domain)
         return partners.sorted(key=lambda p: (not p.is_company, not p.active, p.id))[:1]
