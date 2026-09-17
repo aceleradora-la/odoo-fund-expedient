@@ -15,15 +15,16 @@
                        t-on-keydown="onKeydown"/>
             </t>
         </div>
-        <div t-if="state.candidate and !props.readonly"
-             class="d-flex align-items-center gap-2 mt-1 p-2 border rounded bg-light fund_cuit_candidate">
-            <div class="flex-grow-1 text-truncate">
-                <i class="fa fa-building-o me-1 text-muted"/>
-                <strong t-esc="state.candidate.display_name"/>
-                <small class="text-muted ms-2" t-esc="state.candidate.vat"/>
-            </div>
-            <button type="button" class="btn btn-primary btn-sm" t-on-click="onConfirm">Agregar</button>
-            <button type="button" class="btn btn-link btn-sm text-muted" t-on-click="onDiscard">Descartar</button>
+        <div t-if="state.candidate and !props.readonly" class="d-flex align-items-center mt-1 fund_cuit_candidate">
+            <a href="#" class="badge rounded-pill text-bg-primary text-decoration-none text-wrap text-start py-2 px-3"
+               t-att-title="'Agregar a proveedores recomendados (' + state.candidate.vat + ')'"
+               t-on-click.prevent="onConfirm">
+                <i class="fa fa-plus me-1"/><t t-esc="state.candidate.display_name"/>
+            </a>
+            <button type="button" class="btn btn-link btn-sm text-muted p-0 ms-2" title="Descartar"
+                    aria-label="Descartar" t-on-click="onDiscard">
+                <i class="fa fa-times"/>
+            </button>
         </div>
         <div t-if="state.message" class="small mt-1" t-att-class="messageClass">
             <span t-esc="state.message"/>

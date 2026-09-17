@@ -32,6 +32,13 @@ export class SupplierCuitTagsField extends Many2ManyTagsField {
             busy: false,
             lastCuit: "",
         });
+        // Quitar una burbuja también limpia el resultado o aviso previo: si no,
+        // «Agregado: X» seguía a la vista después de sacar a X.
+        const deleteTag = this.deleteTag.bind(this);
+        this.deleteTag = async (id) => {
+            await deleteTag(id);
+            this.resetResult();
+        };
     }
 
     /** Expediente al que pertenece el campo (directo o vía la línea). */
@@ -137,7 +144,7 @@ export class SupplierCuitTagsField extends Many2ManyTagsField {
             if (result.found) {
                 // Se muestra y el usuario decide: no se agrega solo.
                 this.state.candidate = result.partner;
-                this.setMessage(result.message, "warning");
+                this.setMessage(result.message || _t("Hacé clic para agregarlo."), "");
                 return;
             }
             this.state.lastCuit = cuit;
@@ -158,8 +165,7 @@ export class SupplierCuitTagsField extends Many2ManyTagsField {
             return;
         }
         await this.update([partner]);
-        const message = _t("Agregado: %s", partner.display_name);
-        this.setMessage(extraMessage ? `${message} ${extraMessage}` : message, "success");
+        this.setMessage(extraMessage || "", "success");
         this.clearInput();
     }
 
@@ -177,10 +183,6 @@ export class SupplierCuitTagsField extends Many2ManyTagsField {
             );
             this.state.canCreate = false;
             await this.addPartner(partner);
-            this.setMessage(
-                _t("Creado desde ARCA y agregado: %s", partner.display_name),
-                "success"
-            );
         } finally {
             this.state.busy = false;
         }
