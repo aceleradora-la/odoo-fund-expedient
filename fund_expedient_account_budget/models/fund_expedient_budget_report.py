@@ -95,24 +95,61 @@ class FundExpedientBudgetReport(models.Model):
     # ------------------------------------------------------------------
 
     @api.model
-    def _budget_line_analytic_columns(self):
-        """Columnas de `budget.line` que apuntan a una cuenta analítica.
+    def _plan_column_candidates(self, plan):
+        """Nombres posibles de la columna de `budget.line` para un plan.
 
-        Cada plan analítico agrega su propia columna a la línea de
-        presupuesto (`account_id` para el plan de proyectos, `x_plan<N>_id`
-        para los demás), así que no se puede fijar el nombre en el código.
-        Van primero las de planes no-proyecto —las partidas presupuestarias—
-        y `account_id` al final: si una línea tiene proyecto y partida, la
-        fila representa a la partida.
+        Cada plan analítico agrega su propia columna a la línea de presupuesto
+        (`x_plan<N>_id`; `account_id` para el plan de proyectos). Odoo expone
+        `_column_name()` para resolverlo; se prueban además las formas
+        conocidas por si la versión instalada no lo tiene. Los sub-planes
+        comparten la columna de su plan raíz.
         """
-        BudgetLine = self.env["budget.line"]
-        columns = [
-            name
-            for name, field in BudgetLine._fields.items()
-            if field.type == "many2one"
+        names = []
+        if hasattr(plan, "_column_name"):
+            names.append(plan._column_name())
+        root = plan.root_id if "root_id" in plan._fields and plan.root_id else plan
+        names += [f"x_plan{root.id}_id", f"x_plan{plan.id}_id"]
+        return list(dict.fromkeys(names))
+
+    @api.model
+    def _is_budget_line_analytic_column(self, name):
+        field = self.env["budget.line"]._fields.get(name)
+        return bool(
+            field
+            and field.type == "many2one"
             and field.comodel_name == "account.analytic.account"
             and field.store
             and _column_exists(self.env.cr, "budget_line", name)
+        )
+
+    @api.model
+    def _budget_line_analytic_columns(self):
+        """Columnas de `budget.line` por las que se compara.
+
+        Manda el plan analítico configurado para Expedientes (Configuración de
+        expedientes › «Plan analítico», por compañía): es el plan del que
+        salen las cuentas analíticas del expediente y sus líneas, así que es
+        contra ese plan que tiene sentido comparar. Sin configuración, se
+        toman todas las columnas analíticas de la línea de presupuesto, con
+        las partidas antes que los proyectos.
+        """
+        Config = self.env["fund.expedient.config"].sudo()
+        configured = []
+        for company in self.env["res.company"].sudo().search([]):
+            plan = Config.get_analytic_plan(company)
+            if not plan:
+                continue
+            for name in self._plan_column_candidates(plan):
+                if self._is_budget_line_analytic_column(name):
+                    if name not in configured:
+                        configured.append(name)
+                    break
+        if configured:
+            return configured
+        columns = [
+            name
+            for name in self.env["budget.line"]._fields
+            if self._is_budget_line_analytic_column(name)
         ]
         return sorted(columns, key=lambda name: (name == "account_id", name))
 

@@ -4,7 +4,7 @@
 {
     "name": "Fundación - Expedientes: ejecución presupuestaria",
     "summary": "Presupuesto de Contabilidad vs. comprometido y real de los expedientes, por cuenta analítica",
-    "version": "18.0.1.0.0",
+    "version": "18.0.1.0.1",
     "category": "Administration",
     "website": "https://aceleradora.la",
     "author": "aceleradora.la",
