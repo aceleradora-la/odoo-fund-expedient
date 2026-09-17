@@ -1055,9 +1055,13 @@ class FundExpedient(models.Model):
         """Etapas en kanban / statusbar: ordenadas por secuencia (corrige orden con filtros como Mis expedientes)."""
         rec = self[:1]
         if not rec:
+            # `active_id` solo sirve si viene de un expediente. Al abrir la lista
+            # agrupada por etapa desde otro modelo (p. ej. el botón de un reporte),
+            # el contexto trae el id del registro de origen y tomarlo como
+            # expediente rompía con «Registro faltante».
             active_id = self.env.context.get("active_id")
-            if active_id:
-                rec = self.browse(active_id)
+            if active_id and self.env.context.get("active_model") == self._name:
+                rec = self.browse(active_id).exists()
         if rec:
             return rec.allowed_stage_ids.sorted(key=lambda s: (s.sequence, s.id))
         return stages.sorted(key=lambda s: (s.sequence, s.id))
