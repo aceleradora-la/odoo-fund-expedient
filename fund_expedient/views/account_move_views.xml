@@ -5,6 +5,12 @@
         <field name="model">account.move</field>
         <field name="inherit_id" ref="account.view_move_form"/>
         <field name="arch" type="xml">
+            <!--
+                En este bloque del formulario el partner va con etiqueta explícita
+                (`<label for>` + campo `nolabel`), y los campos que se insertan
+                después no reciben etiqueta automática: se sigue el mismo patrón,
+                si no el selector aparece suelto y no se sabe qué es.
+            -->
             <xpath expr="//field[@name='partner_id']" position="after">
                 <!--
                     El selector se limita a los expedientes del partner de la factura
@@ -13,7 +19,10 @@
                 -->
                 <field name="allowed_expedient_ids" invisible="1"
                        groups="fund_expedient.group_fund_expedient_user"/>
-                <field name="expedient_ids" widget="many2many_tags"
+                <label for="expedient_ids" string="Expedientes"
+                       groups="fund_expedient.group_fund_expedient_user"
+                       invisible="move_type not in ('in_invoice', 'in_refund', 'out_invoice', 'out_refund')"/>
+                <field name="expedient_ids" widget="many2many_tags" nolabel="1"
                        options="{'no_create': True}"
                        domain="[('id', 'in', allowed_expedient_ids)]"
                        groups="fund_expedient.group_fund_expedient_user"
@@ -24,12 +33,19 @@
                     poder abrirlo. El grupo Administrador hereda del de Usuario, así
                     que la negación cubre exactamente a quien no tiene ninguno.
                 -->
-                <field name="expedient_names" readonly="1"
+                <label for="expedient_names" string="Expedientes"
                        groups="!fund_expedient.group_fund_expedient_user"
                        invisible="move_type not in ('in_invoice', 'in_refund', 'out_invoice', 'out_refund') or not expedient_names"/>
-                <field name="payment_date" readonly="1"
+                <field name="expedient_names" readonly="1" nolabel="1"
+                       groups="!fund_expedient.group_fund_expedient_user"
+                       invisible="move_type not in ('in_invoice', 'in_refund', 'out_invoice', 'out_refund') or not expedient_names"/>
+                <label for="payment_date" string="Fecha de pago"
                        invisible="move_type != 'in_invoice' or not payment_date"/>
-                <field name="payment_delay_days" readonly="1"
+                <field name="payment_date" readonly="1" nolabel="1"
+                       invisible="move_type != 'in_invoice' or not payment_date"/>
+                <label for="payment_delay_days" string="Días hasta el pago"
+                       invisible="move_type != 'in_invoice' or not payment_date"/>
+                <field name="payment_delay_days" readonly="1" nolabel="1"
                        invisible="move_type != 'in_invoice' or not payment_date"/>
             </xpath>
         </field>
