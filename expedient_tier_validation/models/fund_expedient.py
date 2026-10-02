@@ -569,8 +569,31 @@ class FundExpedient(models.Model):
         vals["stage_id"] = self.stage_id.id
         return vals
 
+    def _check_stage_user_for_tier_action(self, action):
+        """Exige operar la etapa para mover el circuito de validación.
+
+        Mismo criterio que en la Solicitud, la Disposición y la Resolución
+        (ver `fund.tier.validation.mixin`), que lo hacen con
+        `expedient_stage_editable`; acá el campo equivalente es
+        `can_edit_in_stage`. Aplica a solicitar la aprobación y a reiniciar la
+        validación —esta última da de baja lo actuado—, no a aprobar o
+        rechazar, que los define la configuración de niveles.
+
+        Se saltea bajo `sudo` porque ahí el llamador es código del módulo —el
+        portal, que ya aplicó sus propias reglas— y con el superusuario la
+        comprobación de etapa nunca daría verdadera.
+        """
+        if self.env.su:
+            return
+        for rec in self:
+            if not rec.can_edit_in_stage:
+                raise UserError(
+                    _("Solo los usuarios asignados a la etapa actual pueden %s.") % action
+                )
+
     def request_validation(self):
         """Crea solo las reviews faltantes para la etapa actual (respeta orden y secuencia)."""
+        self._check_stage_user_for_tier_action(_("solicitar la aprobación"))
         tr_obj = self.env["tier.review"]
         vals_list = []
         for rec in self:
@@ -617,6 +640,7 @@ class FundExpedient(models.Model):
 
     def restart_validation(self):
         """Reiniciar solo la validación de la etapa actual (mantiene historial de otras etapas)."""
+        self._check_stage_user_for_tier_action(_("reiniciar la validación"))
         for rec in self:
             rec._current_stage_reviews().sudo().unlink()
         self.review_ids._compute_can_review()

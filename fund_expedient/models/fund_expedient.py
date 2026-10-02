@@ -1775,6 +1775,7 @@ class FundExpedient(models.Model):
 
         Type = self.env["fund.expedient.type"]
         Assign = self.env["fund.expedient.type.stage.assign"]
+        Stage = self.env["fund.expedient.stage"]
         skip_check = bool(self.env.context.get("skip_validation_check"))
         for rec in self:
             if not skip_check and not rec.can_edit_in_stage:
@@ -1835,7 +1836,19 @@ class FundExpedient(models.Model):
             if expedient_type and expedient_type.stage_assign_ids:
                 allowed = expedient_type.stage_assign_ids.mapped("stage_id")
                 target_stage_id = new_vals.get("stage_id") or rec.stage_id.id
-                if not target_stage_id or target_stage_id not in allowed.ids:
+                # Cancelar y los cierres por resultado final (Desierto, Sin
+                # efecto, Fracasado) llevan a etapas que no pertenecen al flujo
+                # del tipo: son salidas administrativas, no una etapa
+                # incompatible. Sin esta excepción, «Cancelar» devolvía el
+                # expediente a la primera etapa —en silencio— cuando la etapa
+                # Cancelado no estaba entre las asignaciones del tipo.
+                target_stage = Stage.browse(target_stage_id) if target_stage_id else Stage
+                is_closure = bool(
+                    target_stage.state_type == "cancel" or target_stage.final_outcome_type_id
+                )
+                if not is_closure and (
+                    not target_stage_id or target_stage_id not in allowed.ids
+                ):
                     new_vals["stage_id"] = (
                         self._get_initial_stage_for_type(expedient_type, company=company).id
                         or False
