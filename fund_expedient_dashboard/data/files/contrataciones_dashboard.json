@@ -128,7 +128,7 @@
           "id": "fig_comprometido_mes",
           "x": 0,
           "y": 170,
-          "width": 500,
+          "width": 330,
           "height": 330,
           "tag": "chart",
           "data": {
@@ -173,9 +173,9 @@
         },
         {
           "id": "fig_real_mes",
-          "x": 520,
+          "x": 340,
           "y": 170,
-          "width": 500,
+          "width": 330,
           "height": 330,
           "tag": "chart",
           "data": {
@@ -192,6 +192,53 @@
                 "date:month"
               ],
               "measure": "amount",
+              "order": null,
+              "resModel": "fund.expedient.contract.invoice.report",
+              "mode": "bar"
+            },
+            "searchParams": {
+              "comparison": null,
+              "context": {},
+              "domain": [],
+              "groupBy": [
+                "date:month"
+              ],
+              "orderBy": []
+            },
+            "fieldMatching": {
+              "gf_period": {
+                "chain": "date",
+                "type": "date",
+                "offset": 0
+              },
+              "gf_sector": {
+                "chain": "requestor_department_id",
+                "type": "many2one"
+              }
+            }
+          }
+        },
+        {
+          "id": "fig_pagado_mes",
+          "x": 680,
+          "y": 170,
+          "width": 330,
+          "height": 330,
+          "tag": "chart",
+          "data": {
+            "type": "odoo_bar",
+            "title": {
+              "text": "Pagado por mes"
+            },
+            "background": "#FFFFFF",
+            "legendPosition": "none",
+            "verticalAxisPosition": "left",
+            "stacked": false,
+            "metaData": {
+              "groupBy": [
+                "date:month"
+              ],
+              "measure": "amount_paid",
               "order": null,
               "resModel": "fund.expedient.contract.invoice.report",
               "mode": "bar"
@@ -511,6 +558,7 @@
   "listNextId": 1,
   "chartOdooMenusReferences": {
     "fig_comprometido_mes": "fund_expedient.menu_fund_expedient_reports_locacion_projection",
-    "fig_real_mes": "fund_expedient.menu_fund_expedient_reports_locacion_invoices"
+    "fig_real_mes": "fund_expedient.menu_fund_expedient_reports_locacion_invoices",
+    "fig_pagado_mes": "fund_expedient.menu_fund_expedient_reports_locacion_invoices"
   }
 }
