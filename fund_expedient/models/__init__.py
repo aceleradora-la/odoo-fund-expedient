@@ -26,4 +26,5 @@ from . import account_move_line
 from . import account_payment
 from . import fund_budget_analytic_report
 from . import fund_expedient_contract_projection
+from . import fund_expedient_contract_invoice_report
 from . import expedient_supplier_cuit

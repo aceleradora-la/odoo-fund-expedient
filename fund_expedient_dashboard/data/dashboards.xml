@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="spreadsheet_dashboard_group_expedientes" model="spreadsheet.dashboard.group">
+        <field name="name">Expedientes</field>
+        <field name="sequence">50</field>
+    </record>
+
+    <!--
+        Contrataciones (Locación): KPIs, comprometido por mes según la
+        proyección, real facturado por mes y comprometido por proveedor. Solo
+        lo ve el grupo «Expedientes: Contrataciones» —el mismo que los
+        reportes—: `Command.set` reemplaza el grupo por defecto (Usuario
+        interno) en vez de sumarlo.
+
+        El archivo se recarga en cada actualización del módulo: los cambios al
+        tablero se hacen en el JSON del repositorio, no en la interfaz.
+    -->
+    <record id="spreadsheet_dashboard_contrataciones" model="spreadsheet.dashboard">
+        <field name="name">Contrataciones</field>
+        <field name="spreadsheet_binary_data" type="base64"
+               file="fund_expedient_dashboard/data/files/contrataciones_dashboard.json"/>
+        <field name="dashboard_group_id" ref="spreadsheet_dashboard_group_expedientes"/>
+        <field name="group_ids" eval="[Command.set([ref('fund_expedient.group_fund_expedient_contracting')])]"/>
+        <field name="sequence">10</field>
+        <field name="is_published">True</field>
+    </record>
+
+</odoo>

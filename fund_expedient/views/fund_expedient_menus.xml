@@ -145,19 +145,27 @@
               sequence="30"
               groups="fund_expedient.group_fund_expedient_manager"/>
 
+    <!-- Contrataciones: solo el grupo «Expedientes: Contrataciones». -->
     <menuitem id="menu_fund_expedient_reports_locacion"
               name="Contrataciones (Locación)"
               parent="menu_fund_expedient_reports"
               action="action_expedient_locacion_contrataciones"
               sequence="40"
-              groups="fund_expedient.group_fund_expedient_manager"/>
+              groups="fund_expedient.group_fund_expedient_contracting"/>
 
     <menuitem id="menu_fund_expedient_reports_locacion_projection"
               name="Proyección de Locación"
               parent="menu_fund_expedient_reports"
               action="action_expedient_locacion_projection"
               sequence="45"
-              groups="fund_expedient.group_fund_expedient_manager"/>
+              groups="fund_expedient.group_fund_expedient_contracting"/>
+
+    <menuitem id="menu_fund_expedient_reports_locacion_invoices"
+              name="Facturación de contrataciones"
+              parent="menu_fund_expedient_reports"
+              action="action_expedient_locacion_invoices"
+              sequence="47"
+              groups="fund_expedient.group_fund_expedient_contracting"/>
 
     <menuitem id="menu_expedient_stage"
               name="Etapas de expediente"

@@ -203,4 +203,115 @@
         </field>
     </record>
 
+    <!-- ============================================================
+         Reporte 3: Facturación de contrataciones (Locación)
+         Sobre la vista SQL fund.expedient.contract.invoice.report:
+         lo real (facturado) y lo pagado de cada contratación.
+         ============================================================ -->
+    <record id="view_expedient_locacion_invoice_list" model="ir.ui.view">
+        <field name="name">fund.expedient.contract.invoice.report.list</field>
+        <field name="model">fund.expedient.contract.invoice.report</field>
+        <field name="type">list</field>
+        <field name="arch" type="xml">
+            <list string="Facturación de contrataciones" create="0" delete="0" edit="0">
+                <field name="currency_id" column_invisible="1"/>
+                <field name="date"/>
+                <field name="move_id"/>
+                <field name="expedient_id"/>
+                <field name="partner_id"/>
+                <field name="requestor_department_id" optional="show"/>
+                <field name="contract_kind" optional="hide"/>
+                <field name="analytic_account_id" optional="hide"/>
+                <field name="payment_state" widget="badge"
+                       decoration-success="payment_state == 'paid'"
+                       decoration-info="payment_state == 'in_payment'"
+                       decoration-warning="payment_state == 'partial'"/>
+                <field name="amount" sum="Total facturado"/>
+                <field name="amount_paid" sum="Total pagado"/>
+                <field name="amount_residual" sum="Total pendiente" optional="show"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_expedient_locacion_invoice_pivot" model="ir.ui.view">
+        <field name="name">fund.expedient.contract.invoice.report.pivot</field>
+        <field name="model">fund.expedient.contract.invoice.report</field>
+        <field name="type">pivot</field>
+        <field name="arch" type="xml">
+            <pivot string="Facturación de contrataciones">
+                <field name="expedient_id" type="row"/>
+                <field name="date" interval="month" type="col"/>
+                <field name="amount" type="measure"/>
+                <field name="amount_paid" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="view_expedient_locacion_invoice_graph" model="ir.ui.view">
+        <field name="name">fund.expedient.contract.invoice.report.graph</field>
+        <field name="model">fund.expedient.contract.invoice.report</field>
+        <field name="type">graph</field>
+        <field name="arch" type="xml">
+            <graph string="Facturación de contrataciones" type="bar">
+                <field name="date" interval="month"/>
+                <field name="amount" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="view_expedient_locacion_invoice_search" model="ir.ui.view">
+        <field name="name">fund.expedient.contract.invoice.report.search</field>
+        <field name="model">fund.expedient.contract.invoice.report</field>
+        <field name="arch" type="xml">
+            <search string="Buscar facturación">
+                <field name="expedient_id"/>
+                <field name="move_id"/>
+                <field name="partner_id"/>
+                <field name="requestor_department_id"/>
+                <field name="analytic_account_id"/>
+                <filter string="Pagadas" name="paid"
+                        domain="[('payment_state', 'in', ('paid', 'in_payment'))]"/>
+                <filter string="Con saldo pendiente" name="pending"
+                        domain="[('amount_residual', '!=', 0)]"/>
+                <separator/>
+                <filter string="Locación de Servicios" name="service_lease"
+                        domain="[('contract_kind', '=', 'service_lease')]"/>
+                <filter string="Locación de Obra" name="work_lease"
+                        domain="[('contract_kind', '=', 'work_lease')]"/>
+                <separator/>
+                <filter string="Fecha" name="filter_date" date="date"/>
+                <group expand="0" string="Agrupar por">
+                    <filter string="Expediente" name="group_expedient"
+                            context="{'group_by': 'expedient_id'}"/>
+                    <filter string="Proveedor" name="group_partner"
+                            context="{'group_by': 'partner_id'}"/>
+                    <filter string="Sector requirente" name="group_invoice_department"
+                            context="{'group_by': 'requestor_department_id'}"/>
+                    <filter string="Estado de pago" name="group_payment_state"
+                            context="{'group_by': 'payment_state'}"/>
+                    <filter string="Mes" name="group_invoice_month"
+                            context="{'group_by': 'date:month'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_expedient_locacion_invoices" model="ir.actions.act_window">
+        <field name="name">Facturación de contrataciones</field>
+        <field name="res_model">fund.expedient.contract.invoice.report</field>
+        <field name="view_mode">list,pivot,graph</field>
+        <field name="view_id" ref="view_expedient_locacion_invoice_list"/>
+        <field name="search_view_id" ref="view_expedient_locacion_invoice_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Todavía no hay facturas de contrataciones
+            </p>
+            <p>
+                Se listan las facturas publicadas de los expedientes de Locación que llegaron a
+                la etapa final de su flujo, vinculadas directamente o a través de la orden de
+                compra, con lo facturado, lo pagado y lo pendiente.
+            </p>
+        </field>
+    </record>
+
 </odoo>

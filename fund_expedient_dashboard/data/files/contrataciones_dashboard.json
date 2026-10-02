@@ -1,0 +1,516 @@
+{
+  "version": 22,
+  "sheets": [
+    {
+      "id": "sheet_contrataciones",
+      "name": "Contrataciones",
+      "colNumber": 26,
+      "rowNumber": 1000,
+      "rows": {},
+      "cols": {
+        "0": {
+          "size": 320
+        },
+        "1": {
+          "size": 160
+        }
+      },
+      "merges": [],
+      "cells": {
+        "A1": {
+          "content": "Tablero de Contrataciones (Locación)"
+        },
+        "A24": {
+          "content": "Comprometido por proveedor"
+        },
+        "A25": {
+          "content": "=PIVOT(5)"
+        }
+      },
+      "styles": {
+        "A1": 1,
+        "A24": 1
+      },
+      "formats": {},
+      "borders": {},
+      "conditionalFormats": [],
+      "dataValidationRules": [],
+      "figures": [
+        {
+          "id": "fig_kpi_contrataciones",
+          "x": 0,
+          "y": 40,
+          "width": 240,
+          "height": 110,
+          "tag": "chart",
+          "data": {
+            "type": "scorecard",
+            "title": {
+              "text": "Contrataciones",
+              "bold": true,
+              "color": "#434343"
+            },
+            "background": "#EFF6FF",
+            "keyValue": "Datos!C1",
+            "baselineMode": "difference",
+            "baselineColorUp": "#00A04A",
+            "baselineColorDown": "#DC6965",
+            "humanize": false
+          }
+        },
+        {
+          "id": "fig_kpi_comprometido",
+          "x": 250,
+          "y": 40,
+          "width": 240,
+          "height": 110,
+          "tag": "chart",
+          "data": {
+            "type": "scorecard",
+            "title": {
+              "text": "Comprometido (proyección)",
+              "bold": true,
+              "color": "#434343"
+            },
+            "background": "#EFF6FF",
+            "keyValue": "Datos!C2",
+            "baselineMode": "difference",
+            "baselineColorUp": "#00A04A",
+            "baselineColorDown": "#DC6965",
+            "humanize": false
+          }
+        },
+        {
+          "id": "fig_kpi_real",
+          "x": 500,
+          "y": 40,
+          "width": 240,
+          "height": 110,
+          "tag": "chart",
+          "data": {
+            "type": "scorecard",
+            "title": {
+              "text": "Real facturado",
+              "bold": true,
+              "color": "#434343"
+            },
+            "background": "#EFF6FF",
+            "keyValue": "Datos!C3",
+            "baselineMode": "difference",
+            "baselineColorUp": "#00A04A",
+            "baselineColorDown": "#DC6965",
+            "humanize": false
+          }
+        },
+        {
+          "id": "fig_kpi_pagado",
+          "x": 750,
+          "y": 40,
+          "width": 240,
+          "height": 110,
+          "tag": "chart",
+          "data": {
+            "type": "scorecard",
+            "title": {
+              "text": "Pagado",
+              "bold": true,
+              "color": "#434343"
+            },
+            "background": "#EFF6FF",
+            "keyValue": "Datos!C4",
+            "baselineMode": "difference",
+            "baselineColorUp": "#00A04A",
+            "baselineColorDown": "#DC6965",
+            "humanize": false
+          }
+        },
+        {
+          "id": "fig_comprometido_mes",
+          "x": 0,
+          "y": 170,
+          "width": 500,
+          "height": 330,
+          "tag": "chart",
+          "data": {
+            "type": "odoo_bar",
+            "title": {
+              "text": "Comprometido por mes (proyección)"
+            },
+            "background": "#FFFFFF",
+            "legendPosition": "none",
+            "verticalAxisPosition": "left",
+            "stacked": false,
+            "metaData": {
+              "groupBy": [
+                "month:month"
+              ],
+              "measure": "amount_month",
+              "order": null,
+              "resModel": "fund.expedient.contract.projection",
+              "mode": "bar"
+            },
+            "searchParams": {
+              "comparison": null,
+              "context": {},
+              "domain": [],
+              "groupBy": [
+                "month:month"
+              ],
+              "orderBy": []
+            },
+            "fieldMatching": {
+              "gf_period": {
+                "chain": "month",
+                "type": "date",
+                "offset": 0
+              },
+              "gf_sector": {
+                "chain": "requestor_department_id",
+                "type": "many2one"
+              }
+            }
+          }
+        },
+        {
+          "id": "fig_real_mes",
+          "x": 520,
+          "y": 170,
+          "width": 500,
+          "height": 330,
+          "tag": "chart",
+          "data": {
+            "type": "odoo_bar",
+            "title": {
+              "text": "Real facturado por mes"
+            },
+            "background": "#FFFFFF",
+            "legendPosition": "none",
+            "verticalAxisPosition": "left",
+            "stacked": false,
+            "metaData": {
+              "groupBy": [
+                "date:month"
+              ],
+              "measure": "amount",
+              "order": null,
+              "resModel": "fund.expedient.contract.invoice.report",
+              "mode": "bar"
+            },
+            "searchParams": {
+              "comparison": null,
+              "context": {},
+              "domain": [],
+              "groupBy": [
+                "date:month"
+              ],
+              "orderBy": []
+            },
+            "fieldMatching": {
+              "gf_period": {
+                "chain": "date",
+                "type": "date",
+                "offset": 0
+              },
+              "gf_sector": {
+                "chain": "requestor_department_id",
+                "type": "many2one"
+              }
+            }
+          }
+        }
+      ],
+      "tables": [],
+      "areGridLinesVisible": false,
+      "isVisible": true,
+      "headerGroups": {
+        "ROW": [],
+        "COL": []
+      },
+      "comments": {}
+    },
+    {
+      "id": "sheet_datos",
+      "name": "Datos",
+      "colNumber": 26,
+      "rowNumber": 100,
+      "rows": {},
+      "cols": {},
+      "merges": [],
+      "cells": {
+        "A1": {
+          "content": "Contrataciones (expedientes finalizados)"
+        },
+        "B1": {
+          "content": "=PIVOT.VALUE(1,\"__count\")"
+        },
+        "C1": {
+          "content": "=FORMAT.LARGE.NUMBER(B1)"
+        },
+        "A2": {
+          "content": "Comprometido en el período (proyección)"
+        },
+        "B2": {
+          "content": "=PIVOT.VALUE(2,\"amount_month\")"
+        },
+        "C2": {
+          "content": "=FORMAT.LARGE.NUMBER(B2)"
+        },
+        "A3": {
+          "content": "Real facturado en el período"
+        },
+        "B3": {
+          "content": "=PIVOT.VALUE(3,\"amount\")"
+        },
+        "C3": {
+          "content": "=FORMAT.LARGE.NUMBER(B3)"
+        },
+        "A4": {
+          "content": "Pagado en el período"
+        },
+        "B4": {
+          "content": "=PIVOT.VALUE(4,\"amount_paid\")"
+        },
+        "C4": {
+          "content": "=FORMAT.LARGE.NUMBER(B4)"
+        }
+      },
+      "styles": {},
+      "formats": {
+        "B2": 1,
+        "B3": 1,
+        "B4": 1
+      },
+      "borders": {},
+      "conditionalFormats": [],
+      "dataValidationRules": [],
+      "figures": [],
+      "tables": [],
+      "areGridLinesVisible": true,
+      "isVisible": true,
+      "headerGroups": {
+        "ROW": [],
+        "COL": []
+      },
+      "comments": {}
+    }
+  ],
+  "styles": {
+    "1": {
+      "textColor": "#01666b",
+      "fontSize": 16,
+      "bold": true
+    }
+  },
+  "formats": {
+    "1": "#,##0.00"
+  },
+  "borders": {},
+  "revisionId": "START_REVISION",
+  "uniqueFigureIds": true,
+  "settings": {
+    "locale": {
+      "name": "English (US)",
+      "code": "en_US",
+      "thousandsSeparator": ",",
+      "decimalSeparator": ".",
+      "dateFormat": "mm/dd/yyyy",
+      "timeFormat": "hh:mm:ss",
+      "formulaArgSeparator": ",",
+      "weekStart": 7
+    }
+  },
+  "pivots": {
+    "1": {
+      "type": "ODOO",
+      "name": "Contrataciones",
+      "model": "fund.expedient",
+      "measures": [
+        {
+          "id": "__count",
+          "fieldName": "__count"
+        }
+      ],
+      "columns": [],
+      "rows": [],
+      "domain": [
+        [
+          "contract_kind",
+          "in",
+          [
+            "service_lease",
+            "work_lease"
+          ]
+        ],
+        [
+          "stage_is_final",
+          "=",
+          true
+        ]
+      ],
+      "context": {},
+      "sortedColumn": null,
+      "fieldMatching": {
+        "gf_period": {
+          "chain": "request_date",
+          "type": "date",
+          "offset": 0
+        },
+        "gf_sector": {
+          "chain": "requestor_department_id",
+          "type": "many2one"
+        }
+      }
+    },
+    "2": {
+      "type": "ODOO",
+      "name": "Comprometido (proyección)",
+      "model": "fund.expedient.contract.projection",
+      "measures": [
+        {
+          "id": "amount_month",
+          "fieldName": "amount_month",
+          "aggregator": "sum"
+        }
+      ],
+      "columns": [],
+      "rows": [],
+      "domain": [],
+      "context": {},
+      "sortedColumn": null,
+      "fieldMatching": {
+        "gf_period": {
+          "chain": "month",
+          "type": "date",
+          "offset": 0
+        },
+        "gf_sector": {
+          "chain": "requestor_department_id",
+          "type": "many2one"
+        }
+      }
+    },
+    "3": {
+      "type": "ODOO",
+      "name": "Real facturado",
+      "model": "fund.expedient.contract.invoice.report",
+      "measures": [
+        {
+          "id": "amount",
+          "fieldName": "amount",
+          "aggregator": "sum"
+        }
+      ],
+      "columns": [],
+      "rows": [],
+      "domain": [],
+      "context": {},
+      "sortedColumn": null,
+      "fieldMatching": {
+        "gf_period": {
+          "chain": "date",
+          "type": "date",
+          "offset": 0
+        },
+        "gf_sector": {
+          "chain": "requestor_department_id",
+          "type": "many2one"
+        }
+      }
+    },
+    "4": {
+      "type": "ODOO",
+      "name": "Pagado",
+      "model": "fund.expedient.contract.invoice.report",
+      "measures": [
+        {
+          "id": "amount_paid",
+          "fieldName": "amount_paid",
+          "aggregator": "sum"
+        }
+      ],
+      "columns": [],
+      "rows": [],
+      "domain": [],
+      "context": {},
+      "sortedColumn": null,
+      "fieldMatching": {
+        "gf_period": {
+          "chain": "date",
+          "type": "date",
+          "offset": 0
+        },
+        "gf_sector": {
+          "chain": "requestor_department_id",
+          "type": "many2one"
+        }
+      }
+    },
+    "5": {
+      "type": "ODOO",
+      "name": "Comprometido por proveedor",
+      "model": "fund.expedient.contract.projection",
+      "measures": [
+        {
+          "id": "amount_month",
+          "fieldName": "amount_month",
+          "aggregator": "sum"
+        }
+      ],
+      "columns": [],
+      "rows": [
+        {
+          "fieldName": "partner_id",
+          "order": "asc"
+        }
+      ],
+      "domain": [],
+      "context": {},
+      "sortedColumn": {
+        "groupId": [
+          [],
+          []
+        ],
+        "measure": "amount_month",
+        "order": "desc"
+      },
+      "fieldMatching": {
+        "gf_period": {
+          "chain": "month",
+          "type": "date",
+          "offset": 0
+        },
+        "gf_sector": {
+          "chain": "requestor_department_id",
+          "type": "many2one"
+        }
+      }
+    }
+  },
+  "pivotNextId": 6,
+  "customTableStyles": {},
+  "odooVersion": 12,
+  "globalFilters": [
+    {
+      "id": "gf_period",
+      "type": "date",
+      "label": "Período",
+      "defaultValue": "this_year",
+      "rangeType": "fixedPeriod"
+    },
+    {
+      "id": "gf_sector",
+      "type": "relation",
+      "label": "Sector requirente",
+      "modelName": "hr.department",
+      "defaultValue": [],
+      "defaultValueDisplayNames": [],
+      "rangeType": "year"
+    }
+  ],
+  "lists": {},
+  "listNextId": 1,
+  "chartOdooMenusReferences": {
+    "fig_comprometido_mes": "fund_expedient.menu_fund_expedient_reports_locacion_projection",
+    "fig_real_mes": "fund_expedient.menu_fund_expedient_reports_locacion_invoices"
+  }
+}
