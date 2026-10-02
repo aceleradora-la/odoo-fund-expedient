@@ -5,11 +5,15 @@ import re
 
 from odoo import _, api, models
 from odoo.exceptions import AccessError, UserError
+from odoo.tools import html2plaintext
 
 # Método de la localización de ADHOC (`l10n_ar_edi_ux`) que completa el
 # contacto desde el padrón de ARCA. Es el mismo que llama el botón «Update
 # From AFIP» de la ficha del contacto.
 PADRON_METHOD = "button_update_partner_data_from_afip"
+# Asistente de la misma localización que trae los datos del padrón y los
+# aplica. Ver `_fill_partner_from_padron`.
+PADRON_WIZARD = "res.partner.update.from.padron.wizard"
 
 
 class ExpedientSupplierCuit(models.AbstractModel):
@@ -87,7 +91,39 @@ class ExpedientSupplierCuit(models.AbstractModel):
 
     @api.model
     def _padron_available(self):
-        return hasattr(self.env["res.partner"], PADRON_METHOD)
+        return PADRON_WIZARD in self.env or hasattr(self.env["res.partner"], PADRON_METHOD)
+
+    @api.model
+    def _fill_partner_from_padron(self, partner):
+        """Completa el contacto con los datos del padrón y los APLICA.
+
+        El botón «Update From AFIP» (`button_update_partner_data_from_afip`)
+        no escribe nada: arma el asistente con las diferencias y devuelve la
+        acción para mostrarlo, y los cambios se aplican recién cuando el
+        usuario lo confirma. Llamarlo desde código dejaba el contacto vacío.
+        Sin pantalla se usa el procesamiento automático del mismo asistente,
+        el que la localización ofrece para actualizar en lote: trae el padrón
+        y aplica los campos configurados.
+
+        Ese procesamiento no corta ante un error de ARCA: lo deja como nota en
+        el contacto y sigue. Se devuelve el texto de esa nota, si la hubo, para
+        poder decir por qué no se pudo crear.
+        """
+        if PADRON_WIZARD not in self.env:
+            # Versiones de la localización que actualizan el contacto directo.
+            getattr(partner, PADRON_METHOD)()
+            return ""
+        wizard = (
+            self.env[PADRON_WIZARD]
+            .sudo()
+            .with_context(active_ids=partner.ids, active_model="res.partner")
+            .create({})
+        )
+        wizard.automatic_process_cb()
+        failure = partner.message_ids.filtered(
+            lambda m: "AFIP" in html2plaintext(m.body or "")
+        )[:1]
+        return html2plaintext(failure.body or "").strip() if failure else ""
 
     # ------------------------------------------------------------------
     # Permisos
@@ -174,9 +210,10 @@ class ExpedientSupplierCuit(models.AbstractModel):
         """Contacto nuevo con los datos del padrón; sin datos, no se crea.
 
         Se crea un contacto mínimo (CUIT, tipo de identificación, país) y se
-        lo completa con el método de la localización. Todo dentro de un
-        savepoint: si el padrón falla o no devuelve nada, no queda ningún
-        contacto a medio cargar.
+        lo completa con el padrón vía la localización
+        (`_fill_partner_from_padron`). Todo dentro de un savepoint: si el
+        padrón falla o no devuelve nada, no queda ningún contacto a medio
+        cargar.
         """
         Partner = self.env["res.partner"].sudo()
         if not self._padron_available():
@@ -204,9 +241,9 @@ class ExpedientSupplierCuit(models.AbstractModel):
         try:
             with self.env.cr.savepoint():
                 partner = Partner.create(vals)
-                getattr(partner, PADRON_METHOD)()
+                afip_error = self._fill_partner_from_padron(partner)
                 if not partner.name or partner.name == placeholder:
-                    raise UserError(_("El padrón no devolvió datos."))
+                    raise UserError(afip_error or _("El padrón no devolvió datos."))
         except UserError as exc:
             raise UserError(
                 _(
