@@ -15,6 +15,10 @@ Uso, desde la shell de odoo.sh (o cualquier `odoo-bin shell`):
 Por defecto corre en MODO PRUEBA: hace todo, informa y deshace (rollback).
 Para grabar, agregar MIGRACION_GRABAR=1.
 
+Los proveedores con CUIT válido que no existen se crean con los datos del
+padrón de ARCA, igual que «Crear desde ARCA» del expediente (nunca con el
+CUIT como único dato). Para no crearlos: MIGRACION_CREAR_CONTACTOS=0.
+
 Es idempotente y se puede volver a correr tras corregir: un expediente que ya
 existe no se recrea, pero se le agregan las líneas que todavía no tiene (un
 contrato se identifica por proveedor + fecha de inicio + fecha de fin). Así,
@@ -27,7 +31,9 @@ producción, aunque los ID difieran):
 - Proveedor, POR CUIT. Entre contactos con el mismo CUIT gana el que ya se
   usó como proveedor, igual que el buscador por CUIT del expediente.
 - Partida: cuenta analítica por código, dentro del plan configurado para
-  Expedientes.
+  Expedientes. Acepta el código con o sin punto final («2.4.3.3» y
+  «2.4.3.3.»), y al final informa qué cuenta tomó para cada código, para
+  verificar que coincida con la planilla.
 - Solicitante: el empleado indicado para las iniciales del gerente, sin
   importar tildes ni mayúsculas (define el sector requirente).
 - Tipo: «Locación de Servicios/Obra — contratos previos», que se crea si no
@@ -46,6 +52,7 @@ from collections import Counter
 from datetime import date
 
 GRABAR = os.environ.get("MIGRACION_GRABAR") == "1"
+CREAR_CONTACTOS = os.environ.get("MIGRACION_CREAR_CONTACTOS", "1") != "0"
 JSON_PATH = os.path.expanduser(os.environ.get("MIGRACION_JSON", "~/contratos_previos.json"))
 
 TYPES = {
@@ -62,7 +69,9 @@ Line = env["fund.expedient.line"].with_context(**quiet)
 Partner = env["res.partner"].with_context(active_test=False)
 Employee = env["hr.employee"].with_context(active_test=False)
 Analytic = env["account.analytic.account"]
+Cuit = env["fund.expedient.supplier.cuit"]
 company = env.company
+created_partners = Partner.browse()
 
 
 def norm(text):
@@ -75,13 +84,31 @@ def digits(value):
 
 
 def find_partner(cuit):
+    global created_partners
     d = digits(cuit)
-    if len(d) != 11:
-        return Partner.browse(), "CUIT inválido o vacío"
+    if not d:
+        return Partner.browse(), "sin CUIT en la planilla"
+    if not Cuit._cuit_is_valid(d):
+        return Partner.browse(), (
+            f"CUIT {cuit} mal tipeado en la planilla "
+            f"({len(d)} dígitos)" if len(d) != 11
+            else f"CUIT {cuit} mal tipeado en la planilla (no verifica el dígito verificador)"
+        )
     formatted = f"{d[:2]}-{d[2:10]}-{d[10]}"
     found = Partner.search(["|", ("vat", "=", d), ("vat", "=", formatted)])
     if not found:
-        return found, f"no existe un contacto con CUIT {formatted}"
+        if not CREAR_CONTACTOS:
+            return found, f"no existe un contacto con CUIT {formatted}"
+        try:
+            with env.cr.savepoint():
+                partner = Cuit._create_partner_from_padron(d, env["fund.expedient"])
+        except Exception as exc:  # padrón caído, sin certificado, CUIT inexistente...
+            return Partner.browse(), (
+                f"no existe un contacto con CUIT {formatted} y no se pudo crear "
+                f"desde ARCA: {str(exc).strip().splitlines()[0]}"
+            )
+        created_partners |= partner
+        return partner, ""
     if len(found) == 1:
         return found, ""
     used = found.filtered(lambda p: p.supplier_rank > 0)
@@ -93,9 +120,12 @@ def find_partner(cuit):
 analytic_cache = {}
 
 
+used_analytics = Counter()
+
+
 def find_analytic(code, plan):
     if code not in analytic_cache:
-        domain = [("code", "=", code)]
+        domain = [("code", "in", [code, code.rstrip(".") + "."])]
         if plan:
             domain.append(("plan_id", "child_of", plan.id))
         found = Analytic.search(domain)
@@ -181,6 +211,7 @@ for exp in payload["expedientes"]:
             problems.append((number, ln["consultor"], "; ".join(errors)))
             continue
         ready.append((ln, partner, analytic))
+        used_analytics[(ln["partida"], analytic.display_name)] += 1
 
     existing = Expedient.search([("number", "=", number)], limit=1)
     if existing:
@@ -249,6 +280,14 @@ if touched:
     print(f"  importe total en los expedientes cargados: {total:,.2f}")
     print(f"  finalizados (entran en la proyección): "
           f"{sum(touched.mapped('stage_is_final'))} de {len(touched)}")
+if created_partners:
+    print(f"\nCONTACTOS CREADOS DESDE ARCA ({len(created_partners)}):")
+    for partner in created_partners:
+        print(f"  {partner.vat}  {partner.name}")
+if used_analytics:
+    print("\nPARTIDAS USADAS (código en la planilla -> cuenta en Odoo):")
+    for (code, name), n in sorted(used_analytics.items()):
+        print(f"  {code:<10} -> {name}  ({n} líneas)")
 if problems:
     print("\nPROBLEMAS (lo que no se cargó):")
     for number, who, err in problems:
