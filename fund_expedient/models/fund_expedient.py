@@ -284,6 +284,14 @@ class FundExpedient(models.Model):
         compute="_compute_allowed_stage_ids",
         string="Etapas permitidas",
     )
+    allowed_stage_order = fields.Char(
+        compute="_compute_allowed_stage_ids",
+        string="Orden de las etapas (técnico)",
+        help="Ids de las etapas permitidas en el orden del flujo del tipo. Lo usa "
+        "la barra de etapas del formulario: el navegador pide las etapas sin decir "
+        "de qué tipo es el expediente y el servidor las devuelve en el orden "
+        "general, así que el orden del tipo se aplica en el navegador.",
+    )
     stage_is_final = fields.Boolean(
         string="En la etapa final del flujo",
         compute="_compute_stage_is_final",
@@ -536,6 +544,7 @@ class FundExpedient(models.Model):
         "stage_id",
         "type_id",
         "type_id.stage_assign_ids.stage_id",
+        "type_id.stage_assign_ids.sequence",
         "company_id",
     )
     def _compute_has_adjacent_stages(self):
@@ -859,16 +868,14 @@ class FundExpedient(models.Model):
         """Devuelve la etapa inicial válida para un tipo.
 
         Regla: si el tipo define `stage_assign_ids`, la etapa inicial es la primera
-        (por sequence) dentro de esas asignaciones. Si no define, se usa borrador.
+        del recorrido del tipo (orden de su lista de etapas, ver
+        `fund.expedient.type._flow_stages`). Si no define, se usa borrador.
         """
         company = company or self.env.company
         if expedient_type and expedient_type.stage_assign_ids:
-            stages = (
-                expedient_type.stage_assign_ids.mapped("stage_id")
-                .filtered(lambda s: s.company_id in (False, company))
-                .sorted(key=lambda s: (s.sequence, s.id))
-            )
-            return stages[:1]
+            return expedient_type._flow_stages().filtered(
+                lambda s: not s.company_id or s.company_id == company
+            )[:1]
         return self._get_default_draft_stage(company=company)
 
     @api.depends("stage_id", "stage_id.state_type", "stage_is_final")
@@ -1047,6 +1054,7 @@ class FundExpedient(models.Model):
         "type_id.stage_assign_ids.stage_id",
         "type_id.stage_assign_ids.stage_id.final_outcome_type_id",
         "type_id.stage_assign_ids.is_final_stage",
+        "type_id.stage_assign_ids.sequence",
         "stage_id",
         "company_id",
     )
@@ -1055,9 +1063,7 @@ class FundExpedient(models.Model):
         Assign = self.env["fund.expedient.type.stage.assign"]
         for rec in self:
             if rec.type_id and rec.type_id.stage_assign_ids:
-                ordered = rec.type_id.stage_assign_ids.mapped("stage_id").sorted(
-                    key=lambda s: (s.sequence, s.id)
-                )
+                ordered = rec.type_id._ordered_stages()
                 assign = False
                 if rec.stage_id:
                     assign = Assign.search(
@@ -1077,19 +1083,21 @@ class FundExpedient(models.Model):
                     allowed = ordered[: idx + 1]
                 else:
                     allowed = ordered
-                # Las etapas de resultado final (Desierto/Sin efecto/Fracasado)
-                # no se ofrecen en el statusbar: se llega a ellas solo con la
-                # Disposición. Si el expediente YA está en una, se muestra.
-                rec.allowed_stage_ids = allowed.filtered(
-                    lambda s: not s.final_outcome_type_id or s == rec.stage_id
-                )
             else:
-                stages = Stage.search(
+                # Sin asignaciones no hay orden de tipo: rige el general.
+                allowed = Stage.search(
                     [("company_id", "in", [False, rec.company_id.id])], order="sequence, id"
                 )
-                rec.allowed_stage_ids = stages.filtered(
-                    lambda s: not s.final_outcome_type_id or s == rec.stage_id
-                )
+            # Las etapas de cierre no se ofrecen en la barra: a las de resultado
+            # final (Desierto/Sin efecto/Fracasado) se llega con la Disposición
+            # y a Cancelado con el botón Cancelar. Si el expediente YA está en
+            # una, se muestra.
+            shown = allowed.filtered(
+                lambda s: (not s.final_outcome_type_id and s.state_type != "cancel")
+                or s == rec.stage_id
+            )
+            rec.allowed_stage_ids = shown
+            rec.allowed_stage_order = ",".join(str(stage_id) for stage_id in shown.ids)
 
     @api.onchange("type_id")
     def _onchange_type_id_clear_estimated(self):
@@ -1106,7 +1114,9 @@ class FundExpedient(models.Model):
         if self.type_id:
             allowed = self.type_id.stage_assign_ids.mapped("stage_id")
             if allowed and (not self.stage_id or self.stage_id not in allowed):
-                self.stage_id = allowed.sorted(key=lambda s: (s.sequence, s.id))[:1].id
+                self.stage_id = self._get_initial_stage_for_type(
+                    self.type_id, company=self.company_id or self.env.company
+                )
 
     def _read_group_stage_ids(self, stages, domain):
         """Etapas en kanban / statusbar: ordenadas por secuencia (corrige orden con filtros como Mis expedientes)."""
@@ -1238,23 +1248,24 @@ class FundExpedient(models.Model):
     def _get_allowed_stages(self):
         """Etapas del flujo SECUENCIAL del expediente según su tipo.
 
-        Excluye las etapas marcadas con un «Resultado final» (Desierto, Sin
-        efecto, Fracasado o cualquier otro tipo de disposición que cierre):
-        son cierres alternativos a los que solo se llega aplicando una
-        Disposición; nunca por "Siguiente etapa" ni por el avance del portal.
+        El orden es el de la lista de etapas del tipo
+        (`fund.expedient.type._flow_stages`), no la secuencia general de la
+        etapa. Excluye las etapas de cierre: las de «Resultado final»
+        (Desierto, Sin efecto, Fracasado...), a las que solo se llega aplicando
+        una Disposición, y la de cancelación, a la que se llega con Cancelar;
+        nunca por "Siguiente etapa" ni por el avance del portal. Sin
+        asignaciones en el tipo rige el orden general de las etapas.
         """
         Stage = self.env["fund.expedient.stage"]
         for rec in self:
             if rec.type_id and rec.type_id.stage_assign_ids:
-                allowed = rec.type_id.stage_assign_ids.mapped("stage_id").filtered(
-                    lambda s: not s.final_outcome_type_id
-                )
-                yield rec, allowed.sorted(key=lambda s: (s.sequence, s.id))
+                yield rec, rec.type_id._flow_stages()
             else:
                 all_stages = Stage.search(
                     [
                         ("company_id", "in", [False, rec.company_id.id]),
                         ("final_outcome_type_id", "=", False),
+                        ("state_type", "!=", "cancel"),
                     ],
                     order="sequence, id",
                 )
@@ -1997,9 +2008,7 @@ class FundExpedient(models.Model):
                 new_stage = self.env["fund.expedient.stage"].browse(new_vals["stage_id"])
                 expedient_type = rec.type_id
                 if expedient_type.stage_assign_ids:
-                    ordered = expedient_type.stage_assign_ids.mapped("stage_id").sorted(
-                        key=lambda s: (s.sequence, s.id)
-                    )
+                    ordered = expedient_type._ordered_stages()
                     if (
                         rec.stage_id.id in ordered.ids
                         and new_stage.id in ordered.ids
@@ -2719,12 +2728,9 @@ class FundExpedient(models.Model):
         """
         self.ensure_one()
         if self.type_id and self.type_id.stage_assign_ids:
-            stages = (
-                self.type_id.stage_assign_ids.mapped("stage_id")
-                .filtered(lambda s: s.final_outcome_type_id == disposition_type)
-                .sorted(key=lambda s: (s.sequence, s.id))
-            )
-            return stages[:1]
+            return self.type_id._ordered_stages().filtered(
+                lambda s: s.final_outcome_type_id == disposition_type
+            )[:1]
         return self.env["fund.expedient.stage"].search(
             [
                 ("final_outcome_type_id", "=", disposition_type.id),

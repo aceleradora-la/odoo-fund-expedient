@@ -76,10 +76,12 @@
         <field name="arch" type="xml">
             <form string="Expediente">
                 <header>
-                    <field name="stage_id" widget="statusbar"/>
+                    <!-- En el orden de la lista de etapas del tipo, no en el general. -->
+                    <field name="stage_id" widget="fund_stage_statusbar"/>
                     <field name="state" invisible="1"/>
                     <field name="can_edit_in_stage" invisible="1"/>
                     <field name="allowed_stage_ids" invisible="1"/>
+                    <field name="allowed_stage_order" invisible="1"/>
                     <field name="stage_spend_request_mode" invisible="1"/>
                     <field name="can_create_spend_request_preventiva" invisible="1"/>
                     <field name="can_create_spend_request_final" invisible="1"/>

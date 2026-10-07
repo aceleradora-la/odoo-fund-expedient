@@ -331,6 +331,34 @@ class ExpedientType(models.Model):
         help="Modelo de referencia para el selector de campos dinámicos (uso interno del widget).",
     )
 
+    def _ordered_stages(self):
+        """Etapas del tipo, en el orden de su lista de etapas.
+
+        El orden del flujo es el de las filas de la pestaña de etapas del tipo
+        (la «Secuencia» de cada asignación, la que se mueve arrastrando), no la
+        secuencia general de la etapa: las etapas se comparten entre tipos y
+        cada tipo tiene su propio recorrido. A igual secuencia va la fila que
+        se cargó primero, que es también como se muestra la lista.
+        """
+        self.ensure_one()
+        stages = self.env["fund.expedient.stage"]
+        for assign in self.stage_assign_ids.sorted(lambda a: (a.sequence, a.id)):
+            stages |= assign.stage_id
+        return stages
+
+    def _flow_stages(self):
+        """El recorrido secuencial del tipo, sin las etapas de cierre.
+
+        Quedan afuera las de resultado final (Desierto, Sin efecto,
+        Fracasado), a las que se llega aplicando una Disposición, y la de
+        cancelación, a la que se llega con Cancelar: ninguna es un paso al
+        que se avance con «Siguiente etapa».
+        """
+        self.ensure_one()
+        return self._ordered_stages().filtered(
+            lambda s: not s.final_outcome_type_id and s.state_type != "cancel"
+        )
+
     def _compute_dynamic_placeholder_model(self):
         for rec in self:
             rec.dynamic_placeholder_model = "fund.expedient"
