@@ -18,13 +18,19 @@ en una sola hoja, alimentados por los modelos de estos addons:
 | Gráfico | Tipo | Modelo Odoo | Medida | Agrupado por |
 |---|---|---|---|---|
 | Expedientes por etapa | barras | `fund.expedient` | conteo (`__count`) | `stage_id` |
-| Presupuesto por cuenta analítica | barras | `fund.budget.line` | `amount_total` | `analytic_account_id` |
+| Ejecución presupuestaria por cuenta analítica | barras | `fund.expedient.budget.execution` | `amount` | `analytic_account_id`, `concept` |
 | Solicitudes de gasto (definitiva) por mes | líneas | `fund.expedient.spend.request` | `amount_definitiva` | `date_definitiva:month` |
 | Validaciones por estado | torta | `tier.review` | `approval_qty` | `status` |
 | Tiempo promedio hasta finalizar (KPI) | scorecard | `fund.expedient` | `days_to_done` (promedio) | — (filtro `days_to_done_measured`) |
 
 Filtro global: **Período** (fecha, `this_year`), cableado por `fieldMatching` a `request_date`
 (expedientes), `date_definitiva` (solicitudes de gasto) y `create_date` (validaciones).
+
+El gráfico de **ejecución presupuestaria** compara, por cuenta analítica, Presupuesto, Comprometido
+y Real contra el presupuesto analítico de Contabilidad (módulo `fund_expedient_account_budget`
+18.0.1.1.0 o posterior). Toma los presupuestos en Borrador y Abiertos: si conviven varias versiones
+del mismo año, elegí cuál mirar con el filtro **Presupuesto**, o se suman. El filtro Período se
+cablea a la fecha de inicio del presupuesto.
 
 El KPI **Tiempo promedio hasta finalizar** promedia los días desde que el expediente se cargó en
 Odoo hasta que llegó a la etapa final de su flujo, para los expedientes **finalizados en el
