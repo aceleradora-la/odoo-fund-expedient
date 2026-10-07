@@ -1,11 +1,16 @@
 # Copyright 2026
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 
+import logging
 import re
 
-from odoo import _, api, models
+import psycopg2
+
+from odoo import _, api, fields, models
 from odoo.exceptions import AccessError, UserError
 from odoo.tools import html2plaintext
+
+_logger = logging.getLogger(__name__)
 
 # Método de la localización de ADHOC (`l10n_ar_edi_ux`) que completa el
 # contacto desde el padrón de ARCA. Es el mismo que llama el botón «Update
@@ -14,6 +19,8 @@ PADRON_METHOD = "button_update_partner_data_from_afip"
 # Asistente de la misma localización que trae los datos del padrón y los
 # aplica. Ver `_fill_partner_from_padron`.
 PADRON_WIZARD = "res.partner.update.from.padron.wizard"
+# Servicio de ARCA que consulta el padrón (constancia de inscripción).
+PADRON_WS = "ws_sr_constancia_inscripcion"
 
 
 class ExpedientSupplierCuit(models.AbstractModel):
@@ -92,6 +99,51 @@ class ExpedientSupplierCuit(models.AbstractModel):
     @api.model
     def _padron_available(self):
         return PADRON_WIZARD in self.env or hasattr(self.env["res.partner"], PADRON_METHOD)
+
+    @api.model
+    def _is_placeholder(self, partner):
+        """Contacto que quedó con el nombre provisorio («CUIT 20-…»), sin datos del padrón."""
+        digits = self._cuit_digits(partner.vat)
+        return bool(len(digits) == 11 and partner.name == _("CUIT %s") % self._cuit_format(digits))
+
+    @api.model
+    def _ensure_padron_connection(self):
+        """Pide a ARCA el token del padrón ANTES de cualquier savepoint.
+
+        La conexión de la localización (`_l10n_ar_get_connection` de
+        l10n_ar_edi) hace `commit` al guardar un token nuevo: ARCA no entrega
+        otro mientras el anterior siga vigente, así que no quiere perderlo si
+        después algo falla. Ese commit dentro de un savepoint lo invalida
+        («savepoint does not exist») y además confirma todo lo pendiente.
+        Pedir el token acá, antes de escribir nada, deja el commit sin efecto
+        práctico; las consultas siguientes reutilizan el token (dura horas) y
+        ya no hacen commit.
+
+        Elige la compañía igual que la localización: la actual si su
+        certificado está vigente; si no, la primera con certificado vigente.
+        Si algo falla se deja pasar: el error real aparece en la consulta.
+        """
+        Company = self.env["res.company"]
+        if not hasattr(Company, "_l10n_ar_get_connection") or "certificate.certificate" not in self.env:
+            return
+        today = fields.Date.context_today(self.with_context(tz="America/Argentina/Buenos_Aires"))
+        certificates = (
+            self.env["certificate.certificate"]
+            .sudo()
+            .search([("active", "=", True), ("date_end", ">=", today)])
+            .filtered(lambda c: c.country_code == "AR")
+        )
+        company = self.env.company.sudo()
+        if "l10n_ar_afip_ws_crt_id" not in company._fields or company.l10n_ar_afip_ws_crt_id not in certificates:
+            company = certificates[:1].company_id.sudo()
+        if not company:
+            return
+        try:
+            company._l10n_ar_get_connection(PADRON_WS)
+        except psycopg2.Error:
+            raise
+        except Exception:  # certificado, red, ARCA caído: se informa en la consulta
+            _logger.info("No se pudo obtener de antemano el token del padrón de ARCA.", exc_info=True)
 
     @api.model
     def _fill_partner_from_padron(self, partner):
@@ -225,6 +277,8 @@ class ExpedientSupplierCuit(models.AbstractModel):
             )
         formatted = self._cuit_format(digits)
         placeholder = _("CUIT %s") % formatted
+        # Fuera del savepoint: el token nuevo se guarda con commit.
+        self._ensure_padron_connection()
         vals = {
             "name": placeholder,
             "vat": digits,

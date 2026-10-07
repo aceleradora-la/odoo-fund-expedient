@@ -96,6 +96,17 @@ def find_partner(cuit):
         )
     formatted = f"{d[:2]}-{d[2:10]}-{d[10]}"
     found = Partner.search(["|", ("vat", "=", d), ("vat", "=", formatted)])
+    # Contacto provisorio («CUIT 20-…») que quedó de un intento anterior sin
+    # los datos del padrón: se lo completa en lugar de usarlo así.
+    for partner in found.filtered(Cuit._is_placeholder):
+        if CREAR_CONTACTOS:
+            Cuit._fill_partner_from_padron(partner)
+        if Cuit._is_placeholder(partner):
+            return Partner.browse(), (
+                f"el contacto con CUIT {formatted} quedó sin datos del padrón "
+                f"(id {partner.id}): completarlo a mano o borrarlo"
+            )
+        created_partners |= partner
     if not found:
         if not CREAR_CONTACTOS:
             return found, f"no existe un contacto con CUIT {formatted}"
@@ -204,6 +215,12 @@ def line_key(partner_id, start, end):
 with open(JSON_PATH, encoding="utf-8") as fh:
     payload = json.load(fh)
 managers = payload.get("gerentes", {})
+
+# El token del padrón de ARCA se pide ANTES de escribir nada: la localización
+# hace commit al guardarlo, y en medio de la carga ese commit grababa lo hecho
+# hasta ahí aunque fuera MODO PRUEBA (y rompía los savepoints).
+if CREAR_CONTACTOS:
+    Cuit._ensure_padron_connection()
 
 plan = env["fund.expedient.config"].get_analytic_plan(company)
 final_stage = env.ref("fund_expedient.stage_expedient_approved")
