@@ -96,14 +96,17 @@ class PurchaseRequisitionCreateAlternative(models.TransientModel):
 
         res = super().action_create_alternative()
 
-        if not origin_po or not origin_po.expedient_ids:
+        # sudo: la alternativa hereda TODOS los expedientes de la OC original,
+        # también los que el usuario no ve.
+        origin_expedients = origin_po.sudo().expedient_ids if origin_po else False
+        if not origin_expedients:
             return res
 
         new_alt = self._get_new_alternative_po(origin_po, before_alt_ids, res)
         if not new_alt:
             return res
 
-        new_alt.write({"expedient_ids": [(6, 0, origin_po.expedient_ids.ids)]})
+        new_alt.sudo().write({"expedient_ids": [(6, 0, origin_expedients.ids)]})
 
         orig_lines = origin_po.order_line.sorted(key=lambda l: (l.sequence, l.id))
         for alt in new_alt:

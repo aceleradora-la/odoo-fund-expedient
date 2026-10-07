@@ -3,6 +3,8 @@
 
 from odoo import api, fields, models
 
+from .expedient_link import link_web_read, link_write
+
 
 class AccountMove(models.Model):
     _inherit = "account.move"
@@ -180,7 +182,7 @@ class AccountMove(models.Model):
     def _apply_expedient_analytic_distribution(self):
         """Propaga la cuenta analítica del expediente a las líneas sin distribución."""
         for move in self.filtered(lambda m: m.move_type in ("in_invoice", "in_refund")):
-            if not move.expedient_ids:
+            if not move.sudo().expedient_ids:
                 continue
             analytics = move.sudo().expedient_ids.mapped("analytic_account_id").filtered(
                 lambda a: a
@@ -248,8 +250,11 @@ class AccountMove(models.Model):
             expedients._invalidate_commercial_computes()
         return moves
 
+    def web_read(self, specification):
+        return link_web_read(self, super().web_read(specification), specification)
+
     def write(self, vals):
-        res = super().write(vals)
+        res = link_write(self, vals, lambda moves, v: super(AccountMove, moves).write(v))
         if "invoice_line_ids" in vals and not self.env.context.get("skip_expedient_po_sync"):
             self._sync_expedients_from_purchase()
         if "expedient_ids" in vals:

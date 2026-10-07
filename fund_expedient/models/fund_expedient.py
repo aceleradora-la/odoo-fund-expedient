@@ -6,6 +6,7 @@ import logging
 from odoo import SUPERUSER_ID, api, fields, models
 from odoo.exceptions import UserError
 from odoo import _
+from odoo.osv import expression
 from odoo.tools import html2plaintext
 
 _logger = logging.getLogger(__name__)
@@ -22,6 +23,11 @@ class FundExpedient(models.Model):
     _order = "id desc"
     _rec_name = "number"
     _rec_names_search = ["number", "description_plain"]
+
+    # Campos que el selector de facturas/OC/pagos puede filtrar al buscar con
+    # sudo (ver `name_search`). Cualquier otro filtro pasaría a buscar sobre
+    # el contenido de expedientes ajenos, así que se rechaza.
+    LINK_SEARCH_FIELDS = ("id", "company_id", "operation_type", "stage_id.state_type")
 
     number = fields.Char(
         string="Número",
@@ -2428,6 +2434,57 @@ class FundExpedient(models.Model):
             record._assign_default_responsible(creating=True)
         records._record_participants(self.env.user)
         return records
+
+    # ------------------------------------------------------------------
+    # Número visible para todos (selector de facturas, OC y pagos)
+    # ------------------------------------------------------------------
+
+    @api.model
+    def _link_search_domain_is_safe(self, domain):
+        for leaf in domain or []:
+            if isinstance(leaf, (list, tuple)) and len(leaf) == 3:
+                if leaf[0] not in self.LINK_SEARCH_FIELDS:
+                    return False
+            elif leaf not in ("&", "|", "!"):
+                return False
+        return True
+
+    @api.model
+    def name_search(self, name="", args=None, operator="ilike", limit=100):
+        """Con `fund_expedient_link_all`, busca entre TODOS los expedientes.
+
+        Lo usan los campos «Expedientes» de facturas, OC y pagos (ver
+        `expedient_link.py`): quien carga el documento tiene que poder
+        vincularlo aunque no participe del expediente. Se devuelve solo id y
+        número, se busca solo por número (buscar por la descripción con sudo
+        permitiría sondear el contenido de expedientes ajenos) y el dominio
+        del campo se acepta únicamente sobre `LINK_SEARCH_FIELDS`.
+        """
+        if (
+            self.env.context.get("fund_expedient_link_all")
+            and not self.env.su
+            and self._link_search_domain_is_safe(args)
+        ):
+            self.browse().check_access("read")
+            domain = list(args or [])
+            if name:
+                domain = expression.AND([domain, [("number", operator, name)]])
+            records = self.sudo().search_fetch(domain, ["number"], limit=limit)
+            return [(record.id, record.display_name) for record in records]
+        return super().name_search(name=name, args=args, operator=operator, limit=limit)
+
+    def web_read(self, specification):
+        """Leer solo el número de cualquier expediente.
+
+        Al elegir una etiqueta en el selector, el navegador pide el nombre del
+        expediente elegido; si es ajeno, las reglas lo rechazarían. Es lo
+        mismo que Odoo ya hace para los Many2one (muestra el nombre con sudo
+        aunque no se pueda abrir el registro).
+        """
+        if specification and not self.env.su and set(specification) <= {"display_name"}:
+            self.browse().check_access("read")
+            return super(FundExpedient, self.sudo()).web_read(specification)
+        return super().web_read(specification)
 
     @api.depends("description")
     def _compute_description_plain(self):

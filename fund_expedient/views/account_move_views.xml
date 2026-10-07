@@ -23,8 +23,10 @@
                 <label for="expedient_ids" string="Expedientes"
                        groups="fund_expedient.group_fund_expedient_user"
                        invisible="move_type not in ('in_invoice', 'in_refund', 'out_invoice', 'out_refund')"/>
+                <!-- Número de cualquier expediente, aunque no participe (expedient_link.py). -->
                 <field name="expedient_ids" widget="many2many_tags" nolabel="1"
                        options="{'no_create': True}"
+                       context="{'fund_expedient_link_all': True}"
                        domain="[('id', 'in', allowed_expedient_ids)]"
                        groups="fund_expedient.group_fund_expedient_user"
                        invisible="move_type not in ('in_invoice', 'in_refund', 'out_invoice', 'out_refund')"/>

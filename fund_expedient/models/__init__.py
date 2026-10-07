@@ -17,6 +17,7 @@ from . import expedient_line
 from . import fund_expedient
 from . import fund_expedient_document
 from . import expedient_config
+from . import expedient_link
 from . import purchase_order
 from . import purchase_requisition_create_alternative
 from . import project_project

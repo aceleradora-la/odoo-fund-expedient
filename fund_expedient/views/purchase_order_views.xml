@@ -22,7 +22,9 @@
         <field name="inherit_id" ref="purchase.purchase_order_form"/>
         <field name="arch" type="xml">
             <xpath expr="//field[@name='partner_ref']" position="after">
-                <field name="expedient_ids" widget="many2many_tags" options="{'no_create': True}"/>
+                <!-- Número de cualquier expediente, aunque no participe (expedient_link.py). -->
+                <field name="expedient_ids" widget="many2many_tags" options="{'no_create': True}"
+                       context="{'fund_expedient_link_all': True}"/>
             </xpath>
         </field>
     </record>

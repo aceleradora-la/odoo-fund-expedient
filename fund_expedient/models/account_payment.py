@@ -3,6 +3,8 @@
 
 from odoo import api, fields, models
 
+from .expedient_link import link_web_read, link_write
+
 
 class AccountPayment(models.Model):
     _inherit = "account.payment"
@@ -23,6 +25,12 @@ class AccountPayment(models.Model):
         help="Números de los expedientes vinculados, en texto. Permite verlos sin "
         "tener permisos sobre el módulo de Expedientes.",
     )
+
+    def web_read(self, specification):
+        return link_web_read(self, super().web_read(specification), specification)
+
+    def write(self, vals):
+        return link_write(self, vals, lambda payments, v: super(AccountPayment, payments).write(v))
 
     @api.depends("expedient_ids")
     def _compute_expedient_names(self):

@@ -6,8 +6,10 @@
         <field name="inherit_id" ref="account.view_account_payment_form"/>
         <field name="arch" type="xml">
             <xpath expr="//field[@name='partner_id']" position="after">
+                <!-- Número de cualquier expediente, aunque no participe (expedient_link.py). -->
                 <field name="expedient_ids" widget="many2many_tags"
                        options="{'no_create': True}"
+                       context="{'fund_expedient_link_all': True}"
                        groups="fund_expedient.group_fund_expedient_user"/>
                 <!-- Sin permisos de Expedientes: solo el número, en texto. -->
                 <field name="expedient_names" readonly="1"

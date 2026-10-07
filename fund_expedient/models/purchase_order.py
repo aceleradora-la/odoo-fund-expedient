@@ -4,6 +4,8 @@
 from odoo import api, fields, models
 from odoo.exceptions import ValidationError
 
+from .expedient_link import link_web_read, link_write
+
 
 class PurchaseOrder(models.Model):
     _inherit = "purchase.order"
@@ -19,8 +21,15 @@ class PurchaseOrder(models.Model):
         help="Solo se pueden asociar expedientes que estén en etapa de tipo Compras.",
     )
 
+    # sudo en los recorridos de `expedient_ids`: con la privacidad de los
+    # expedientes, sin él solo se verían los del usuario y los totales de los
+    # demás quedarían sin recalcular (ver `expedient_link.py`).
+
     def _touch_linked_expedient_commercial_fields(self):
-        self.mapped("expedient_ids")._invalidate_commercial_computes()
+        self.sudo().mapped("expedient_ids")._invalidate_commercial_computes()
+
+    def web_read(self, specification):
+        return link_web_read(self, super().web_read(specification), specification)
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -29,22 +38,22 @@ class PurchaseOrder(models.Model):
         return orders
 
     def write(self, vals):
-        before = self.mapped("expedient_ids")
-        res = super().write(vals)
+        before = self.sudo().mapped("expedient_ids")
+        res = link_write(self, vals, lambda orders, v: super(PurchaseOrder, orders).write(v))
         if "expedient_ids" in vals:
             self.sudo().invoice_ids._sync_expedients_from_purchase()
-        (before | self.mapped("expedient_ids"))._invalidate_commercial_computes()
+        (before | self.sudo().mapped("expedient_ids"))._invalidate_commercial_computes()
         return res
 
     def unlink(self):
-        expedients = self.mapped("expedient_ids")
+        expedients = self.sudo().mapped("expedient_ids")
         res = super().unlink()
         expedients._invalidate_commercial_computes()
         return res
 
     @api.constrains("expedient_ids")
     def _check_expedient_ids_stage_purchases(self):
-        for order in self:
+        for order in self.sudo():
             bad = order.expedient_ids.filtered(
                 lambda e: not e.stage_id or e.stage_id.state_type != "purchases"
             )
