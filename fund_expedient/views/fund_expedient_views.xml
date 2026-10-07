@@ -275,6 +275,9 @@
                                    invisible="not requestor_department_manager_id"/>
                             <field name="responsible_user_id" readonly="1" widget="many2one_avatar_user"
                                    invisible="not responsible_user_id"/>
+                            <!-- Locación: solo lo ven estos usuarios (más seguidores y aprobadores). -->
+                            <field name="participant_user_ids" widget="many2many_avatar_user"
+                                   invisible="contract_kind in (False, 'none')"/>
                             <field name="date_done" readonly="1" invisible="state != 'done'"/>
                             <field name="done_by_id" readonly="1" widget="many2one_avatar_user"
                                    invisible="state != 'done'"/>

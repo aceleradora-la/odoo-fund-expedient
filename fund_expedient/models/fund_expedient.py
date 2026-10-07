@@ -490,6 +490,32 @@ class FundExpedient(models.Model):
         compute="_compute_can_edit_in_stage",
         help="True si el usuario actual puede modificar el expediente en la etapa actual (asignación tipo/etapa).",
     )
+    # ------------------------------------------------------------------
+    # Participantes (privacidad de las Locaciones)
+    #
+    # Los expedientes de Locación de Servicios/Obra (honorarios de personas)
+    # solo los ven quienes participaron: ver
+    # `security/fund_expedient_lease_privacy.xml`. Este campo es la memoria de
+    # esa participación: los asignados de una etapa dejan de estarlo cuando el
+    # expediente avanza, pero siguen viéndolo. Es acumulativo —nunca se quita
+    # a nadie— y lo mantiene `_record_participants`.
+    # ------------------------------------------------------------------
+    participant_user_ids = fields.Many2many(
+        "res.users",
+        "fund_expedient_participant_rel",
+        "expedient_id",
+        "user_id",
+        string="Participantes",
+        copy=False,
+        readonly=True,
+        help="Usuarios que intervinieron en el expediente: quien lo creó, el "
+        "solicitante y el responsable de su sector, los asignados de cada etapa "
+        "por la que pasó, sus responsables y quienes lo modificaron. En los "
+        "expedientes de Locación son, junto con los seguidores y los "
+        "aprobadores, los únicos que lo ven (además de Administrador y "
+        "Contrataciones). Para compartirlo con alguien más, agréguelo como "
+        "seguidor.",
+    )
     assignable_user_ids = fields.Many2many(
         "res.users",
         compute="_compute_assignable_user_ids",
@@ -1471,7 +1497,9 @@ class FundExpedient(models.Model):
             return False
         prefix = "%s-" % parent.number
         used = set() if taken is None else taken.setdefault(parent.id, set())
-        for child in parent.child_ids:
+        # sudo: con las reglas de privacidad de Locación el usuario puede no ver
+        # a todos los hermanos, y el sufijo se repetiría.
+        for child in parent.sudo().child_ids:
             if not child.number or not child.number.startswith(prefix):
                 continue
             suffix = child.number[len(prefix):]
@@ -1633,16 +1661,13 @@ class FundExpedient(models.Model):
             else:
                 rec.amount_estimated_unit = 0.0
 
-            # Comprometido: si la etapa lo toma del expediente, se convierte el
-            # definitivo (misma regla que `_compute_amounts`); si no, se recorren
-            # las OC igual que siempre, convirtiendo a moneda del tipo.
-            if rec._committed_from_expedient():
-                if rec.amount_estimated_confirmed and rec.request_date:
-                    rec.amount_committed_unit = company_currency._convert(
-                        rec.amount_estimated_confirmed, unit_currency, company, rec.request_date
-                    )
-                else:
-                    rec.amount_committed_unit = 0.0
+            # Comprometido: si la etapa lo toma del expediente, es el definitivo
+            # menos lo facturado (misma regla que `_compute_amounts`; se calcula
+            # al final, después del real). Si no, se recorren las OC igual que
+            # siempre, convirtiendo a moneda del tipo.
+            from_expedient = rec._committed_from_expedient()
+            if from_expedient:
+                pass
             else:
                 pos_committed = rec._purchase_orders_data().filtered(
                     lambda po: po.state in ("purchase", "done") and po.invoice_status != "invoiced"
@@ -1671,6 +1696,14 @@ class FundExpedient(models.Model):
                 amt_cc = inv.currency_id._convert(signed, company_currency, company, inv_date)
                 real_unit += company_currency._convert(amt_cc, unit_currency, company, inv_date)
             rec.amount_real_unit = real_unit
+
+            if from_expedient:
+                confirmed_unit = 0.0
+                if rec.amount_estimated_confirmed and rec.request_date:
+                    confirmed_unit = company_currency._convert(
+                        rec.amount_estimated_confirmed, unit_currency, company, rec.request_date
+                    )
+                rec.amount_committed_unit = max(0.0, confirmed_unit - real_unit)
 
     @api.depends(
         "amount_estimated_confirmed",
@@ -1715,12 +1748,10 @@ class FundExpedient(models.Model):
         for rec in self:
             company_currency = rec.company_id.currency_id
 
-            if rec._committed_from_expedient():
-                # Etapa sin cotizaciones: el compromiso es el importe definitivo
-                # del expediente (suma de líneas o total confirmado manual), ya
-                # expresado en moneda compañía. Reemplaza al de las OC para no
-                # contar dos veces el mismo compromiso.
-                rec.amount_committed = rec.amount_estimated_confirmed or 0.0
+            from_expedient = rec._committed_from_expedient()
+            if from_expedient:
+                # Se calcula al final, porque depende de lo ya facturado.
+                pass
             else:
                 # Total Comprometido: OC confirmadas menos facturado (posteado).
                 # Nota: con "facturación al recibir", qty_to_invoice puede ser 0 hasta recibir, pero el
@@ -1760,6 +1791,16 @@ class FundExpedient(models.Model):
                 )
                 amount_real += amt_cc
             rec.amount_real = amount_real
+
+            if from_expedient:
+                # Etapa sin cotizaciones: el compromiso es el importe definitivo
+                # del expediente (suma de líneas o total confirmado manual), en
+                # moneda compañía, MENOS lo ya facturado. Es la misma regla que
+                # las OC (ordenado − facturado): sin restar, al vincular las
+                # facturas el mismo gasto contaba en Comprometido y en Real.
+                rec.amount_committed = max(
+                    0.0, (rec.amount_estimated_confirmed or 0.0) - amount_real
+                )
 
     def write(self, vals):
         """Escritura con 2 reglas:
@@ -2037,7 +2078,49 @@ class FundExpedient(models.Model):
                 rec._apply_dynamic_placeholders_to_description()
             if stage_will_change:
                 rec._on_stage_changed()
+            rec._record_participants(self.env.user)
         return True
+
+    def _record_participants(self, extra_users=None):
+        """Suma a los participantes a quienes hoy intervienen en el expediente.
+
+        Creador, solicitante, responsable del sector, responsable actual y
+        asignados de la etapa actual (más `extra_users`, normalmente quien
+        está escribiendo). Nunca quita a nadie: así los asignados de etapas
+        anteriores conservan el acceso cuando el expediente avanza.
+
+        Se escribe por SQL a propósito: pasar por `write` dispararía los
+        candados de etapa y de validación, y esto no es una edición del
+        usuario sino un registro de lo que ya pasó.
+        """
+        if not self.ids:
+            return
+        expedient_ids, user_ids = [], []
+        for rec in self.sudo():
+            users = (
+                rec.create_uid
+                | rec.requestor_id.user_id
+                | rec.requestor_department_manager_id.user_id
+                | rec.responsible_user_id
+                | rec.assignable_user_ids
+            )
+            if extra_users:
+                users |= extra_users.sudo()
+            users = users.filtered(lambda u: not u.share and u.id != SUPERUSER_ID)
+            missing = users - rec.participant_user_ids
+            expedient_ids += [rec.id] * len(missing)
+            user_ids += missing.ids
+        if not user_ids:
+            return
+        self.env.cr.execute(
+            """
+            INSERT INTO fund_expedient_participant_rel (expedient_id, user_id)
+            SELECT * FROM unnest(%s::int[], %s::int[])
+            ON CONFLICT DO NOTHING
+            """,
+            (expedient_ids, user_ids),
+        )
+        self.invalidate_recordset(["participant_user_ids"])
 
     def _on_stage_changed(self):
         """Todo lo que sigue a un cambio de etapa, por cualquier camino.
@@ -2329,6 +2412,7 @@ class FundExpedient(models.Model):
         records._apply_dynamic_placeholders_to_description()
         for record in records:
             record._assign_default_responsible(creating=True)
+        records._record_participants(self.env.user)
         return records
 
     @api.depends("description")

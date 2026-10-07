@@ -162,19 +162,36 @@ def find_employee(name):
 
 
 def ensure_type(kind):
+    """Tipo de expediente para los contratos previos.
+
+    En la etapa final el comprometido sale del propio expediente
+    (`committed_from_expedient`): estos contratos no tienen OC, así que de
+    otro modo el comprometido quedaría en cero. Es el importe definitivo de
+    las líneas menos lo ya facturado.
+    """
     Type = env["fund.expedient.type"]
-    expedient_type = Type.search([("name", "=", TYPES[kind])], limit=1)
-    if expedient_type:
-        return expedient_type
     first = env.ref("fund_expedient.stage_expedient_in_progress")
     final = env.ref("fund_expedient.stage_expedient_approved")
+    expedient_type = Type.search([("name", "=", TYPES[kind])], limit=1)
+    if expedient_type:
+        # Tipos creados por una corrida anterior del script.
+        final_assign = expedient_type.stage_assign_ids.filtered(lambda a: a.stage_id == final)
+        final_assign.filtered(lambda a: not a.committed_from_expedient).write(
+            {"committed_from_expedient": True}
+        )
+        return expedient_type
     return Type.create({
         "name": TYPES[kind],
         "operation_type": "expense",
         "contract_kind": kind,
         "stage_assign_ids": [
             (0, 0, {"stage_id": first.id, "sequence": 1}),
-            (0, 0, {"stage_id": final.id, "sequence": 2, "is_final_stage": True}),
+            (0, 0, {
+                "stage_id": final.id,
+                "sequence": 2,
+                "is_final_stage": True,
+                "committed_from_expedient": True,
+            }),
         ],
     })
 
@@ -215,6 +232,15 @@ for exp in payload["expedientes"]:
 
     existing = Expedient.search([("number", "=", number)], limit=1)
     if existing:
+        # Líneas de una corrida anterior sin importe definitivo: el contrato
+        # firmado es el definitivo, y sin él no cuenta como comprometido.
+        for line in existing.line_ids.filtered(
+            lambda l: not l.display_type and not l.price_unit_final and l.price_unit_estimated
+        ):
+            line.with_context(skip_final_amount_check=True).write(
+                {"price_unit_final": line.price_unit_estimated}
+            )
+            stats["líneas existentes con importe definitivo completado"] += 1
         have = {line_key(l.recommended_supplier_ids[:1].id, l.date_start, l.date_end)
                 for l in existing.line_ids}
         new = [(ln, p, a) for ln, p, a in ready
@@ -256,6 +282,8 @@ for exp in payload["expedientes"]:
             "name": ln["nombre"],
             "product_qty": ln["meses"],
             "price_unit_estimated": ln["monto_mensual"],
+            # Contrato ya firmado: el estimado es el definitivo (comprometido).
+            "price_unit_final": ln["monto_mensual"],
             "date_start": ln["fecha_inicio"],
             "date_end": ln["fecha_fin"],
             "analytic_account_id": analytic.id,
@@ -278,6 +306,12 @@ for key, n in sorted(stats.items()):
 if touched:
     total = sum(touched.mapped("line_ids.amount_estimated_line"))
     print(f"  importe total en los expedientes cargados: {total:,.2f}")
+    touched.invalidate_recordset()
+    touched._invalidate_commercial_computes()
+    env.flush_all()
+    committed = sum(touched.mapped("amount_committed"))
+    real = sum(touched.mapped("amount_real"))
+    print(f"  comprometido (definitivo − facturado): {committed:,.2f}   real: {real:,.2f}")
     print(f"  finalizados (entran en la proyección): "
           f"{sum(touched.mapped('stage_is_final'))} de {len(touched)}")
 if created_partners:

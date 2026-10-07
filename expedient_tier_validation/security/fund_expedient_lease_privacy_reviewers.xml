@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!--
+        Privacidad de las Locaciones: los aprobadores también participan.
+
+        Complementa fund_expedient/security/fund_expedient_lease_privacy.xml,
+        que deja ver un expediente de Locación solo a sus participantes. Quien
+        tiene (o tuvo) que aprobar el expediente, su Solicitud de Gasto, una
+        Disposición o una Resolución necesita verlo para decidir, aunque nunca
+        haya estado asignado a una etapa. Las reglas de grupo se suman (OR) a
+        las del módulo base.
+
+        Lectura y escritura (aprobar puede hacer avanzar el expediente); no
+        crear ni borrar, que siguen reservados a los participantes. Como las
+        revisiones quedan guardadas, el aprobador lo sigue viendo después de
+        aprobar.
+
+        Para expedientes que no son de Locación estas reglas no agregan nada:
+        la regla base ya los deja ver a todos.
+    -->
+    <data>
+        <record id="rule_lease_privacy_expedient_reviewer" model="ir.rule">
+            <field name="name">Expedientes: Locación visible para sus aprobadores</field>
+            <field name="model_id" ref="fund_expedient.model_fund_expedient"/>
+            <field name="groups" eval="[(4, ref('fund_expedient.group_fund_expedient_user'))]"/>
+            <field name="domain_force">['|', '|', '|', ('review_ids.reviewer_ids', 'in', [user.id]), ('spend_request_ids.review_ids.reviewer_ids', 'in', [user.id]), ('disposition_ids.review_ids.reviewer_ids', 'in', [user.id]), ('resolution_ids.review_ids.reviewer_ids', 'in', [user.id])]</field>
+            <field name="perm_create" eval="False"/>
+            <field name="perm_unlink" eval="False"/>
+        </record>
+
+        <record id="rule_lease_privacy_line_reviewer" model="ir.rule">
+            <field name="name">Líneas: Locación visible para sus aprobadores</field>
+            <field name="model_id" ref="fund_expedient.model_fund_expedient_line"/>
+            <field name="groups" eval="[(4, ref('fund_expedient.group_fund_expedient_user'))]"/>
+            <field name="domain_force">['|', '|', '|', ('expedient_id.review_ids.reviewer_ids', 'in', [user.id]), ('expedient_id.spend_request_ids.review_ids.reviewer_ids', 'in', [user.id]), ('expedient_id.disposition_ids.review_ids.reviewer_ids', 'in', [user.id]), ('expedient_id.resolution_ids.review_ids.reviewer_ids', 'in', [user.id])]</field>
+            <field name="perm_create" eval="False"/>
+            <field name="perm_unlink" eval="False"/>
+        </record>
+
+        <record id="rule_lease_privacy_document_reviewer" model="ir.rule">
+            <field name="name">Documentos: Locación visible para sus aprobadores</field>
+            <field name="model_id" ref="fund_expedient.model_fund_expedient_document"/>
+            <field name="groups" eval="[(4, ref('fund_expedient.group_fund_expedient_user'))]"/>
+            <field name="domain_force">['|', '|', '|', ('expedient_id.review_ids.reviewer_ids', 'in', [user.id]), ('expedient_id.spend_request_ids.review_ids.reviewer_ids', 'in', [user.id]), ('expedient_id.disposition_ids.review_ids.reviewer_ids', 'in', [user.id]), ('expedient_id.resolution_ids.review_ids.reviewer_ids', 'in', [user.id])]</field>
+            <field name="perm_create" eval="False"/>
+            <field name="perm_unlink" eval="False"/>
+        </record>
+
+        <record id="rule_lease_privacy_disposition_reviewer" model="ir.rule">
+            <field name="name">Disposiciones: Locación visible para sus aprobadores</field>
+            <field name="model_id" ref="fund_expedient.model_fund_expedient_disposition"/>
+            <field name="groups" eval="[(4, ref('fund_expedient.group_fund_expedient_user'))]"/>
+            <field name="domain_force">['|', '|', '|', ('expedient_id.review_ids.reviewer_ids', 'in', [user.id]), ('expedient_id.spend_request_ids.review_ids.reviewer_ids', 'in', [user.id]), ('expedient_id.disposition_ids.review_ids.reviewer_ids', 'in', [user.id]), ('expedient_id.resolution_ids.review_ids.reviewer_ids', 'in', [user.id])]</field>
+            <field name="perm_create" eval="False"/>
+            <field name="perm_unlink" eval="False"/>
+        </record>
+
+        <record id="rule_lease_privacy_resolution_reviewer" model="ir.rule">
+            <field name="name">Resoluciones: Locación visible para sus aprobadores</field>
+            <field name="model_id" ref="fund_expedient.model_fund_expedient_resolution"/>
+            <field name="groups" eval="[(4, ref('fund_expedient.group_fund_expedient_user'))]"/>
+            <field name="domain_force">['|', '|', '|', ('expedient_id.review_ids.reviewer_ids', 'in', [user.id]), ('expedient_id.spend_request_ids.review_ids.reviewer_ids', 'in', [user.id]), ('expedient_id.disposition_ids.review_ids.reviewer_ids', 'in', [user.id]), ('expedient_id.resolution_ids.review_ids.reviewer_ids', 'in', [user.id])]</field>
+            <field name="perm_create" eval="False"/>
+            <field name="perm_unlink" eval="False"/>
+        </record>
+
+        <record id="rule_lease_privacy_spend_request_reviewer" model="ir.rule">
+            <field name="name">Solicitudes de gasto: Locación visible para sus aprobadores</field>
+            <field name="model_id" ref="fund_expedient.model_fund_expedient_spend_request"/>
+            <field name="groups" eval="[(4, ref('fund_expedient.group_fund_expedient_user'))]"/>
+            <field name="domain_force">['|', '|', '|', ('expedient_id.review_ids.reviewer_ids', 'in', [user.id]), ('expedient_id.spend_request_ids.review_ids.reviewer_ids', 'in', [user.id]), ('expedient_id.disposition_ids.review_ids.reviewer_ids', 'in', [user.id]), ('expedient_id.resolution_ids.review_ids.reviewer_ids', 'in', [user.id])]</field>
+            <field name="perm_create" eval="False"/>
+            <field name="perm_unlink" eval="False"/>
+        </record>
+
+        <record id="rule_lease_privacy_spend_request_line_reviewer" model="ir.rule">
+            <field name="name">Líneas de solicitudes de gasto: Locación visible para sus aprobadores</field>
+            <field name="model_id" ref="fund_expedient.model_fund_expedient_spend_request_line"/>
+            <field name="groups" eval="[(4, ref('fund_expedient.group_fund_expedient_user'))]"/>
+            <field name="domain_force">['|', '|', '|', ('spend_request_id.expedient_id.review_ids.reviewer_ids', 'in', [user.id]), ('spend_request_id.expedient_id.spend_request_ids.review_ids.reviewer_ids', 'in', [user.id]), ('spend_request_id.expedient_id.disposition_ids.review_ids.reviewer_ids', 'in', [user.id]), ('spend_request_id.expedient_id.resolution_ids.review_ids.reviewer_ids', 'in', [user.id])]</field>
+            <field name="perm_create" eval="False"/>
+            <field name="perm_unlink" eval="False"/>
+        </record>
+
+        <record id="rule_lease_privacy_notification_mail_reviewer" model="ir.rule">
+            <field name="name">Notificaciones (correo): Locación visible para sus aprobadores</field>
+            <field name="model_id" ref="fund_expedient.model_fund_expedient_notification_mail"/>
+            <field name="groups" eval="[(4, ref('fund_expedient.group_fund_expedient_user'))]"/>
+            <field name="domain_force">['|', '|', '|', ('expedient_id.review_ids.reviewer_ids', 'in', [user.id]), ('expedient_id.spend_request_ids.review_ids.reviewer_ids', 'in', [user.id]), ('expedient_id.disposition_ids.review_ids.reviewer_ids', 'in', [user.id]), ('expedient_id.resolution_ids.review_ids.reviewer_ids', 'in', [user.id])]</field>
+            <field name="perm_create" eval="False"/>
+            <field name="perm_unlink" eval="False"/>
+        </record>
+    </data>
+</odoo>
