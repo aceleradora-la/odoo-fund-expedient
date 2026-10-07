@@ -98,7 +98,7 @@
           "tag": "chart",
           "data": {
             "title": {
-              "text": "Ejecución presupuestaria por cuenta analítica"
+              "text": "Ejecución presupuestaria de gastos por cuenta analítica"
             },
             "background": "#FFFFFF",
             "legendPosition": "top",
@@ -123,6 +123,11 @@
                     "draft",
                     "confirmed"
                   ]
+                ],
+                [
+                  "operation_type",
+                  "=",
+                  "expense"
                 ]
               ],
               "groupBy": [

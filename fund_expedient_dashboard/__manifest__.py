@@ -3,8 +3,8 @@
 
 {
     "name": "Fundación - Expedientes: tableros",
-    "summary": "Tableros de Expedientes en la app Tableros (Expedientes y Contrataciones)",
-    "version": "18.0.1.1.0",
+    "summary": "Tableros de Expedientes en la app Tableros (Expedientes, Aprobaciones y Contrataciones)",
+    "version": "18.0.1.2.0",
     "category": "Administration",
     "website": "https://aceleradora.la",
     "author": "aceleradora.la",

@@ -25,6 +25,22 @@
     </record>
 
     <!--
+        Aprobaciones: validaciones de expedientes y de solicitudes de gasto
+        por aprobador, y tiempo promedio de aprobación (tier.review, de
+        expedient_tier_validation). Lo ven los usuarios de Expedientes.
+        Reemplaza al que se cargaba a mano (tablero_aprobaciones.json).
+    -->
+    <record id="spreadsheet_dashboard_aprobaciones" model="spreadsheet.dashboard">
+        <field name="name">Aprobaciones</field>
+        <field name="spreadsheet_binary_data" type="base64"
+               file="fund_expedient_dashboard/data/files/aprobaciones_dashboard.json"/>
+        <field name="dashboard_group_id" ref="spreadsheet_dashboard_group_expedientes"/>
+        <field name="group_ids" eval="[Command.set([ref('fund_expedient.group_fund_expedient_user')])]"/>
+        <field name="sequence">20</field>
+        <field name="is_published">True</field>
+    </record>
+
+    <!--
         Contrataciones (Locación): KPIs, comprometido por mes según la
         proyección, real facturado por mes y comprometido por proveedor. Solo
         lo ve el grupo «Expedientes: Contrataciones» —el mismo que los

@@ -1,0 +1,171 @@
+{
+  "version": 22,
+  "sheets": [
+    {
+      "id": "sheet_aprobaciones",
+      "name": "Aprobaciones",
+      "colNumber": 26,
+      "rowNumber": 100,
+      "rows": {},
+      "cols": {},
+      "merges": [],
+      "cells": {
+        "A1": { "content": "Tablero de Aprobaciones" }
+      },
+      "styles": { "A1": 1 },
+      "formats": {},
+      "borders": {},
+      "conditionalFormats": [],
+      "dataValidationRules": [],
+      "figures": [
+        {
+          "id": "fig_apr_exp_stage_7b2f",
+          "x": 0,
+          "y": 30,
+          "width": 660,
+          "height": 320,
+          "tag": "chart",
+          "data": {
+            "type": "odoo_bar",
+            "title": { "text": "Aprobaciones de expedientes por aprobador y etapa" },
+            "background": "#FFFFFF",
+            "legendPosition": "top",
+            "verticalAxisPosition": "left",
+            "stacked": true,
+            "metaData": {
+              "groupBy": ["done_by", "stage_id"],
+              "measure": "approval_qty",
+              "order": null,
+              "resModel": "tier.review",
+              "mode": "bar"
+            },
+            "searchParams": {
+              "comparison": null,
+              "context": {},
+              "domain": [
+                ["fund_record_type", "=", "expedient"],
+                ["status", "=", "approved"]
+              ],
+              "groupBy": ["done_by", "stage_id"],
+              "orderBy": []
+            },
+            "fieldMatching": {
+              "gf_period": { "chain": "reviewed_date", "type": "date", "offset": 0 }
+            }
+          }
+        },
+        {
+          "id": "fig_apr_sg_a91c",
+          "x": 680,
+          "y": 30,
+          "width": 660,
+          "height": 320,
+          "tag": "chart",
+          "data": {
+            "type": "odoo_bar",
+            "title": { "text": "Aprobaciones de Solicitudes de Gasto por aprobador y fase" },
+            "background": "#FFFFFF",
+            "legendPosition": "top",
+            "verticalAxisPosition": "left",
+            "stacked": true,
+            "metaData": {
+              "groupBy": ["done_by", "spend_phase"],
+              "measure": "approval_qty",
+              "order": null,
+              "resModel": "tier.review",
+              "mode": "bar"
+            },
+            "searchParams": {
+              "comparison": null,
+              "context": {},
+              "domain": [
+                ["fund_record_type", "=", "spend_request"],
+                ["status", "=", "approved"]
+              ],
+              "groupBy": ["done_by", "spend_phase"],
+              "orderBy": []
+            },
+            "fieldMatching": {
+              "gf_period": { "chain": "reviewed_date", "type": "date", "offset": 0 }
+            }
+          }
+        },
+        {
+          "id": "fig_apr_time_c503",
+          "x": 0,
+          "y": 370,
+          "width": 660,
+          "height": 320,
+          "tag": "chart",
+          "data": {
+            "type": "odoo_bar",
+            "title": { "text": "Tiempo promedio de aprobación (días) por aprobador" },
+            "background": "#FFFFFF",
+            "legendPosition": "none",
+            "verticalAxisPosition": "left",
+            "stacked": false,
+            "metaData": {
+              "groupBy": ["done_by"],
+              "measure": "approval_duration_days",
+              "order": null,
+              "resModel": "tier.review",
+              "mode": "bar"
+            },
+            "searchParams": {
+              "comparison": null,
+              "context": {},
+              "domain": [
+                ["status", "=", "approved"]
+              ],
+              "groupBy": ["done_by"],
+              "orderBy": []
+            },
+            "fieldMatching": {
+              "gf_period": { "chain": "reviewed_date", "type": "date", "offset": 0 }
+            }
+          }
+        }
+      ],
+      "tables": [],
+      "areGridLinesVisible": false,
+      "isVisible": true,
+      "headerGroups": { "ROW": [], "COL": [] },
+      "comments": {}
+    }
+  ],
+  "styles": {
+    "1": { "textColor": "#01666b", "fontSize": 16, "bold": true }
+  },
+  "formats": {},
+  "borders": {},
+  "revisionId": "START_REVISION",
+  "uniqueFigureIds": true,
+  "settings": {
+    "locale": {
+      "name": "English (US)",
+      "code": "en_US",
+      "thousandsSeparator": ",",
+      "decimalSeparator": ".",
+      "dateFormat": "mm/dd/yyyy",
+      "timeFormat": "hh:mm:ss",
+      "formulaArgSeparator": ",",
+      "weekStart": 7
+    }
+  },
+  "pivots": {},
+  "pivotNextId": 1,
+  "customTableStyles": {},
+  "odooVersion": 12,
+  "globalFilters": [
+    {
+      "id": "gf_period",
+      "type": "date",
+      "label": "Período",
+      "defaultValue": "this_year",
+      "rangeType": "fixedPeriod"
+    }
+  ],
+  "lists": {},
+  "listNextId": 1,
+  "chartOdooMenusReferences": {}
+}

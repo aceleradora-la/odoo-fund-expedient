@@ -24,7 +24,7 @@ en una sola hoja, alimentados por los modelos de estos addons:
 | Gráfico | Tipo | Modelo Odoo | Medida | Agrupado por |
 |---|---|---|---|---|
 | Expedientes por etapa | barras | `fund.expedient` | conteo (`__count`) | `stage_id` |
-| Ejecución presupuestaria por cuenta analítica | barras | `fund.expedient.budget.execution` | `amount` | `analytic_account_id`, `concept` |
+| Ejecución presupuestaria de gastos por cuenta analítica | barras | `fund.expedient.budget.execution` | `amount` | `analytic_account_id`, `concept` |
 | Solicitudes de gasto (definitiva) por mes | líneas | `fund.expedient.spend.request` | `amount_definitiva` | `date_definitiva:month` |
 | Validaciones por estado | torta | `tier.review` | `approval_qty` | `status` |
 | Tiempo promedio hasta finalizar (KPI) | scorecard | `fund.expedient` | `days_to_done` (promedio) | — (filtro `days_to_done_measured`) |
@@ -34,7 +34,8 @@ Filtro global: **Período** (fecha, `this_year`), cableado por `fieldMatching` a
 
 El gráfico de **ejecución presupuestaria** compara, por cuenta analítica, Presupuesto, Comprometido
 y Real contra el presupuesto analítico de Contabilidad (módulo `fund_expedient_account_budget`
-18.0.1.1.0 o posterior). Toma los presupuestos en Borrador y Abiertos: si conviven varias versiones
+18.0.1.1.0 o posterior). Muestra solo las líneas de gasto: las de ingreso, mucho más grandes,
+aplastaban la escala. Toma los presupuestos en Borrador y Abiertos: si conviven varias versiones
 del mismo año, elegí cuál mirar con el filtro **Presupuesto**, o se suman. El filtro Período se
 cablea a la fecha de inicio del presupuesto.
 
@@ -86,6 +87,10 @@ en los módulos e **Insertar en hoja de cálculo** (te da el formato exacto de t
 ---
 
 ## Tablero de Aprobaciones (`tablero_aprobaciones.json`)
+
+> **Desde `fund_expedient_dashboard` 18.0.1.2.0 viene con el módulo**
+> (`fund_expedient_dashboard/data/files/aprobaciones_dashboard.json`, copia de este archivo). Ya no
+> hace falta importarlo; el importado a mano se puede borrar.
 
 Tres gráficos sobre `tier.review`, agrupados **por aprobador** (`done_by`):
 
