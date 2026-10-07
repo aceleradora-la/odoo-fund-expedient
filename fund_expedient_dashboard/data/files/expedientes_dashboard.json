@@ -1,0 +1,397 @@
+{
+  "version": 22,
+  "sheets": [
+    {
+      "id": "sheet_expedientes",
+      "name": "Expedientes",
+      "colNumber": 26,
+      "rowNumber": 100,
+      "rows": {},
+      "cols": {},
+      "merges": [],
+      "cells": {
+        "A1": {
+          "content": "Tablero de Expedientes"
+        }
+      },
+      "styles": {
+        "A1": 1
+      },
+      "formats": {},
+      "borders": {},
+      "conditionalFormats": [],
+      "dataValidationRules": [],
+      "figures": [
+        {
+          "id": "fig_kpi_dias_finalizar",
+          "x": 0,
+          "y": 30,
+          "width": 320,
+          "height": 120,
+          "tag": "chart",
+          "data": {
+            "type": "scorecard",
+            "title": {
+              "text": "Tiempo promedio hasta finalizar",
+              "bold": true,
+              "color": "#434343"
+            },
+            "background": "#EFF6FF",
+            "keyValue": "Datos!C1",
+            "baseline": "Datos!C2",
+            "baselineMode": "text",
+            "baselineDescr": "",
+            "baselineColorUp": "#00A04A",
+            "baselineColorDown": "#DC6965",
+            "humanize": false
+          }
+        },
+        {
+          "id": "fig_pipeline_8a1c",
+          "x": 0,
+          "y": 170,
+          "width": 500,
+          "height": 300,
+          "tag": "chart",
+          "data": {
+            "title": {
+              "text": "Expedientes por etapa"
+            },
+            "background": "#FFFFFF",
+            "legendPosition": "none",
+            "metaData": {
+              "groupBy": [
+                "stage_id"
+              ],
+              "measure": "__count",
+              "order": null,
+              "resModel": "fund.expedient",
+              "mode": "bar"
+            },
+            "searchParams": {
+              "comparison": null,
+              "context": {},
+              "domain": [],
+              "groupBy": [
+                "stage_id"
+              ],
+              "orderBy": []
+            },
+            "type": "odoo_bar",
+            "verticalAxisPosition": "left",
+            "stacked": false,
+            "fieldMatching": {
+              "gf_period": {
+                "chain": "request_date",
+                "type": "date",
+                "offset": 0
+              }
+            }
+          }
+        },
+        {
+          "id": "fig_budget_execution",
+          "x": 520,
+          "y": 170,
+          "width": 500,
+          "height": 300,
+          "tag": "chart",
+          "data": {
+            "title": {
+              "text": "Ejecución presupuestaria por cuenta analítica"
+            },
+            "background": "#FFFFFF",
+            "legendPosition": "top",
+            "metaData": {
+              "groupBy": [
+                "analytic_account_id",
+                "concept"
+              ],
+              "measure": "amount",
+              "order": null,
+              "resModel": "fund.expedient.budget.execution",
+              "mode": "bar"
+            },
+            "searchParams": {
+              "comparison": null,
+              "context": {},
+              "domain": [
+                [
+                  "budget_state",
+                  "in",
+                  [
+                    "draft",
+                    "confirmed"
+                  ]
+                ]
+              ],
+              "groupBy": [
+                "analytic_account_id",
+                "concept"
+              ],
+              "orderBy": []
+            },
+            "type": "odoo_bar",
+            "verticalAxisPosition": "left",
+            "stacked": false,
+            "fieldMatching": {
+              "gf_period": {
+                "chain": "date_from",
+                "type": "date",
+                "offset": 0
+              },
+              "gf_budget": {
+                "chain": "budget_analytic_id",
+                "type": "many2one"
+              }
+            }
+          }
+        },
+        {
+          "id": "fig_spend_b29e",
+          "x": 0,
+          "y": 490,
+          "width": 500,
+          "height": 300,
+          "tag": "chart",
+          "data": {
+            "title": {
+              "text": "Solicitudes de gasto (definitiva) por mes"
+            },
+            "background": "#FFFFFF",
+            "legendPosition": "none",
+            "metaData": {
+              "groupBy": [
+                "date_definitiva:month"
+              ],
+              "measure": "amount_definitiva",
+              "order": null,
+              "resModel": "fund.expedient.spend.request",
+              "mode": "line"
+            },
+            "searchParams": {
+              "comparison": null,
+              "context": {},
+              "domain": [],
+              "groupBy": [
+                "date_definitiva:month"
+              ],
+              "orderBy": []
+            },
+            "type": "odoo_line",
+            "verticalAxisPosition": "left",
+            "stacked": false,
+            "fillArea": true,
+            "fieldMatching": {
+              "gf_period": {
+                "chain": "date_definitiva",
+                "type": "date",
+                "offset": 0
+              }
+            }
+          }
+        },
+        {
+          "id": "fig_tier_c4a0",
+          "x": 520,
+          "y": 490,
+          "width": 500,
+          "height": 300,
+          "tag": "chart",
+          "data": {
+            "title": {
+              "text": "Validaciones por estado"
+            },
+            "background": "#FFFFFF",
+            "legendPosition": "right",
+            "metaData": {
+              "groupBy": [
+                "status"
+              ],
+              "measure": "approval_qty",
+              "order": null,
+              "resModel": "tier.review",
+              "mode": "pie"
+            },
+            "searchParams": {
+              "comparison": null,
+              "context": {},
+              "domain": [],
+              "groupBy": [
+                "status"
+              ],
+              "orderBy": []
+            },
+            "type": "odoo_pie",
+            "fieldMatching": {
+              "gf_period": {
+                "chain": "create_date",
+                "type": "date",
+                "offset": 0
+              }
+            }
+          }
+        }
+      ],
+      "tables": [],
+      "areGridLinesVisible": false,
+      "isVisible": true,
+      "headerGroups": {
+        "ROW": [],
+        "COL": []
+      },
+      "comments": {}
+    },
+    {
+      "id": "sheet_datos_kpi",
+      "name": "Datos",
+      "colNumber": 26,
+      "rowNumber": 100,
+      "rows": {},
+      "cols": {},
+      "merges": [],
+      "cells": {
+        "A1": {
+          "content": "Días hasta finalizar (promedio)"
+        },
+        "B1": {
+          "content": "=PIVOT.VALUE(1,\"days_to_done:avg\")"
+        },
+        "C1": {
+          "content": "=IF(B2>0,TEXT(ROUND(B1,1),\"0.0\")&\" días\",\"Sin datos\")"
+        },
+        "A2": {
+          "content": "Expedientes finalizados en el período (con medida)"
+        },
+        "B2": {
+          "content": "=PIVOT.VALUE(2,\"__count\")"
+        },
+        "C2": {
+          "content": "=B2&IF(B2=1,\" expediente finalizado\",\" expedientes finalizados\")"
+        }
+      },
+      "styles": {},
+      "formats": {},
+      "borders": {},
+      "conditionalFormats": [],
+      "dataValidationRules": [],
+      "figures": [],
+      "tables": [],
+      "areGridLinesVisible": true,
+      "isVisible": false,
+      "headerGroups": {
+        "ROW": [],
+        "COL": []
+      },
+      "comments": {}
+    }
+  ],
+  "styles": {
+    "1": {
+      "textColor": "#01666b",
+      "fontSize": 16,
+      "bold": true
+    }
+  },
+  "formats": {},
+  "borders": {},
+  "revisionId": "START_REVISION",
+  "uniqueFigureIds": true,
+  "settings": {
+    "locale": {
+      "name": "English (US)",
+      "code": "en_US",
+      "thousandsSeparator": ",",
+      "decimalSeparator": ".",
+      "dateFormat": "mm/dd/yyyy",
+      "timeFormat": "hh:mm:ss",
+      "formulaArgSeparator": ",",
+      "weekStart": 7
+    }
+  },
+  "pivots": {
+    "1": {
+      "type": "ODOO",
+      "name": "Días hasta finalizar (promedio)",
+      "model": "fund.expedient",
+      "measures": [
+        {
+          "id": "days_to_done:avg",
+          "fieldName": "days_to_done",
+          "aggregator": "avg"
+        }
+      ],
+      "columns": [],
+      "rows": [],
+      "domain": [
+        [
+          "days_to_done_measured",
+          "=",
+          true
+        ]
+      ],
+      "context": {},
+      "sortedColumn": null,
+      "fieldMatching": {
+        "gf_period": {
+          "chain": "date_done",
+          "type": "date",
+          "offset": 0
+        }
+      }
+    },
+    "2": {
+      "type": "ODOO",
+      "name": "Expedientes finalizados con medida",
+      "model": "fund.expedient",
+      "measures": [
+        {
+          "id": "__count",
+          "fieldName": "__count"
+        }
+      ],
+      "columns": [],
+      "rows": [],
+      "domain": [
+        [
+          "days_to_done_measured",
+          "=",
+          true
+        ]
+      ],
+      "context": {},
+      "sortedColumn": null,
+      "fieldMatching": {
+        "gf_period": {
+          "chain": "date_done",
+          "type": "date",
+          "offset": 0
+        }
+      }
+    }
+  },
+  "pivotNextId": 3,
+  "customTableStyles": {},
+  "odooVersion": 12,
+  "globalFilters": [
+    {
+      "id": "gf_period",
+      "type": "date",
+      "label": "Período",
+      "defaultValue": "this_year",
+      "rangeType": "fixedPeriod"
+    },
+    {
+      "id": "gf_budget",
+      "type": "relation",
+      "label": "Presupuesto",
+      "modelName": "budget.analytic",
+      "defaultValue": [],
+      "defaultValueDisplayNames": [],
+      "rangeType": "year"
+    }
+  ],
+  "lists": {},
+  "listNextId": 1,
+  "chartOdooMenusReferences": {}
+}

@@ -12,6 +12,12 @@ El procedimiento de importación es el mismo para ambos (sección "Importar").
 
 ## Tablero de Expedientes (`tablero_expedientes.json`)
 
+> **Desde `fund_expedient_dashboard` 18.0.1.1.0 este tablero viene con el módulo**
+> (`fund_expedient_dashboard/data/files/expedientes_dashboard.json`, copia de este archivo) y ya no
+> hace falta importarlo a mano. Se recarga en cada actualización del módulo: los cambios se hacen en
+> el JSON del repositorio, no en la interfaz. La actualización junta en el grupo del módulo los
+> grupos «Expedientes» creados a mano; el tablero importado a mano queda al lado y se puede borrar.
+
 Contenido (`spreadsheet_data`) de un tablero de Odoo Spreadsheet, con **4 gráficos Odoo**
 en una sola hoja, alimentados por los modelos de estos addons:
 
