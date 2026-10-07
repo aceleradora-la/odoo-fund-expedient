@@ -4,7 +4,7 @@
 {
     "name": "Fundación - Expedientes",
     "summary": "Gestión de expedientes con etapas, cuentas analíticas y relaciones con compras y proyectos",
-    "version": "18.0.18.0",
+    "version": "18.0.19.0",
     "category": "Administration",
     "website": "https://aceleradora.la",
     "author": "aceleradora.la",
@@ -34,7 +34,7 @@
     "data": [
         "security/fund_expedient_security.xml",
         "security/ir.model.access.csv",
-        "security/fund_expedient_lease_privacy.xml",
+        "security/fund_expedient_privacy.xml",
         "data/legacy_cleanup.xml",
         "data/sequence_data.xml",
         "data/expedient_disposition_type_data.xml",

@@ -171,7 +171,26 @@ class TierReview(models.Model):
                 self._fill_fund_context_vals(vals)
         records = super().create(vals_list)
         records._backfill_missing_context()
+        records._record_fund_participants()
         return records
+
+    def _record_fund_participants(self):
+        """Los aprobadores pasan a ser participantes (y seguidores) del expediente.
+
+        Vale para las aprobaciones del expediente y de sus documentos (SG,
+        disposición, resolución): quien aprueba cualquiera de ellos queda
+        con acceso al expediente aun después de aprobar.
+        """
+        reviewers_by_expedient = {}
+        for review in self.filtered(lambda r: r.model in _FUND_EXPEDIENT_MODELS and r.res_id):
+            record = self.env[review.model].sudo().browse(review.res_id).exists()
+            expedient = record if review.model == "fund.expedient" else record.expedient_id
+            if expedient:
+                reviewers_by_expedient.setdefault(expedient, self.env["res.users"])
+                reviewers_by_expedient[expedient] |= review.sudo().reviewer_ids
+        for expedient, reviewers in reviewers_by_expedient.items():
+            if reviewers:
+                expedient._record_participants(reviewers)
 
     def _backfill_missing_context(self):
         """Corregir reviews ya creadas sin etapa/fase (p. ej. forward antes del fix)."""

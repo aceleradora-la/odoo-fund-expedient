@@ -39,5 +39,7 @@ def migrate(cr, version):
         """,
         {"root": SUPERUSER_ID},
     )
-    env["fund.expedient"].with_context(active_test=False).search([])._record_participants()
+    env["fund.expedient"].with_context(
+        active_test=False, fund_participants_no_subscribe=True
+    ).search([])._record_participants()
     _recompute_expedient_commercial_amounts(env)

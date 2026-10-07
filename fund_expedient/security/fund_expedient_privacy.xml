@@ -1,18 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <!--
-        Privacidad de las Locaciones de Servicios y de Obra.
+        Privacidad de los expedientes.
 
-        Son contratos con personas (honorarios, CUIT, datos personales): un
-        expediente de Locación solo lo ven quienes participaron. El resto de
-        los expedientes siguen visibles para todos los usuarios.
-
-        Participante es quien:
+        Un expediente solo lo ven quienes participaron y los Administradores
+        del módulo. Participante es quien:
           - lo creó;
           - figura en «Participantes» (`participant_user_ids`): solicitante,
             responsable del sector, asignados y responsables de cada etapa por
-            la que pasó y quienes lo modificaron. Es acumulativo: quien estuvo
-            en una etapa anterior lo sigue viendo;
+            la que pasó, aprobadores y quienes lo modificaron. Es acumulativo:
+            quien estuvo en una etapa anterior lo sigue viendo. Todos ellos
+            quedan además como seguidores, automáticamente;
           - es el responsable actual o está asignado a la etapa actual;
           - es seguidor (así se comparte con alguien más);
           - con Aprobaciones instalado, es aprobador del expediente o de sus
@@ -20,23 +18,26 @@
 
         Las reglas de grupo se suman (OR):
           - Administrador ve y opera todo;
-          - Contrataciones lee todo (reportes, tablero y su detalle) pero solo
-            modifica aquello en lo que participa.
+          - Contrataciones lee todas las Locaciones (sus reportes, tablero y
+            detalle), pero solo modifica aquello en lo que participa.
 
         Los modelos hijos (líneas, documentos, disposiciones, resoluciones,
-        solicitudes de gasto, notificaciones) siguen al expediente: si no se ve el
-        expediente, tampoco su detalle. Las vistas de reporte de
-        Contrataciones son modelos aparte y quedan reservadas a su grupo.
+        solicitudes de gasto, notificaciones) siguen al expediente: si no se
+        ve el expediente, tampoco su detalle.
+
+        Los ids de las reglas conservan el prefijo `rule_lease_privacy_` de
+        la primera versión (solo Locaciones) para que la actualización las
+        modifique en lugar de crear otras.
 
         No incluye el portal: los usuarios de portal tienen sus propias reglas
         (fund_expedient_portal), que ya se limitan a sus expedientes.
     -->
     <data>
         <record id="rule_lease_privacy_expedient_user" model="ir.rule">
-            <field name="name">Expedientes: Locación solo para participantes</field>
+            <field name="name">Expedientes: solo para participantes</field>
             <field name="model_id" ref="model_fund_expedient"/>
             <field name="groups" eval="[(4, ref('group_fund_expedient_user'))]"/>
-            <field name="domain_force">['|', ('contract_kind', 'not in', ['service_lease', 'work_lease']), '|', '|', '|', '|', ('create_uid', '=', user.id), ('participant_user_ids', 'in', [user.id]), ('responsible_user_id', '=', user.id), ('assignable_user_ids', 'in', [user.id]), ('message_partner_ids', 'in', [user.partner_id.id])]</field>
+            <field name="domain_force">['|', '|', '|', '|', ('create_uid', '=', user.id), ('participant_user_ids', 'in', [user.id]), ('responsible_user_id', '=', user.id), ('assignable_user_ids', 'in', [user.id]), ('message_partner_ids', 'in', [user.partner_id.id])]</field>
         </record>
         <record id="rule_lease_privacy_expedient_manager" model="ir.rule">
             <field name="name">Expedientes: Administrador ve todo</field>
@@ -45,20 +46,20 @@
             <field name="domain_force">[(1, '=', 1)]</field>
         </record>
         <record id="rule_lease_privacy_expedient_contracting" model="ir.rule">
-            <field name="name">Expedientes: Contrataciones lee todo</field>
+            <field name="name">Expedientes: Contrataciones lee las Locaciones</field>
             <field name="model_id" ref="model_fund_expedient"/>
             <field name="groups" eval="[(4, ref('group_fund_expedient_contracting'))]"/>
-            <field name="domain_force">[(1, '=', 1)]</field>
+            <field name="domain_force">[('contract_kind', 'in', ['service_lease', 'work_lease'])]</field>
             <field name="perm_write" eval="False"/>
             <field name="perm_create" eval="False"/>
             <field name="perm_unlink" eval="False"/>
         </record>
 
         <record id="rule_lease_privacy_line_user" model="ir.rule">
-            <field name="name">Líneas: Locación solo para participantes</field>
+            <field name="name">Líneas: solo para participantes</field>
             <field name="model_id" ref="model_fund_expedient_line"/>
             <field name="groups" eval="[(4, ref('group_fund_expedient_user'))]"/>
-            <field name="domain_force">['|', ('expedient_id.contract_kind', 'not in', ['service_lease', 'work_lease']), '|', '|', '|', '|', ('expedient_id.create_uid', '=', user.id), ('expedient_id.participant_user_ids', 'in', [user.id]), ('expedient_id.responsible_user_id', '=', user.id), ('expedient_id.assignable_user_ids', 'in', [user.id]), ('expedient_id.message_partner_ids', 'in', [user.partner_id.id])]</field>
+            <field name="domain_force">['|', '|', '|', '|', ('expedient_id.create_uid', '=', user.id), ('expedient_id.participant_user_ids', 'in', [user.id]), ('expedient_id.responsible_user_id', '=', user.id), ('expedient_id.assignable_user_ids', 'in', [user.id]), ('expedient_id.message_partner_ids', 'in', [user.partner_id.id])]</field>
         </record>
         <record id="rule_lease_privacy_line_manager" model="ir.rule">
             <field name="name">Líneas: Administrador ve todo</field>
@@ -67,20 +68,20 @@
             <field name="domain_force">[(1, '=', 1)]</field>
         </record>
         <record id="rule_lease_privacy_line_contracting" model="ir.rule">
-            <field name="name">Líneas: Contrataciones lee todo</field>
+            <field name="name">Líneas: Contrataciones lee las Locaciones</field>
             <field name="model_id" ref="model_fund_expedient_line"/>
             <field name="groups" eval="[(4, ref('group_fund_expedient_contracting'))]"/>
-            <field name="domain_force">[(1, '=', 1)]</field>
+            <field name="domain_force">[('expedient_id.contract_kind', 'in', ['service_lease', 'work_lease'])]</field>
             <field name="perm_write" eval="False"/>
             <field name="perm_create" eval="False"/>
             <field name="perm_unlink" eval="False"/>
         </record>
 
         <record id="rule_lease_privacy_document_user" model="ir.rule">
-            <field name="name">Documentos: Locación solo para participantes</field>
+            <field name="name">Documentos: solo para participantes</field>
             <field name="model_id" ref="model_fund_expedient_document"/>
             <field name="groups" eval="[(4, ref('group_fund_expedient_user'))]"/>
-            <field name="domain_force">['|', ('expedient_id.contract_kind', 'not in', ['service_lease', 'work_lease']), '|', '|', '|', '|', ('expedient_id.create_uid', '=', user.id), ('expedient_id.participant_user_ids', 'in', [user.id]), ('expedient_id.responsible_user_id', '=', user.id), ('expedient_id.assignable_user_ids', 'in', [user.id]), ('expedient_id.message_partner_ids', 'in', [user.partner_id.id])]</field>
+            <field name="domain_force">['|', '|', '|', '|', ('expedient_id.create_uid', '=', user.id), ('expedient_id.participant_user_ids', 'in', [user.id]), ('expedient_id.responsible_user_id', '=', user.id), ('expedient_id.assignable_user_ids', 'in', [user.id]), ('expedient_id.message_partner_ids', 'in', [user.partner_id.id])]</field>
         </record>
         <record id="rule_lease_privacy_document_manager" model="ir.rule">
             <field name="name">Documentos: Administrador ve todo</field>
@@ -89,20 +90,20 @@
             <field name="domain_force">[(1, '=', 1)]</field>
         </record>
         <record id="rule_lease_privacy_document_contracting" model="ir.rule">
-            <field name="name">Documentos: Contrataciones lee todo</field>
+            <field name="name">Documentos: Contrataciones lee las Locaciones</field>
             <field name="model_id" ref="model_fund_expedient_document"/>
             <field name="groups" eval="[(4, ref('group_fund_expedient_contracting'))]"/>
-            <field name="domain_force">[(1, '=', 1)]</field>
+            <field name="domain_force">[('expedient_id.contract_kind', 'in', ['service_lease', 'work_lease'])]</field>
             <field name="perm_write" eval="False"/>
             <field name="perm_create" eval="False"/>
             <field name="perm_unlink" eval="False"/>
         </record>
 
         <record id="rule_lease_privacy_disposition_user" model="ir.rule">
-            <field name="name">Disposiciones: Locación solo para participantes</field>
+            <field name="name">Disposiciones: solo para participantes</field>
             <field name="model_id" ref="model_fund_expedient_disposition"/>
             <field name="groups" eval="[(4, ref('group_fund_expedient_user'))]"/>
-            <field name="domain_force">['|', ('expedient_id.contract_kind', 'not in', ['service_lease', 'work_lease']), '|', '|', '|', '|', ('expedient_id.create_uid', '=', user.id), ('expedient_id.participant_user_ids', 'in', [user.id]), ('expedient_id.responsible_user_id', '=', user.id), ('expedient_id.assignable_user_ids', 'in', [user.id]), ('expedient_id.message_partner_ids', 'in', [user.partner_id.id])]</field>
+            <field name="domain_force">['|', '|', '|', '|', ('expedient_id.create_uid', '=', user.id), ('expedient_id.participant_user_ids', 'in', [user.id]), ('expedient_id.responsible_user_id', '=', user.id), ('expedient_id.assignable_user_ids', 'in', [user.id]), ('expedient_id.message_partner_ids', 'in', [user.partner_id.id])]</field>
         </record>
         <record id="rule_lease_privacy_disposition_manager" model="ir.rule">
             <field name="name">Disposiciones: Administrador ve todo</field>
@@ -111,20 +112,20 @@
             <field name="domain_force">[(1, '=', 1)]</field>
         </record>
         <record id="rule_lease_privacy_disposition_contracting" model="ir.rule">
-            <field name="name">Disposiciones: Contrataciones lee todo</field>
+            <field name="name">Disposiciones: Contrataciones lee las Locaciones</field>
             <field name="model_id" ref="model_fund_expedient_disposition"/>
             <field name="groups" eval="[(4, ref('group_fund_expedient_contracting'))]"/>
-            <field name="domain_force">[(1, '=', 1)]</field>
+            <field name="domain_force">[('expedient_id.contract_kind', 'in', ['service_lease', 'work_lease'])]</field>
             <field name="perm_write" eval="False"/>
             <field name="perm_create" eval="False"/>
             <field name="perm_unlink" eval="False"/>
         </record>
 
         <record id="rule_lease_privacy_resolution_user" model="ir.rule">
-            <field name="name">Resoluciones: Locación solo para participantes</field>
+            <field name="name">Resoluciones: solo para participantes</field>
             <field name="model_id" ref="model_fund_expedient_resolution"/>
             <field name="groups" eval="[(4, ref('group_fund_expedient_user'))]"/>
-            <field name="domain_force">['|', ('expedient_id.contract_kind', 'not in', ['service_lease', 'work_lease']), '|', '|', '|', '|', ('expedient_id.create_uid', '=', user.id), ('expedient_id.participant_user_ids', 'in', [user.id]), ('expedient_id.responsible_user_id', '=', user.id), ('expedient_id.assignable_user_ids', 'in', [user.id]), ('expedient_id.message_partner_ids', 'in', [user.partner_id.id])]</field>
+            <field name="domain_force">['|', '|', '|', '|', ('expedient_id.create_uid', '=', user.id), ('expedient_id.participant_user_ids', 'in', [user.id]), ('expedient_id.responsible_user_id', '=', user.id), ('expedient_id.assignable_user_ids', 'in', [user.id]), ('expedient_id.message_partner_ids', 'in', [user.partner_id.id])]</field>
         </record>
         <record id="rule_lease_privacy_resolution_manager" model="ir.rule">
             <field name="name">Resoluciones: Administrador ve todo</field>
@@ -133,20 +134,20 @@
             <field name="domain_force">[(1, '=', 1)]</field>
         </record>
         <record id="rule_lease_privacy_resolution_contracting" model="ir.rule">
-            <field name="name">Resoluciones: Contrataciones lee todo</field>
+            <field name="name">Resoluciones: Contrataciones lee las Locaciones</field>
             <field name="model_id" ref="model_fund_expedient_resolution"/>
             <field name="groups" eval="[(4, ref('group_fund_expedient_contracting'))]"/>
-            <field name="domain_force">[(1, '=', 1)]</field>
+            <field name="domain_force">[('expedient_id.contract_kind', 'in', ['service_lease', 'work_lease'])]</field>
             <field name="perm_write" eval="False"/>
             <field name="perm_create" eval="False"/>
             <field name="perm_unlink" eval="False"/>
         </record>
 
         <record id="rule_lease_privacy_spend_request_user" model="ir.rule">
-            <field name="name">Solicitudes de gasto: Locación solo para participantes</field>
+            <field name="name">Solicitudes de gasto: solo para participantes</field>
             <field name="model_id" ref="model_fund_expedient_spend_request"/>
             <field name="groups" eval="[(4, ref('group_fund_expedient_user'))]"/>
-            <field name="domain_force">['|', ('expedient_id.contract_kind', 'not in', ['service_lease', 'work_lease']), '|', '|', '|', '|', ('expedient_id.create_uid', '=', user.id), ('expedient_id.participant_user_ids', 'in', [user.id]), ('expedient_id.responsible_user_id', '=', user.id), ('expedient_id.assignable_user_ids', 'in', [user.id]), ('expedient_id.message_partner_ids', 'in', [user.partner_id.id])]</field>
+            <field name="domain_force">['|', '|', '|', '|', ('expedient_id.create_uid', '=', user.id), ('expedient_id.participant_user_ids', 'in', [user.id]), ('expedient_id.responsible_user_id', '=', user.id), ('expedient_id.assignable_user_ids', 'in', [user.id]), ('expedient_id.message_partner_ids', 'in', [user.partner_id.id])]</field>
         </record>
         <record id="rule_lease_privacy_spend_request_manager" model="ir.rule">
             <field name="name">Solicitudes de gasto: Administrador ve todo</field>
@@ -155,20 +156,20 @@
             <field name="domain_force">[(1, '=', 1)]</field>
         </record>
         <record id="rule_lease_privacy_spend_request_contracting" model="ir.rule">
-            <field name="name">Solicitudes de gasto: Contrataciones lee todo</field>
+            <field name="name">Solicitudes de gasto: Contrataciones lee las Locaciones</field>
             <field name="model_id" ref="model_fund_expedient_spend_request"/>
             <field name="groups" eval="[(4, ref('group_fund_expedient_contracting'))]"/>
-            <field name="domain_force">[(1, '=', 1)]</field>
+            <field name="domain_force">[('expedient_id.contract_kind', 'in', ['service_lease', 'work_lease'])]</field>
             <field name="perm_write" eval="False"/>
             <field name="perm_create" eval="False"/>
             <field name="perm_unlink" eval="False"/>
         </record>
 
         <record id="rule_lease_privacy_spend_request_line_user" model="ir.rule">
-            <field name="name">Líneas de solicitudes de gasto: Locación solo para participantes</field>
+            <field name="name">Líneas de solicitudes de gasto: solo para participantes</field>
             <field name="model_id" ref="model_fund_expedient_spend_request_line"/>
             <field name="groups" eval="[(4, ref('group_fund_expedient_user'))]"/>
-            <field name="domain_force">['|', ('spend_request_id.expedient_id.contract_kind', 'not in', ['service_lease', 'work_lease']), '|', '|', '|', '|', ('spend_request_id.expedient_id.create_uid', '=', user.id), ('spend_request_id.expedient_id.participant_user_ids', 'in', [user.id]), ('spend_request_id.expedient_id.responsible_user_id', '=', user.id), ('spend_request_id.expedient_id.assignable_user_ids', 'in', [user.id]), ('spend_request_id.expedient_id.message_partner_ids', 'in', [user.partner_id.id])]</field>
+            <field name="domain_force">['|', '|', '|', '|', ('spend_request_id.expedient_id.create_uid', '=', user.id), ('spend_request_id.expedient_id.participant_user_ids', 'in', [user.id]), ('spend_request_id.expedient_id.responsible_user_id', '=', user.id), ('spend_request_id.expedient_id.assignable_user_ids', 'in', [user.id]), ('spend_request_id.expedient_id.message_partner_ids', 'in', [user.partner_id.id])]</field>
         </record>
         <record id="rule_lease_privacy_spend_request_line_manager" model="ir.rule">
             <field name="name">Líneas de solicitudes de gasto: Administrador ve todo</field>
@@ -177,20 +178,20 @@
             <field name="domain_force">[(1, '=', 1)]</field>
         </record>
         <record id="rule_lease_privacy_spend_request_line_contracting" model="ir.rule">
-            <field name="name">Líneas de solicitudes de gasto: Contrataciones lee todo</field>
+            <field name="name">Líneas de solicitudes de gasto: Contrataciones lee las Locaciones</field>
             <field name="model_id" ref="model_fund_expedient_spend_request_line"/>
             <field name="groups" eval="[(4, ref('group_fund_expedient_contracting'))]"/>
-            <field name="domain_force">[(1, '=', 1)]</field>
+            <field name="domain_force">[('spend_request_id.expedient_id.contract_kind', 'in', ['service_lease', 'work_lease'])]</field>
             <field name="perm_write" eval="False"/>
             <field name="perm_create" eval="False"/>
             <field name="perm_unlink" eval="False"/>
         </record>
 
         <record id="rule_lease_privacy_notification_mail_user" model="ir.rule">
-            <field name="name">Notificaciones (correo): Locación solo para participantes</field>
+            <field name="name">Notificaciones (correo): solo para participantes</field>
             <field name="model_id" ref="model_fund_expedient_notification_mail"/>
             <field name="groups" eval="[(4, ref('group_fund_expedient_user'))]"/>
-            <field name="domain_force">['|', ('expedient_id.contract_kind', 'not in', ['service_lease', 'work_lease']), '|', '|', '|', '|', ('expedient_id.create_uid', '=', user.id), ('expedient_id.participant_user_ids', 'in', [user.id]), ('expedient_id.responsible_user_id', '=', user.id), ('expedient_id.assignable_user_ids', 'in', [user.id]), ('expedient_id.message_partner_ids', 'in', [user.partner_id.id])]</field>
+            <field name="domain_force">['|', '|', '|', '|', ('expedient_id.create_uid', '=', user.id), ('expedient_id.participant_user_ids', 'in', [user.id]), ('expedient_id.responsible_user_id', '=', user.id), ('expedient_id.assignable_user_ids', 'in', [user.id]), ('expedient_id.message_partner_ids', 'in', [user.partner_id.id])]</field>
         </record>
         <record id="rule_lease_privacy_notification_mail_manager" model="ir.rule">
             <field name="name">Notificaciones (correo): Administrador ve todo</field>
@@ -199,10 +200,10 @@
             <field name="domain_force">[(1, '=', 1)]</field>
         </record>
         <record id="rule_lease_privacy_notification_mail_contracting" model="ir.rule">
-            <field name="name">Notificaciones (correo): Contrataciones lee todo</field>
+            <field name="name">Notificaciones (correo): Contrataciones lee las Locaciones</field>
             <field name="model_id" ref="model_fund_expedient_notification_mail"/>
             <field name="groups" eval="[(4, ref('group_fund_expedient_contracting'))]"/>
-            <field name="domain_force">[(1, '=', 1)]</field>
+            <field name="domain_force">[('expedient_id.contract_kind', 'in', ['service_lease', 'work_lease'])]</field>
             <field name="perm_write" eval="False"/>
             <field name="perm_create" eval="False"/>
             <field name="perm_unlink" eval="False"/>

@@ -491,14 +491,15 @@ class FundExpedient(models.Model):
         help="True si el usuario actual puede modificar el expediente en la etapa actual (asignación tipo/etapa).",
     )
     # ------------------------------------------------------------------
-    # Participantes (privacidad de las Locaciones)
+    # Participantes (privacidad de los expedientes)
     #
-    # Los expedientes de Locación de Servicios/Obra (honorarios de personas)
-    # solo los ven quienes participaron: ver
-    # `security/fund_expedient_lease_privacy.xml`. Este campo es la memoria de
+    # Un expediente solo lo ven quienes participaron y los Administradores:
+    # ver `security/fund_expedient_privacy.xml`. Este campo es la memoria de
     # esa participación: los asignados de una etapa dejan de estarlo cuando el
     # expediente avanza, pero siguen viéndolo. Es acumulativo —nunca se quita
-    # a nadie— y lo mantiene `_record_participants`.
+    # a nadie— y lo mantiene `_record_participants`, que además los suma como
+    # seguidores. El acceso sale de este campo y no de los seguidores para que
+    # nadie lo pierda por dejar de seguir el expediente.
     # ------------------------------------------------------------------
     participant_user_ids = fields.Many2many(
         "res.users",
@@ -510,10 +511,10 @@ class FundExpedient(models.Model):
         readonly=True,
         help="Usuarios que intervinieron en el expediente: quien lo creó, el "
         "solicitante y el responsable de su sector, los asignados de cada etapa "
-        "por la que pasó, sus responsables y quienes lo modificaron. En los "
-        "expedientes de Locación son, junto con los seguidores y los "
-        "aprobadores, los únicos que lo ven (además de Administrador y "
-        "Contrataciones). Para compartirlo con alguien más, agréguelo como "
+        "por la que pasó, sus responsables, sus aprobadores y quienes lo "
+        "modificaron. Se suman solos y también quedan como seguidores. Junto "
+        "con los seguidores son los únicos que ven el expediente (además de los "
+        "Administradores). Para compartirlo con alguien más, agréguelo como "
         "seguidor.",
     )
     assignable_user_ids = fields.Many2many(
@@ -2085,9 +2086,14 @@ class FundExpedient(models.Model):
         """Suma a los participantes a quienes hoy intervienen en el expediente.
 
         Creador, solicitante, responsable del sector, responsable actual y
-        asignados de la etapa actual (más `extra_users`, normalmente quien
-        está escribiendo). Nunca quita a nadie: así los asignados de etapas
-        anteriores conservan el acceso cuando el expediente avanza.
+        asignados de la etapa actual (más `extra_users`: quien está
+        escribiendo, o los aprobadores cuando se piden aprobaciones). Nunca
+        quita a nadie: así los asignados de etapas anteriores conservan el
+        acceso cuando el expediente avanza.
+
+        Cada participante nuevo queda además como seguidor. Solo los nuevos:
+        a quien ya participaba y dejó de seguir el expediente no se lo vuelve
+        a suscribir (y no pierde el acceso, que sale de este campo).
 
         Se escribe por SQL a propósito: pasar por `write` dispararía los
         candados de etapa y de validación, y esto no es una edición del
@@ -2096,6 +2102,7 @@ class FundExpedient(models.Model):
         if not self.ids:
             return
         expedient_ids, user_ids = [], []
+        new_by_record = {}
         for rec in self.sudo():
             users = (
                 rec.create_uid
@@ -2108,6 +2115,8 @@ class FundExpedient(models.Model):
                 users |= extra_users.sudo()
             users = users.filtered(lambda u: not u.share and u.id != SUPERUSER_ID)
             missing = users - rec.participant_user_ids
+            if missing:
+                new_by_record[rec] = missing
             expedient_ids += [rec.id] * len(missing)
             user_ids += missing.ids
         if not user_ids:
@@ -2121,6 +2130,11 @@ class FundExpedient(models.Model):
             (expedient_ids, user_ids),
         )
         self.invalidate_recordset(["participant_user_ids"])
+        if self.env.context.get("fund_participants_no_subscribe"):
+            # Migraciones: el historial no se suscribe en bloque.
+            return
+        for rec, users in new_by_record.items():
+            rec.message_subscribe(partner_ids=users.partner_id.ids)
 
     def _on_stage_changed(self):
         """Todo lo que sigue a un cambio de etapa, por cualquier camino.
