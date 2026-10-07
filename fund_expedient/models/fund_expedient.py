@@ -29,6 +29,19 @@ class FundExpedient(models.Model):
     # el contenido de expedientes ajenos, así que se rechaza.
     LINK_SEARCH_FIELDS = ("id", "company_id", "operation_type", "stage_id.state_type")
 
+    # El nombre (el número) se calcula con sudo: los expedientes solo los ven
+    # sus participantes, pero el número tiene que poder mostrarse en las
+    # facturas, OC y pagos vinculados aunque quien los mira no participe (ver
+    # `expedient_link.py`). Sin esto, al agregar un expediente ajeno en una
+    # factura el recálculo del formulario (onchange) leía el número con los
+    # permisos del usuario y fallaba con «Error de acceso». Solo se expone el
+    # número; el contenido sigue protegido por las reglas.
+    display_name = fields.Char(
+        string="Display Name",
+        compute="_compute_display_name",
+        search="_search_display_name",
+        compute_sudo=True,
+    )
     number = fields.Char(
         string="Número",
         copy=False,
