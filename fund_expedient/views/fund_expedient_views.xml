@@ -76,8 +76,15 @@
         <field name="arch" type="xml">
             <form string="Expediente">
                 <header>
-                    <!-- En el orden de la lista de etapas del tipo, no en el general. -->
-                    <field name="stage_id" widget="fund_stage_statusbar"/>
+                    <!--
+                        En el orden de la lista de etapas del tipo, no en el general.
+                        `class="o_field_statusbar"`: Odoo arma la clase del contenedor
+                        con el nombre del widget, y todo el CSS de la barra —incluida
+                        la regla que vuelve a dar vuelta la lista, que el componente
+                        invierte a propósito— cuelga de `.o_field_statusbar`. Sin esa
+                        clase la barra se veía al revés.
+                    -->
+                    <field name="stage_id" widget="fund_stage_statusbar" class="o_field_statusbar"/>
                     <field name="state" invisible="1"/>
                     <field name="can_edit_in_stage" invisible="1"/>
                     <field name="allowed_stage_ids" invisible="1"/>
