@@ -21,9 +21,17 @@ en una sola hoja, alimentados por los modelos de estos addons:
 | Presupuesto por cuenta analítica | barras | `fund.budget.line` | `amount_total` | `analytic_account_id` |
 | Solicitudes de gasto (definitiva) por mes | líneas | `fund.expedient.spend.request` | `amount_definitiva` | `date_definitiva:month` |
 | Validaciones por estado | torta | `tier.review` | `approval_qty` | `status` |
+| Tiempo promedio hasta finalizar (KPI) | scorecard | `fund.expedient` | `days_to_done` (promedio) | — (filtro `days_to_done_measured`) |
 
 Filtro global: **Período** (fecha, `this_year`), cableado por `fieldMatching` a `request_date`
 (expedientes), `date_definitiva` (solicitudes de gasto) y `create_date` (validaciones).
+
+El KPI **Tiempo promedio hasta finalizar** promedia los días desde que el expediente se cargó en
+Odoo hasta que llegó a la etapa final de su flujo, para los expedientes **finalizados en el
+período** (el filtro se cablea a `date_done`). Toma sus datos de dos pivots en la hoja oculta
+«Datos». Requiere `fund_expedient` 18.0.19.3 o posterior (campos `days_to_done` y
+`days_to_done_measured`); quedan afuera los que no tienen una medida válida, como los contratos
+previos migrados, cuyo cierre es anterior a la carga.
 
 > Calibrado al export real de tu instancia (`fundacionsadosky`): `version` 22 y **`odooVersion` 12**.
 > La ausencia de `odooVersion` era la causa del error `Cannot read properties of undefined

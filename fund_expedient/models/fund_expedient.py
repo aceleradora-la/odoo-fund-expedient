@@ -378,6 +378,26 @@ class FundExpedient(models.Model):
         readonly=True,
         copy=False,
     )
+    # Para el tablero: cuánto tardó el expediente en recorrer su flujo. Se
+    # mide desde que se cargó en Odoo (`create_date`), no desde la fecha de
+    # solicitud: esa se puede editar y en los contratos migrados es el inicio
+    # del contrato. Los que no tienen una medida válida —sin cierre, o con un
+    # cierre anterior a la carga, como los contratos previos migrados— quedan
+    # con `days_to_done_measured` en falso y el tablero los excluye (un entero
+    # vacío se guarda como 0 y bajaría el promedio).
+    days_to_done = fields.Integer(
+        string="Días hasta finalizar",
+        compute="_compute_days_to_done",
+        store=True,
+        aggregator="avg",
+        help="Días desde que se cargó el expediente hasta que llegó a la etapa "
+        "final de su flujo.",
+    )
+    days_to_done_measured = fields.Boolean(
+        string="Tiempo hasta finalizar medido",
+        compute="_compute_days_to_done",
+        store=True,
+    )
     # ------------------------------------------------------------------
     # Responsable de la etapa.
     #
@@ -2168,6 +2188,17 @@ class FundExpedient(models.Model):
         self._stamp_done()
         if not self._is_closed():
             self._notify_stage_assignees()
+
+    @api.depends("create_date", "date_done")
+    def _compute_days_to_done(self):
+        for rec in self:
+            start = False
+            if rec.create_date:
+                tz = rec.env.user.tz or "America/Argentina/Buenos_Aires"
+                start = fields.Date.context_today(rec.with_context(tz=tz), rec.create_date)
+            measured = bool(start and rec.date_done and rec.date_done >= start)
+            rec.days_to_done_measured = measured
+            rec.days_to_done = (rec.date_done - start).days if measured else 0
 
     def _stamp_done(self):
         """Sella (o limpia) la fecha de cierre según la etapa sea la final o no."""
