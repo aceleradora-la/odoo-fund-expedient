@@ -20,6 +20,12 @@ Extiende el módulo **Fundación - Expedientes** con validación por niveles (ti
 3. En Ajustes (o en el menú de Tier Definitions), configurar las definiciones de validación para el modelo **Expediente** (fund.expedient).
 4. Al pasar un expediente a un estado "Por aprobar" o "Aprobado", se aplicará la validación configurada.
 
+### Revisor = Solicitante del expediente
+
+El modelo `fund.expedient` expone el campo técnico **Usuario solicitante** (`requestor_user_id`), relacionado con el empleado solicitante.
+
+En la definición de nivel (**Tier Definition**), seleccione como **Reviewer field** el campo **Usuario solicitante** (`requestor_user_id`) si desea que apruebe quien figura como solicitante del expediente.
+
 ## Licencia
 
 AGPL-3.0 o posterior

@@ -15,4 +15,30 @@
             <field name="implied_ids" eval="[(4, ref('group_fund_expedient_user'))]"/>
         </record>
     </data>
+
+    <!--
+        Acceso a los reportes y al tablero de Contrataciones (Locación).
+
+        Categoría propia a propósito: dentro de «Expedientes», Usuario y
+        Administrador forman una cadena y el formulario del usuario los
+        muestra como un desplegable. Un tercer grupo que implica Usuario pero
+        no es implicado por Administrador rompe esa cadena y Odoo pasa toda la
+        categoría a casillas sueltas.
+
+        No lo implica Administrador: los reportes los ve solo quien está en
+        este grupo. Sí implica Usuario, porque el detalle de contrataciones
+        lee líneas y expedientes.
+    -->
+    <data>
+        <record id="module_fund_expedient_contracting_category" model="ir.module.category">
+            <field name="name">Expedientes: Contrataciones</field>
+            <field name="sequence">51</field>
+        </record>
+        <record id="group_fund_expedient_contracting" model="res.groups">
+            <field name="name">Ver reportes y tablero</field>
+            <field name="category_id" ref="module_fund_expedient_contracting_category"/>
+            <field name="implied_ids" eval="[(4, ref('group_fund_expedient_user'))]"/>
+            <field name="comment">Ve los reportes de Contrataciones (Locación), la proyección mensual, la facturación de las contrataciones y su tablero.</field>
+        </record>
+    </data>
 </odoo>

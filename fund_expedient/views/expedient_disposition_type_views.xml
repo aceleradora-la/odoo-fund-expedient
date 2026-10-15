@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_expedient_disposition_type_list" model="ir.ui.view">
+        <field name="name">fund.expedient.disposition.type.list</field>
+        <field name="model">fund.expedient.disposition.type</field>
+        <field name="type">list</field>
+        <field name="arch" type="xml">
+            <list string="Tipos de disposición" create="1" delete="1" edit="1">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="code"/>
+                <field name="closes_expedient"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_expedient_disposition_type_form" model="ir.ui.view">
+        <field name="name">fund.expedient.disposition.type.form</field>
+        <field name="model">fund.expedient.disposition.type</field>
+        <field name="type">form</field>
+        <field name="arch" type="xml">
+            <form string="Tipo de disposición">
+                <sheet>
+                    <widget name="web_ribbon" title="Archivado" bg_color="text-bg-danger"
+                            invisible="active"/>
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="code"/>
+                            <field name="sequence"/>
+                            <field name="active"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                        </group>
+                        <group string="Efecto sobre el expediente">
+                            <field name="closes_expedient"/>
+                        </group>
+                    </group>
+                    <div class="alert alert-info" role="status" invisible="not closes_expedient">
+                        <i class="fa fa-info-circle me-2" aria-hidden="true"/>
+                        Para que este tipo pueda cerrar un expediente hace falta una
+                        <b>etapa</b> con este mismo tipo en su campo «Resultado final»,
+                        agregada a las Asignaciones por etapa del tipo de expediente.
+                        Cada tipo de expediente puede cerrar en su propia etapa.
+                    </div>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_expedient_disposition_type_search" model="ir.ui.view">
+        <field name="name">fund.expedient.disposition.type.search</field>
+        <field name="model">fund.expedient.disposition.type</field>
+        <field name="arch" type="xml">
+            <search string="Buscar tipos de disposición">
+                <field name="name"/>
+                <field name="code"/>
+                <filter string="Cierran el expediente" name="closes"
+                        domain="[('closes_expedient', '=', True)]"/>
+                <filter string="Continúan el proceso" name="continues"
+                        domain="[('closes_expedient', '=', False)]"/>
+                <separator/>
+                <filter string="Archivados" name="inactive" domain="[('active', '=', False)]"/>
+            </search>
+        </field>
+    </record>
+</odoo>

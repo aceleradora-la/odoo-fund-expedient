@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_fund_expedient_disposition_list_report" model="ir.ui.view">
+        <field name="name">fund.expedient.disposition.list.report</field>
+        <field name="model">fund.expedient.disposition</field>
+        <field name="type">list</field>
+        <field name="arch" type="xml">
+            <!--
+                Se puede crear desde acá: una disposición puede existir suelta,
+                sin expediente (trámite administrativo que se vincula después).
+            -->
+            <list string="Disposiciones" create="1" delete="0" edit="1"
+                  decoration-muted="cancelled">
+                <field name="number"/>
+                <field name="expedient_id"/>
+                <field name="stage_id"/>
+                <field name="disposition_date"/>
+                <field name="disposition_type_id" options="{'no_create_edit': True}"/>
+                <field name="file_name" string="Archivo" optional="show"/>
+                <field name="cancelled" optional="show"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+            </list>
+        </field>
+    </record>
+
+    <!--
+        Formulario propio de la Disposición. Hace falta porque el registro se
+        abre fuera del expediente: desde el botón «Crear Disposición» y desde el
+        reporte. Sin esta vista Odoo genera una automática con todos los campos
+        técnicos (incluidos los de validación por niveles).
+        Refleja el mismo contenido que el formulario embebido en el expediente.
+    -->
+    <record id="view_fund_expedient_disposition_form" model="ir.ui.view">
+        <field name="name">fund.expedient.disposition.form</field>
+        <field name="model">fund.expedient.disposition</field>
+        <field name="type">form</field>
+        <field name="arch" type="xml">
+            <form string="Disposición" create="1" delete="0">
+                <header>
+                    <field name="outcome_applied" invisible="1"/>
+                    <field name="cancelled" invisible="1"/>
+                    <field name="expedient_stage_editable" invisible="1"/>
+                    <field name="disposition_closes_expedient" invisible="1"/>
+                    <button name="action_apply_disposition" type="object"
+                            string="Aplicar disposición"
+                            class="btn-warning"
+                            confirm="El expediente se cerrará en la etapa final correspondiente al resultado de esta disposición. ¿Continuar?"
+                            invisible="cancelled or not disposition_closes_expedient or outcome_applied"/>
+                    <button name="action_cancel" type="object"
+                            string="Anular disposición" class="btn-secondary"
+                            confirm="La disposición quedará anulada como historial y podrá crearse otra. ¿Continuar?"
+                            invisible="cancelled or not expedient_stage_editable"/>
+                </header>
+                <sheet>
+                    <widget name="web_ribbon" title="Anulada" bg_color="text-bg-danger"
+                            invisible="not cancelled"/>
+                    <div class="oe_title">
+                        <h1><field name="number" readonly="1"/></h1>
+                    </div>
+                    <group>
+                        <group>
+                            <!--
+                                Editables: la disposición puede nacer suelta y
+                                vincularse a un expediente más adelante. La etapa
+                                se limita a las del expediente elegido.
+                            -->
+                            <field name="expedient_id"
+                                   options="{'no_create': True, 'no_create_edit': True}"/>
+                            <field name="stage_id" options="{'no_create': True}"
+                                   domain="[('id', 'in', expedient_allowed_stage_ids)]"
+                                   invisible="not expedient_id"/>
+                            <field name="expedient_allowed_stage_ids" invisible="1"/>
+                            <field name="disposition_date"/>
+                            <field name="disposition_type_id" options="{'no_create_edit': True}"/>
+                        </group>
+                        <group>
+                            <field name="file_data" filename="file_name" widget="binary"
+                                   string="Archivo"/>
+                            <field name="file_name" invisible="1"/>
+                            <field name="sequence"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                        </group>
+                    </group>
+                    <group string="Observaciones">
+                        <field name="notes" widget="html" placeholder="Observaciones..." nolabel="1"/>
+                    </group>
+                    <group string="Documentos relacionados">
+                        <field name="document_ids" nolabel="1"
+                               context="{'default_expedient_id': expedient_id, 'default_stage_id': stage_id, 'default_disposition_id': id}">
+                            <list create="1" delete="1" edit="1">
+                                <field name="number"/>
+                                <field name="file_name"/>
+                                <field name="name"/>
+                                <field name="delivered"/>
+                                <field name="document_type_id" optional="show"/>
+                                <button type="object"
+                                        name="action_open_document"
+                                        string="Abrir"
+                                        class="btn-secondary"/>
+                            </list>
+                        </field>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_fund_expedient_disposition_pivot_report" model="ir.ui.view">
+        <field name="name">fund.expedient.disposition.pivot.report</field>
+        <field name="model">fund.expedient.disposition</field>
+        <field name="type">pivot</field>
+        <field name="arch" type="xml">
+            <pivot string="Disposiciones - Análisis">
+                <field name="disposition_type_id" type="row"/>
+                <field name="stage_id" type="row"/>
+                <field name="expedient_id" type="row"/>
+                <field name="disposition_date" interval="month" type="col"/>
+                <field name="id" type="measure" string="Cantidad"/>
+            </pivot>
+        </field>
+    </record>
+</odoo>
+

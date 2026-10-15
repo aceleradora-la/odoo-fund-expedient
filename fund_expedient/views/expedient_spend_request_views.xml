@@ -1,0 +1,240 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_fund_expedient_spend_request_list" model="ir.ui.view">
+        <field name="name">fund.expedient.spend.request.list</field>
+        <field name="model">fund.expedient.spend.request</field>
+        <field name="type">list</field>
+        <field name="arch" type="xml">
+            <list string="Solicitudes de Gasto" create="0" delete="0" edit="0"
+                  decoration-muted="cancelled">
+                <field name="display_name" string="Solicitud"/>
+                <field name="expedient_id"/>
+                <field name="operation_type" optional="show"/>
+                <field name="expedient_type_id" optional="show"/>
+                <field name="expedient_type_number" optional="show"/>
+                <field name="number"/>
+                <field name="requestor_id" optional="show"/>
+                <field name="requestor_department_id" optional="show"/>
+                <field name="requestor_department_manager_id" optional="hide"/>
+                <field name="contract_object" optional="hide"/>
+                <field name="delivery_location" optional="hide"/>
+                <field name="spend_state"/>
+                <field name="preventiva_state"/>
+                <field name="definitiva_state"/>
+                <field name="date_preventiva"/>
+                <field name="date_definitiva"/>
+                <field name="amount_diff_pct" optional="hide"/>
+                <field name="cancelled" optional="show"/>
+                <field name="cancel_date" optional="hide"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_fund_expedient_spend_request_search" model="ir.ui.view">
+        <field name="name">fund.expedient.spend.request.search</field>
+        <field name="model">fund.expedient.spend.request</field>
+        <field name="arch" type="xml">
+            <search string="Buscar solicitudes de gasto">
+                <field name="display_name" string="Solicitud"/>
+                <field name="expedient_id"/>
+                <field name="expedient_type_id"/>
+                <field name="expedient_type_number"/>
+                <field name="number"/>
+                <field name="requestor_id"/>
+                <field name="requestor_department_id" string="Sector requirente"/>
+                <field name="requestor_department_manager_id" string="Responsable del sector"/>
+                <field name="contract_object" string="Objeto de la contratación"/>
+                <field name="delivery_location" string="Lugar de Entrega/Ejecución"/>
+                <separator/>
+                <filter string="Gasto" name="op_expense"
+                        domain="[('operation_type', '=', 'expense')]"/>
+                <filter string="Ingreso" name="op_income"
+                        domain="[('operation_type', '=', 'income')]"/>
+                <separator/>
+                <filter string="Preventiva" name="phase_preventiva"
+                        domain="[('spend_state', '=', 'preventiva')]"/>
+                <filter string="Definitiva" name="phase_definitiva"
+                        domain="[('spend_state', '=', 'definitiva')]"/>
+                <filter string="Preventiva generada" name="preventiva_generated"
+                        domain="[('preventiva_state', '=', 'generated')]"/>
+                <filter string="Preventiva aprobada" name="preventiva_approved"
+                        domain="[('preventiva_state', '=', 'approved')]"/>
+                <filter string="Definitiva generada" name="definitiva_generated"
+                        domain="[('definitiva_state', '=', 'generated')]"/>
+                <filter string="Definitiva aprobada" name="definitiva_approved"
+                        domain="[('definitiva_state', '=', 'approved')]"/>
+                <separator/>
+                <filter string="Vigentes" name="not_cancelled"
+                        domain="[('cancelled', '=', False)]"/>
+                <filter string="Canceladas" name="cancelled"
+                        domain="[('cancelled', '=', True)]"/>
+                <separator/>
+                <filter string="De mi sector" name="my_department"
+                        domain="[('requestor_department_id.member_ids.user_id', '=', uid)]"/>
+                <separator/>
+                <!--
+                    Filtros sobre la variación definitivo vs. preventivo.
+                    Útiles para revisar SGs con sobrecosto/ahorro relevante
+                    y para que el equipo de control pueda ubicarlas rápido.
+                -->
+                <filter string="Sobrecosto &gt; 10%" name="overrun_10"
+                        domain="[('amount_diff_pct', '&gt;', 10)]"/>
+                <filter string="Sobrecosto &gt; 20%" name="overrun_20"
+                        domain="[('amount_diff_pct', '&gt;', 20)]"/>
+                <filter string="Ahorro" name="savings"
+                        domain="[('amount_diff_pct', '&lt;', 0)]"/>
+                <group expand="0" string="Agrupar por">
+                    <filter string="Tipo de operación" name="group_operation_type"
+                            context="{'group_by': 'operation_type'}"/>
+                    <filter string="Expediente" name="group_expedient"
+                            context="{'group_by': 'expedient_id'}"/>
+                    <filter string="Fase SG" name="group_spend_state"
+                            context="{'group_by': 'spend_state'}"/>
+                    <filter string="Estado preventiva" name="group_preventiva_state"
+                            context="{'group_by': 'preventiva_state'}"/>
+                    <filter string="Estado definitiva" name="group_definitiva_state"
+                            context="{'group_by': 'definitiva_state'}"/>
+                    <filter string="Solicitante" name="group_requestor"
+                            context="{'group_by': 'requestor_id'}"/>
+                    <filter string="Sector requirente" name="group_department"
+                            context="{'group_by': 'requestor_department_id'}"/>
+                    <filter string="Responsable del sector" name="group_department_manager"
+                            context="{'group_by': 'requestor_department_manager_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="view_fund_expedient_spend_request_form" model="ir.ui.view">
+        <field name="name">fund.expedient.spend.request.form</field>
+        <field name="model">fund.expedient.spend.request</field>
+        <field name="type">form</field>
+        <field name="arch" type="xml">
+            <form string="Solicitud de Gasto" create="0" delete="0">
+                <header>
+                    <button name="action_print_report" type="object"
+                            string="Imprimir SG" class="btn-secondary"
+                            invisible="not number or number == '/'"/>
+                    <button name="action_cancel" type="object"
+                            string="Cancelar solicitud" class="btn-secondary"
+                            confirm="La solicitud quedará cancelada como historial y podrá generarse una nueva. ¿Continuar?"
+                            invisible="cancelled or not expedient_stage_editable or not number or number == '/'"/>
+                    <field name="cancelled" invisible="1"/>
+                    <field name="expedient_stage_editable" invisible="1"/>
+                    <!-- Necesario para que `parent.contract_kind` resuelva en las líneas. -->
+                    <field name="contract_kind" invisible="1"/>
+                </header>
+                <sheet>
+                    <widget name="web_ribbon" title="Cancelada" bg_color="text-bg-danger"
+                            invisible="not cancelled"/>
+                    <group>
+                        <field name="expedient_id" readonly="1"/>
+                    </group>
+                    <!--
+                        Identificación: dos columnas. A la izquierda los datos
+                        de identificación y estado de la SG; a la derecha los
+                        datos de la contratación y responsables del sector.
+                        El objeto y lugar de entrega van ANTES del solicitante
+                        para que la lectura describa primero el "qué" y luego
+                        el "quién".
+                    -->
+                    <group string="Identificación">
+                        <group>
+                            <field name="number" readonly="1"/>
+                            <field name="expedient_type_id" readonly="1"/>
+                            <field name="expedient_type_number" readonly="1"
+                                   invisible="not expedient_type_number"/>
+                            <field name="spend_state" readonly="1"/>
+                            <field name="preventiva_state" readonly="1"/>
+                            <field name="definitiva_state" readonly="1"/>
+                            <field name="final_number" readonly="1" optional="hide"/>
+                        </group>
+                        <group>
+                            <field name="contract_object" readonly="1"
+                                   invisible="not contract_object"/>
+                            <field name="delivery_location" readonly="1"
+                                   invisible="not delivery_location"/>
+                            <field name="requestor_id" readonly="1"/>
+                            <field name="requestor_department_id" readonly="1"/>
+                            <field name="requestor_department_manager_id" readonly="1"
+                                   invisible="not requestor_department_manager_id"/>
+                            <field name="currency_id" invisible="1"/>
+                            <field name="approval_currency_id" invisible="1"/>
+                        </group>
+                    </group>
+                    <group string="Preventiva">
+                        <group>
+                            <field name="date_preventiva" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="amount_preventiva" readonly="1"/>
+                            <field name="amount_preventiva_unit" readonly="1"/>
+                        </group>
+                    </group>
+                    <group string="Definitiva">
+                        <group>
+                            <field name="date_definitiva" readonly="1"/>
+                            <!--
+                                Variación % definitivo vs. preventivo.
+                                El campo ya almacena el porcentaje listo
+                                (5.0 = 5%), así que no usamos el widget
+                                "percentage" (que asume ratio 0..1).
+                                Lo mostramos solo cuando hay definitivo
+                                cargado para evitar el "0,00 %" en SGs
+                                que aún están en fase preventiva.
+                            -->
+                            <label for="amount_diff_pct"
+                                   invisible="not amount_definitiva"/>
+                            <div invisible="not amount_definitiva">
+                                <field name="amount_diff_pct" readonly="1"
+                                       nolabel="1" class="oe_inline"/>
+                                <span class="oe_inline">%</span>
+                            </div>
+                        </group>
+                        <group>
+                            <field name="amount_definitiva" readonly="1"/>
+                            <field name="amount_definitiva_unit" readonly="1"/>
+                        </group>
+                    </group>
+                    <group string="Líneas">
+                        <field name="line_ids" nolabel="1" readonly="1">
+                            <list create="0" delete="0" edit="0">
+                                <field name="sequence" widget="handle"/>
+                                <field name="display_type" column_invisible="1"/>
+                                <field name="product_id"/>
+                                <field name="name"/>
+                                <field name="product_qty"/>
+                                <field name="product_uom_id"/>
+                                <field name="analytic_account_id" optional="show"/>
+                                <field name="price_unit_estimated"/>
+                                <field name="amount_estimated_line"/>
+                                <field name="price_unit_final" optional="show"/>
+                                <field name="amount_final_line"/>
+                                <!-- Locación: el período contratado de cada línea, tal
+                                     como quedó en el momento de generar la solicitud. -->
+                                <field name="date_start"
+                                       column_invisible="parent.contract_kind in ('none', False)"/>
+                                <field name="date_end"
+                                       column_invisible="parent.contract_kind in ('none', False)"/>
+                            </list>
+                        </field>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_fund_expedient_spend_request_pivot" model="ir.ui.view">
+        <field name="name">fund.expedient.spend.request.pivot</field>
+        <field name="model">fund.expedient.spend.request</field>
+        <field name="type">pivot</field>
+        <field name="arch" type="xml">
+            <pivot string="Solicitudes de Gasto - Análisis">
+                <field name="expedient_id" type="row"/>
+                <field name="date_preventiva" interval="month" type="col"/>
+                <field name="id" type="measure" string="Cantidad"/>
+            </pivot>
+        </field>
+    </record>
+</odoo>

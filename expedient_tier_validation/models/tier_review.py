@@ -1,0 +1,326 @@
+# Copyright 2026
+# License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
+
+import inspect
+
+from odoo import api, fields, models
+
+_FUND_EXPEDIENT_MODELS = (
+    "fund.expedient",
+    "fund.expedient.spend.request",
+    "fund.expedient.disposition",
+    "fund.expedient.resolution",
+)
+_MY_APPROVALS_MODELS = (
+    "fund.expedient",
+    "fund.expedient.spend.request",
+)
+
+
+class TierReview(models.Model):
+    _inherit = "tier.review"
+
+    stage_id = fields.Many2one(
+        comodel_name="fund.expedient.stage",
+        string="Etapa (Expediente)",
+        index=True,
+        help="Etapa del expediente al momento de solicitar/crear la revisión.",
+    )
+    spend_phase = fields.Selection(
+        selection=[
+            ("preventiva", "Preventiva"),
+            ("definitiva", "Definitiva"),
+        ],
+        string="Fase SG",
+        index=True,
+        help="Fase de la Solicitud de Gasto asociada a la revisión.",
+    )
+    fund_expedient_id = fields.Many2one(
+        comodel_name="fund.expedient",
+        string="Expediente",
+        compute="_compute_fund_approval_links",
+        store=True,
+        index=True,
+        search="_search_fund_expedient_id",
+    )
+    fund_spend_request_id = fields.Many2one(
+        comodel_name="fund.expedient.spend.request",
+        string="Solicitud de Gasto",
+        compute="_compute_fund_approval_links",
+        store=True,
+        index=True,
+        search="_search_fund_spend_request_id",
+    )
+    fund_record_type = fields.Selection(
+        selection=[
+            ("expedient", "Expediente"),
+            ("spend_request", "Solicitud de Gasto"),
+        ],
+        string="Tipo de registro",
+        compute="_compute_fund_approval_links",
+        store=True,
+        index=True,
+        search="_search_fund_record_type",
+    )
+    approval_qty = fields.Integer(
+        string="Cantidad",
+        default=1,
+        required=True,
+        aggregator="sum",
+        help="Medida fija para pivote/gráficos (1 por validación).",
+    )
+    approval_duration_days = fields.Float(
+        string="Días hasta aprobación",
+        compute="_compute_approval_duration_days",
+        store=True,
+        aggregator="avg",
+        help="Días entre la creación de la revisión (solicitud) y su aprobación. "
+        "Solo se calcula para revisiones aprobadas; el resto queda en 0. "
+        "Medida para promediar tiempos de aprobación en pivote/gráficos "
+        "(filtrar status='approved' para evitar sesgo por los ceros).",
+    )
+
+    @api.depends("status", "reviewed_date", "create_date")
+    def _compute_approval_duration_days(self):
+        for rec in self:
+            if rec.status == "approved" and rec.reviewed_date and rec.create_date:
+                delta = rec.reviewed_date - rec.create_date
+                rec.approval_duration_days = delta.total_seconds() / 86400.0
+            else:
+                rec.approval_duration_days = 0.0
+
+    @api.depends("model", "res_id")
+    def _compute_fund_approval_links(self):
+        SpendRequest = self.env["fund.expedient.spend.request"]
+        Expedient = self.env["fund.expedient"]
+        for rec in self:
+            rec.fund_expedient_id = False
+            rec.fund_spend_request_id = False
+            rec.fund_record_type = False
+            if not rec.res_id:
+                continue
+            if rec.model == "fund.expedient":
+                expedient = Expedient.browse(rec.res_id).exists()
+                if expedient:
+                    rec.fund_expedient_id = expedient.id
+                    rec.fund_record_type = "expedient"
+            elif rec.model == "fund.expedient.spend.request":
+                spend_request = SpendRequest.browse(rec.res_id).exists()
+                if spend_request:
+                    rec.fund_spend_request_id = spend_request.id
+                    rec.fund_expedient_id = spend_request.expedient_id
+                    rec.fund_record_type = "spend_request"
+
+    @api.model
+    def _search_fund_expedient_id(self, operator, value):
+        return [("model", "=", "fund.expedient"), ("res_id", operator, value)]
+
+    @api.model
+    def _search_fund_spend_request_id(self, operator, value):
+        return [("model", "=", "fund.expedient.spend.request"), ("res_id", operator, value)]
+
+    @api.model
+    def _search_fund_record_type(self, operator, value):
+        if operator != "=":
+            return [("id", "=", False)]
+        if value == "expedient":
+            return [("model", "=", "fund.expedient")]
+        if value == "spend_request":
+            return [("model", "=", "fund.expedient.spend.request")]
+        return [("id", "=", False)]
+
+    def action_open_fund_record(self):
+        """Abrir el expediente o la SG vinculada a esta validación."""
+        self.ensure_one()
+        if self.model not in _MY_APPROVALS_MODELS or not self.res_id:
+            return False
+        return {
+            "type": "ir.actions.act_window",
+            "name": self.env[self.model]._description,
+            "res_model": self.model,
+            "res_id": self.res_id,
+            "view_mode": "form",
+            "target": "current",
+        }
+
+    def _fill_fund_context_vals(self, vals, review=None):
+        """Completar etapa/fase en reviews creadas fuera de request_validation (p. ej. forward)."""
+        model = vals.get("model") or (review.model if review else False)
+        res_id = vals.get("res_id") or (review.res_id if review else False)
+        if not model or not res_id:
+            return
+        stage_id = vals.get("stage_id") or (review.stage_id.id if review and review.stage_id else False)
+        spend_phase = vals.get("spend_phase") or (review.spend_phase if review else False)
+        if model == "fund.expedient" and not stage_id:
+            expedient = self.env["fund.expedient"].browse(res_id).exists()
+            if expedient.stage_id:
+                vals["stage_id"] = expedient.stage_id.id
+        elif model == "fund.expedient.spend.request" and not spend_phase:
+            spend_request = self.env["fund.expedient.spend.request"].browse(res_id).exists()
+            if spend_request:
+                vals["spend_phase"] = spend_request._get_active_spend_phase()
+        elif model in ("fund.expedient.disposition", "fund.expedient.resolution") and not stage_id:
+            record = self.env[model].browse(res_id).exists()
+            if record.stage_id:
+                vals["stage_id"] = record.stage_id.id
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        for vals in vals_list:
+            if vals.get("model") in _FUND_EXPEDIENT_MODELS:
+                self._fill_fund_context_vals(vals)
+        records = super().create(vals_list)
+        records._backfill_missing_context()
+        records._record_fund_participants()
+        return records
+
+    def _record_fund_participants(self):
+        """Los aprobadores pasan a ser participantes (y seguidores) del expediente.
+
+        Vale para las aprobaciones del expediente y de sus documentos (SG,
+        disposición, resolución): quien aprueba cualquiera de ellos queda
+        con acceso al expediente aun después de aprobar.
+        """
+        reviewers_by_expedient = {}
+        for review in self.filtered(lambda r: r.model in _FUND_EXPEDIENT_MODELS and r.res_id):
+            record = self.env[review.model].sudo().browse(review.res_id).exists()
+            expedient = record if review.model == "fund.expedient" else record.expedient_id
+            if expedient:
+                reviewers_by_expedient.setdefault(expedient, self.env["res.users"])
+                reviewers_by_expedient[expedient] |= review.sudo().reviewer_ids
+        for expedient, reviewers in reviewers_by_expedient.items():
+            if reviewers:
+                expedient._record_participants(reviewers)
+
+    def _backfill_missing_context(self):
+        """Corregir reviews ya creadas sin etapa/fase (p. ej. forward antes del fix)."""
+        for review in self.filtered(lambda r: r.model in _FUND_EXPEDIENT_MODELS):
+            patch = {}
+            review._fill_fund_context_vals(patch, review=review)
+            if patch:
+                super(TierReview, review).write(patch)
+
+    def write(self, vals):
+        res = super().write(vals)
+        self._backfill_missing_context()
+        return res
+
+    def _fund_promote_to_pending(self, open_context_reviews=None):
+        """Pasar a «pendiente» las revisiones de `self` que ya pueden atenderse.
+
+        Sin esto quedan en «esperando»: no se avisa al revisor de que le llegó
+        algo y la lista de aprobaciones muestra un estado que no refleja la
+        realidad. `_update_counter` lo hace, pero solo cuando quien pide la
+        validación es además revisor.
+
+        `base_tier_validation` lo resuelve con `_update_review_status`, que no
+        existe en todas las versiones. Cuando no está, se replica el criterio:
+        promover la revisión de menor secuencia —y todas, si la definición no
+        exige orden—. `open_context_reviews` son todas las revisiones del mismo
+        contexto (etapa del expediente o fase de la solicitud): la secuencia se
+        compara contra ellas y no solo contra las recién creadas, porque acá se
+        crean únicamente las que faltaban y una anterior sin resolver tiene que
+        seguir bloqueando. Si la versión instalada ya las crea en «pendiente»,
+        no hay nada que promover y no se toca nada.
+        """
+        if not self:
+            return
+        promote = getattr(self, "_update_review_status", None)
+        if promote:
+            promote()
+            return
+        waiting = self.filtered(lambda r: r.status == "waiting")
+        if not waiting:
+            return
+        scope = self if open_context_reviews is None else open_context_reviews
+        open_reviews = scope.filtered(lambda r: r.status in ("waiting", "pending"))
+        next_seq = min(open_reviews.mapped("sequence"), default=0)
+        for review in waiting:
+            if review.approve_sequence and review.sequence != next_seq:
+                continue
+            review.status = "pending"
+            review._notify_pending_review()
+
+    def _notify_pending_review(self):
+        """Avisar al revisor de que la revisión pasó a «pendiente».
+
+        Equivale a lo que hace `_update_review_status` del estándar, para las
+        versiones de `base_tier_validation` que no tienen ese método. El aviso
+        se resuelve de forma defensiva —tanto el campo de la definición como la
+        firma del método cambiaron entre versiones—: si no está disponible, la
+        revisión igual queda en «pendiente» y solo se pierde el correo.
+        """
+        self.ensure_one()
+        definition = self.definition_id
+        if "notify_on_pending" not in definition._fields:
+            return
+        if not definition.notify_on_pending:
+            return
+        notify = getattr(self, "_notify_pending_status", None)
+        if not notify:
+            return
+        if inspect.signature(notify).parameters:
+            notify(self)
+        else:
+            notify()
+
+    def _pending_reviews_same_context(self, resource):
+        """Reviews pendientes del mismo contexto (etapa/fase), tolerando filas sin contexto."""
+        self.ensure_one()
+        if self.model == "fund.expedient.spend.request":
+            phase = resource._get_active_spend_phase()
+            return resource.review_ids.filtered(
+                lambda r: r.status == "pending"
+                and (r.spend_phase == phase or not r.spend_phase)
+            )
+        if self.model in ("fund.expedient.disposition", "fund.expedient.resolution"):
+            return resource.review_ids.filtered(
+                lambda r: r.status == "pending"
+                and (r.stage_id == resource.stage_id or not r.stage_id)
+            )
+        return resource.review_ids.filtered(
+            lambda r: r.status == "pending"
+            and (r.stage_id == resource.stage_id or not r.stage_id)
+        )
+
+    def _can_review_value(self):
+        """Agrupar secuencia de aprobación solo entre reviews de la misma etapa del expediente."""
+        self.ensure_one()
+        if self.model not in (
+            "fund.expedient",
+            "fund.expedient.spend.request",
+            "fund.expedient.disposition",
+            "fund.expedient.resolution",
+        ):
+            return super()._can_review_value()
+        if self.status not in ("pending", "waiting"):
+            return False
+        if not self.approve_sequence:
+            return True
+        resource = self.env[self.model].browse(self.res_id)
+        reviews = self._pending_reviews_same_context(resource)
+        if not reviews:
+            return True
+        sequence = min(reviews.mapped("sequence"))
+        return self.sequence == sequence
+
+    @api.model
+    def _definition_reviews_resolved(self, tier_definition, context_reviews):
+        """True si la definición está cubierta (aprobada o reenviada y aprobada por el destinatario)."""
+        def_reviews = context_reviews.filtered(
+            lambda r, d=tier_definition: r.definition_id == d
+        )
+        if not def_reviews:
+            return False
+        if any(r.status in ("pending", "waiting", "rejected") for r in def_reviews):
+            return False
+        if all(r.status == "approved" for r in def_reviews):
+            return True
+        if any(r.status == "forwarded" for r in def_reviews):
+            return bool(
+                context_reviews.filtered(
+                    lambda r: not r.definition_id and r.status == "approved"
+                )
+            )
+        return False
+

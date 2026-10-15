@@ -7,9 +7,11 @@ from odoo import fields, models
 class ProjectProject(models.Model):
     _inherit = "project.project"
 
-    expedient_ids = fields.One2many(
+    expedient_ids = fields.Many2many(
         "fund.expedient",
+        "fund_expedient_project_rel",
         "project_id",
+        "expedient_id",
         string="Expedientes",
     )
     expedient_count = fields.Integer(
@@ -26,6 +28,6 @@ class ProjectProject(models.Model):
         action = self.env["ir.actions.act_window"]._for_xml_id(
             "fund_expedient.action_fund_expedient"
         )
-        action["domain"] = [("project_id", "=", self.id)]
-        action["context"] = {"default_project_id": self.id}
+        action["domain"] = [("id", "in", self.expedient_ids.ids)]
+        action["context"] = {"default_project_ids": [(4, self.id)]}
         return action

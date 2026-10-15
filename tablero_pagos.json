@@ -1,0 +1,219 @@
+{
+  "version": 22,
+  "sheets": [
+    {
+      "id": "sheet_resumen",
+      "name": "Tiempos de Pago",
+      "colNumber": 26,
+      "rowNumber": 1000,
+      "rows": {},
+      "cols": {},
+      "merges": [],
+      "cells": {
+        "A1": { "content": "Tablero de Tiempos de Pago" },
+        "A22": { "content": "Días promedio de pago por proveedor" },
+        "A23": { "content": "=PIVOT(1)" }
+      },
+      "styles": { "A1": 1, "A22": 1 },
+      "formats": {},
+      "borders": {},
+      "conditionalFormats": [],
+      "dataValidationRules": [],
+      "figures": [
+        {
+          "id": "fig_pago_kpi_2e55",
+          "x": 0,
+          "y": 40,
+          "width": 360,
+          "height": 260,
+          "tag": "chart",
+          "data": {
+            "type": "scorecard",
+            "title": { "text": "Promedio general de días de pago" },
+            "background": "#FFFFFF",
+            "keyValue": "Datos!B1",
+            "baseline": "Datos!B2",
+            "baselineMode": "difference",
+            "baselineDescr": "días vs. mismo período anterior",
+            "baselineColorUp": "#DC6965",
+            "baselineColorDown": "#00A04A",
+            "humanize": false
+          }
+        },
+        {
+          "id": "fig_pago_mes_4d1a",
+          "x": 380,
+          "y": 40,
+          "width": 700,
+          "height": 340,
+          "tag": "chart",
+          "data": {
+            "type": "odoo_line",
+            "title": { "text": "Días promedio de pago por mes" },
+            "background": "#FFFFFF",
+            "legendPosition": "none",
+            "verticalAxisPosition": "left",
+            "stacked": false,
+            "fillArea": true,
+            "metaData": {
+              "groupBy": ["invoice_date:month"],
+              "measure": "payment_delay_days",
+              "order": null,
+              "resModel": "account.move",
+              "mode": "line"
+            },
+            "searchParams": {
+              "comparison": null,
+              "context": {},
+              "domain": [
+                ["move_type", "=", "in_invoice"],
+                ["state", "=", "posted"],
+                ["payment_state", "in", ["paid", "in_payment"]]
+              ],
+              "groupBy": ["invoice_date:month"],
+              "orderBy": []
+            },
+            "fieldMatching": {
+              "gf_period": { "chain": "invoice_date", "type": "date", "offset": 0 }
+            }
+          }
+        }
+      ],
+      "tables": [],
+      "areGridLinesVisible": false,
+      "isVisible": true,
+      "headerGroups": { "ROW": [], "COL": [] },
+      "comments": {}
+    },
+    {
+      "id": "sheet_datos",
+      "name": "Datos",
+      "colNumber": 26,
+      "rowNumber": 100,
+      "rows": {},
+      "cols": {},
+      "merges": [],
+      "cells": {
+        "A1": { "content": "Promedio actual (período seleccionado)" },
+        "B1": { "content": "=PIVOT.VALUE(2,\"payment_delay_days\")" },
+        "A2": { "content": "Promedio mismo período anterior" },
+        "B2": { "content": "=PIVOT.VALUE(3,\"payment_delay_days\")" }
+      },
+      "styles": {},
+      "formats": { "B1": 1, "B2": 1 },
+      "borders": {},
+      "conditionalFormats": [],
+      "dataValidationRules": [],
+      "figures": [],
+      "tables": [],
+      "areGridLinesVisible": true,
+      "isVisible": true,
+      "headerGroups": { "ROW": [], "COL": [] },
+      "comments": {}
+    }
+  ],
+  "styles": {
+    "1": { "textColor": "#01666b", "fontSize": 16, "bold": true }
+  },
+  "formats": {
+    "1": "#,##0.0"
+  },
+  "borders": {},
+  "revisionId": "START_REVISION",
+  "uniqueFigureIds": true,
+  "settings": {
+    "locale": {
+      "name": "English (US)",
+      "code": "en_US",
+      "thousandsSeparator": ",",
+      "decimalSeparator": ".",
+      "dateFormat": "mm/dd/yyyy",
+      "timeFormat": "hh:mm:ss",
+      "formulaArgSeparator": ",",
+      "weekStart": 7
+    }
+  },
+  "pivots": {
+    "1": {
+      "type": "ODOO",
+      "name": "Días promedio de pago por proveedor",
+      "model": "account.move",
+      "measures": [
+        { "id": "payment_delay_days", "fieldName": "payment_delay_days", "aggregator": "avg" }
+      ],
+      "columns": [],
+      "rows": [
+        { "fieldName": "partner_id", "order": "asc" }
+      ],
+      "domain": [
+        ["move_type", "=", "in_invoice"],
+        ["state", "=", "posted"],
+        ["payment_state", "in", ["paid", "in_payment"]]
+      ],
+      "context": {},
+      "sortedColumn": {
+        "groupId": [[], []],
+        "measure": "payment_delay_days",
+        "order": "desc"
+      },
+      "fieldMatching": {
+        "gf_period": { "chain": "invoice_date", "type": "date", "offset": 0 }
+      }
+    },
+    "2": {
+      "type": "ODOO",
+      "name": "Promedio general (período actual)",
+      "model": "account.move",
+      "measures": [
+        { "id": "payment_delay_days", "fieldName": "payment_delay_days", "aggregator": "avg" }
+      ],
+      "columns": [],
+      "rows": [],
+      "domain": [
+        ["move_type", "=", "in_invoice"],
+        ["state", "=", "posted"],
+        ["payment_state", "in", ["paid", "in_payment"]]
+      ],
+      "context": {},
+      "sortedColumn": null,
+      "fieldMatching": {
+        "gf_period": { "chain": "invoice_date", "type": "date", "offset": 0 }
+      }
+    },
+    "3": {
+      "type": "ODOO",
+      "name": "Promedio general (mismo período anterior)",
+      "model": "account.move",
+      "measures": [
+        { "id": "payment_delay_days", "fieldName": "payment_delay_days", "aggregator": "avg" }
+      ],
+      "columns": [],
+      "rows": [],
+      "domain": [
+        ["move_type", "=", "in_invoice"],
+        ["state", "=", "posted"],
+        ["payment_state", "in", ["paid", "in_payment"]]
+      ],
+      "context": {},
+      "sortedColumn": null,
+      "fieldMatching": {
+        "gf_period": { "chain": "invoice_date", "type": "date", "offset": -1 }
+      }
+    }
+  },
+  "pivotNextId": 4,
+  "customTableStyles": {},
+  "odooVersion": 12,
+  "globalFilters": [
+    {
+      "id": "gf_period",
+      "type": "date",
+      "label": "Período",
+      "defaultValue": "this_year",
+      "rangeType": "fixedPeriod"
+    }
+  ],
+  "lists": {},
+  "listNextId": 1,
+  "chartOdooMenusReferences": {}
+}

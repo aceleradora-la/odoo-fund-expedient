@@ -1,0 +1,271 @@
+# Copyright 2025
+# License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
+
+from odoo import api, fields, models
+
+from .expedient_link import link_web_read, link_write
+
+
+class AccountMove(models.Model):
+    _inherit = "account.move"
+
+    expedient_ids = fields.Many2many(
+        "fund.expedient",
+        "fund_expedient_account_move_rel",
+        "move_id",
+        "expedient_id",
+        string="Expedientes",
+        copy=False,
+        help="Expedientes a los que se imputa esta factura. Se puede cargar una factura "
+        "directa (sin orden de compra) y asociarla acá. Solo se ofrecen los expedientes "
+        "del proveedor de la factura: debe figurar como proveedor recomendado del "
+        "expediente o tener una orden de compra suya.",
+    )
+    expedient_names = fields.Char(
+        string="Expedientes",
+        compute="_compute_expedient_names",
+        help="Números de los expedientes vinculados, en texto. Permite que quien "
+        "trabaja en Contabilidad sepa a qué expediente corresponde la factura "
+        "aunque no tenga permisos sobre el módulo de Expedientes.",
+    )
+    allowed_expedient_ids = fields.Many2many(
+        "fund.expedient",
+        compute="_compute_allowed_expedient_ids",
+        string="Expedientes disponibles",
+        help="Campo técnico: alimenta el domain del selector de expedientes según el "
+        "proveedor/cliente de la factura.",
+    )
+
+    def _expedients_for_display(self):
+        """Expedientes a los que corresponde la factura.
+
+        Incluye los vinculados directamente y los que llegan por la orden de
+        compra de las líneas: una factura generada desde una OC no tiene el
+        vínculo directo, y es justamente el caso más habitual.
+        """
+        self.ensure_one()
+        move = self.sudo()
+        expedients = move.expedient_ids
+        for order in move.invoice_line_ids.purchase_line_id.order_id:
+            expedients |= order.expedient_ids
+        return expedients
+
+    @api.depends("expedient_ids", "invoice_line_ids")
+    def _compute_expedient_names(self):
+        """Números de los expedientes, legibles sin permisos de Expedientes.
+
+        `sudo` deliberado y acotado: se expone únicamente el número, que es lo
+        que Contabilidad necesita para saber a qué expediente corresponde la
+        factura. El expediente en sí sigue protegido por su ACL.
+        """
+        for move in self:
+            names = move._expedients_for_display().mapped("display_name")
+            move.expedient_names = ", ".join(name for name in names if name)
+
+    @api.depends("partner_id", "move_type", "company_id")
+    def _compute_allowed_expedient_ids(self):
+        """Expedientes seleccionables según el partner y el tipo de factura.
+
+        - Factura/nota de proveedor: expedientes de gasto donde el proveedor figura
+          como recomendado (cabecera o líneas) o es proveedor de una OC vinculada.
+        - Factura/nota de cliente: expedientes de ingreso (el expediente no tiene un
+          campo de cliente, así que ahí el filtro es solo por tipo de operación).
+        """
+        # sudo: se usa para acotar el selector; el usuario no ve estos registros
+        # salvo que tenga permisos, porque el campo solo se renderiza para ellos.
+        Expedient = self.env["fund.expedient"].sudo()
+        for move in self:
+            if move.move_type not in (
+                "in_invoice",
+                "in_refund",
+                "out_invoice",
+                "out_refund",
+            ):
+                move.allowed_expedient_ids = Expedient
+                continue
+
+            company_domain = [("company_id", "in", [False, move.company_id.id])]
+            if move.move_type in ("out_invoice", "out_refund"):
+                move.allowed_expedient_ids = Expedient.search(
+                    company_domain + [("operation_type", "=", "income")]
+                )
+                continue
+
+            partner = move.partner_id
+            if not partner:
+                move.allowed_expedient_ids = Expedient
+                continue
+            # Aceptar tanto el contacto de la factura como su empresa: los
+            # proveedores recomendados se cargan a nivel compañía.
+            partner_ids = list({partner.id, partner.commercial_partner_id.id})
+            by_recommended = Expedient.search(
+                company_domain
+                + [
+                    ("operation_type", "=", "expense"),
+                    "|",
+                    ("recommended_supplier_ids", "in", partner_ids),
+                    ("line_ids.recommended_supplier_ids", "in", partner_ids),
+                ]
+            )
+            # `purchase_order_ids` está restringido al grupo de Compras; el sudo
+            # de arriba también cubre ese caso.
+            by_order = Expedient.search(
+                company_domain
+                + [
+                    ("operation_type", "=", "expense"),
+                    ("purchase_order_ids.partner_id", "in", partner_ids),
+                ]
+            )
+            move.allowed_expedient_ids = by_recommended | by_order
+    payment_date = fields.Date(
+        string="Fecha de pago",
+        compute="_compute_payment_delay",
+        store=True,
+        help="Fecha en que la factura de proveedor quedó totalmente pagada "
+        "(fecha del último asiento conciliado contra la línea a pagar).",
+    )
+    payment_delay_days = fields.Float(
+        string="Días hasta el pago",
+        compute="_compute_payment_delay",
+        store=True,
+        aggregator="avg",
+        help="Días entre la fecha de la factura y la fecha en que quedó pagada. "
+        "Solo se calcula para facturas de proveedor pagadas; el resto queda en 0. "
+        "Medida para promediar tiempos de pago en pivote/gráficos "
+        "(filtrar payment_state in ('paid','in_payment') para evitar sesgo por los ceros).",
+    )
+
+    @api.depends(
+        "move_type",
+        "invoice_date",
+        "payment_state",
+        "line_ids.matched_debit_ids.max_date",
+        "line_ids.matched_credit_ids.max_date",
+    )
+    def _compute_payment_delay(self):
+        for move in self:
+            pay_date = False
+            if (
+                move.move_type == "in_invoice"
+                and move.invoice_date
+                and move.payment_state in ("paid", "in_payment")
+            ):
+                payable_lines = move.line_ids.filtered(
+                    lambda l: l.account_id.account_type
+                    in ("liability_payable", "asset_receivable")
+                )
+                partials = payable_lines.matched_debit_ids | payable_lines.matched_credit_ids
+                dates = [d for d in partials.mapped("max_date") if d]
+                if dates:
+                    pay_date = max(dates)
+            move.payment_date = pay_date
+            move.payment_delay_days = (
+                (pay_date - move.invoice_date).days
+                if pay_date and move.invoice_date
+                else 0.0
+            )
+
+    @api.onchange("expedient_ids")
+    def _onchange_expedient_ids_analytic(self):
+        """Si todos los expedientes apuntan a la misma cuenta analítica,
+        se sugiere para las líneas de factura sin distribución cargada."""
+        for move in self.filtered(lambda m: m.move_type in ("in_invoice", "in_refund")):
+            analytics = move.sudo().expedient_ids.mapped("analytic_account_id").filtered(
+                lambda a: a
+            )
+            if len(analytics) == 1:
+                analytic = analytics[0]
+                for line in move.invoice_line_ids.filtered(lambda l: not l.display_type):
+                    if not line.analytic_distribution:
+                        line.analytic_distribution = {str(analytic.id): 100.0}
+
+    def _apply_expedient_analytic_distribution(self):
+        """Propaga la cuenta analítica del expediente a las líneas sin distribución."""
+        for move in self.filtered(lambda m: m.move_type in ("in_invoice", "in_refund")):
+            if not move.sudo().expedient_ids:
+                continue
+            analytics = move.sudo().expedient_ids.mapped("analytic_account_id").filtered(
+                lambda a: a
+            )
+            if len(analytics) != 1:
+                continue
+            analytic = analytics[0]
+            lines_to_update = move.invoice_line_ids.filtered(
+                lambda l: not l.display_type and not l.analytic_distribution
+            )
+            if lines_to_update:
+                lines_to_update.write({"analytic_distribution": {str(analytic.id): 100.0}})
+
+    def _linked_expedients_for_recompute(self):
+        """Expedientes cuyos totales dependen de estas facturas.
+
+        Incluye los vinculados directamente y los que llegan por la orden de compra
+        de las líneas (una factura de OC impacta el expediente de esa orden).
+        """
+        # sudo en toda la travesía: es un recálculo interno de totales. Sin esto,
+        # un usuario de Contabilidad sin permisos de Expedientes (o sin permisos
+        # de Compras, por el `groups` de `purchase_order_ids`) no puede siquiera
+        # guardar la factura.
+        expedients = self.sudo().mapped("expedient_ids")
+        for move in self.sudo():
+            if move.move_type in ("in_invoice", "in_refund"):
+                for po in move.invoice_line_ids.purchase_line_id.order_id:
+                    if po.expedient_ids:
+                        expedients |= po.expedient_ids
+        return expedients
+
+    def _sync_expedients_from_purchase(self):
+        """Vincula la factura a los expedientes de sus órdenes de compra.
+
+        Una factura generada desde una OC no traía el vínculo directo: el campo
+        Expedientes quedaba vacío y había que recorrer la OC para saber a qué
+        expediente correspondía. Se completa acá; nunca se quita nada, lo
+        cargado a mano se respeta. Con sudo: `purchase_order.expedient_ids`
+        está restringido al grupo de Compras y el vínculo es un dato interno.
+        """
+        for move in self.sudo():
+            if move.move_type not in ("in_invoice", "in_refund"):
+                continue
+            po_expedients = move.invoice_line_ids.purchase_line_id.order_id.expedient_ids
+            missing = po_expedients - move.expedient_ids
+            if missing:
+                move.with_context(skip_expedient_po_sync=True).write(
+                    {"expedient_ids": [(4, expedient.id) for expedient in missing]}
+                )
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        """Igual que `write`: propagar analítica y refrescar totales del expediente.
+
+        `amount_committed` / `amount_real` del expediente son campos almacenados sin
+        dependencias sobre facturas (se invalidan a mano), así que una factura creada
+        ya vinculada —o creada desde una OC— dejaba los totales sin actualizar y el
+        expediente mostraba «real» en cero.
+        """
+        moves = super().create(vals_list)
+        moves._sync_expedients_from_purchase()
+        moves._apply_expedient_analytic_distribution()
+        expedients = moves._linked_expedients_for_recompute()
+        if expedients:
+            expedients._invalidate_commercial_computes()
+        return moves
+
+    def web_read(self, specification):
+        return link_web_read(self, super().web_read(specification), specification)
+
+    def write(self, vals):
+        res = link_write(self, vals, lambda moves, v: super(AccountMove, moves).write(v))
+        if "invoice_line_ids" in vals and not self.env.context.get("skip_expedient_po_sync"):
+            self._sync_expedients_from_purchase()
+        if "expedient_ids" in vals:
+            self._apply_expedient_analytic_distribution()
+        if any(
+            f in vals
+            for f in ("expedient_ids", "state", "amount_total", "currency_id", "invoice_line_ids")
+        ):
+            # Recompute de importes comprometidos/reales del expediente
+            # cuando cambia la factura o su vínculo.
+            expedients = self._linked_expedients_for_recompute()
+            if expedients:
+                expedients._invalidate_commercial_computes()
+        return res

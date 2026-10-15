@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!--
+        Los cuatro tipos que antes eran una lista fija. Sus `code` son los que
+        usa la migración para convertir las disposiciones y las etapas ya
+        existentes, así que no deben cambiar.
+        Se pueden agregar más desde Configuración › Tipos de disposición.
+    -->
+    <data noupdate="1">
+        <record id="disposition_type_adjudicacion" model="fund.expedient.disposition.type">
+            <field name="name">Adjudicación</field>
+            <field name="code">adjudicacion</field>
+            <field name="sequence">10</field>
+            <field name="closes_expedient" eval="False"/>
+        </record>
+        <record id="disposition_type_desierto" model="fund.expedient.disposition.type">
+            <field name="name">Declarar Desierto</field>
+            <field name="code">desierto</field>
+            <field name="sequence">20</field>
+            <field name="closes_expedient" eval="True"/>
+        </record>
+        <record id="disposition_type_sin_efecto" model="fund.expedient.disposition.type">
+            <field name="name">Dejar sin efecto</field>
+            <field name="code">sin_efecto</field>
+            <field name="sequence">30</field>
+            <field name="closes_expedient" eval="True"/>
+        </record>
+        <record id="disposition_type_fracasado" model="fund.expedient.disposition.type">
+            <field name="name">Declarar Fracasado</field>
+            <field name="code">fracasado</field>
+            <field name="sequence">40</field>
+            <field name="closes_expedient" eval="True"/>
+        </record>
+    </data>
+</odoo>

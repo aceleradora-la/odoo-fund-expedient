@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_expedient_type_list" model="ir.ui.view">
+        <field name="name">fund.expedient.type.list</field>
+        <field name="model">fund.expedient.type</field>
+        <field name="type">list</field>
+        <field name="arch" type="xml">
+            <list string="Tipos de expediente" create="1" delete="1" edit="1">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="operation_type"/>
+                <field name="contract_kind"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_expedient_type_form" model="ir.ui.view">
+        <field name="name">fund.expedient.type.form</field>
+        <field name="model">fund.expedient.type</field>
+        <field name="type">form</field>
+        <field name="arch" type="xml">
+            <form string="Tipo de expediente">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="sequence"/>
+                            <field name="operation_type"/>
+                            <field name="contract_kind"/>
+                        </group>
+                        <group>
+                            <field name="approval_currency_id"/>
+                            <field name="unit_mode" invisible="1"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                            <field name="sequence_id" readonly="1"/>
+                            <button name="action_create_type_sequence" type="object"
+                                    string="Crear secuencia numérica"
+                                    class="btn-secondary"
+                                    invisible="sequence_id"
+                                    groups="fund_expedient.group_fund_expedient_manager"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Valores por defecto" name="defaults">
+                            <field name="dynamic_placeholder_model" invisible="1"/>
+                            <div class="text-muted mb-2">
+                                Podés insertar campos dinámicos del expediente con
+                                <code>{{ object.campo }}</code> (p. ej.
+                                <code>{{ object.requestor_id.name }}</code>); se completan
+                                automáticamente al crear el expediente o al elegir el tipo.
+                            </div>
+                            <group>
+                                <field name="default_description"
+                                       widget="html"
+                                       options="{'dynamic_placeholder': true, 'dynamic_placeholder_model_reference_field': 'dynamic_placeholder_model'}"
+                                       placeholder="Texto predeterminado para el campo Descripción/Memo al crear un expediente..."
+                                       nolabel="1"/>
+                            </group>
+                        </page>
+                        <page string="Encuadres" name="encuadres">
+                            <field name="encuadre_ids" widget="many2many_tags" nolabel="1"/>
+                        </page>
+                        <page string="Asignaciones por etapa" name="stage_assign">
+                            <field name="stage_assign_ids" nolabel="1">
+                                <list create="1" delete="1" edit="1">
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="stage_id" options="{'no_create': True}"/>
+                                    <field name="use_requestor"/>
+                                    <field name="assign_creator" optional="show"/>
+                                    <field name="group_ids" widget="many2many_tags" readonly="use_requestor"/>
+                                    <field name="job_ids" widget="many2many_tags" readonly="use_requestor"/>
+                                    <field name="user_ids" widget="many2many_tags" readonly="use_requestor"/>
+                                    <field name="allow_edit_type_id" optional="show"/>
+                                    <field name="allow_edit_line_amount_final" optional="show"/>
+                                    <field name="required_document_type_ids" widget="many2many_tags"
+                                           optional="hide"/>
+                                    <field name="visible_page_ids" widget="many2many_tags"
+                                           optional="hide"/>
+                                    <field name="committed_from_expedient" optional="hide"/>
+                                    <field name="is_final_stage" optional="show"/>
+                                    <field name="notify_stage_assignees" optional="hide"/>
+                                    <field name="require_notification" optional="show"/>
+                                </list>
+                                <form string="Asignaciones por etapa">
+                                    <group>
+                                        <group>
+                                            <field name="type_id" readonly="1"/>
+                                            <field name="sequence"/>
+                                            <field name="stage_id" options="{'no_create': True}"/>
+                                            <div class="alert alert-info mb-2" role="alert" colspan="2"
+                                                 invisible="not is_final_stage">
+                                                Etapa final del flujo: al llegar, el expediente queda
+                                                <b>finalizado</b> y sin nadie a cargo. La asignación de
+                                                esta etapa no se usa.
+                                            </div>
+                                            <field name="use_requestor" invisible="is_final_stage"/>
+                                            <field name="assign_creator" invisible="is_final_stage"/>
+                                        </group>
+                                    </group>
+                                    <group>
+                                        <field name="group_ids" widget="many2many_tags" readonly="use_requestor"/>
+                                        <field name="job_ids" widget="many2many_tags" readonly="use_requestor"/>
+                                        <field name="user_ids" widget="many2many_tags" readonly="use_requestor"/>
+                                    </group>
+                                    <group string="Tipo de expediente">
+                                        <field name="allow_edit_type_id"/>
+                                        <field name="allow_edit_line_amount_final"/>
+                                        <field name="hide_type_id"/>
+                                    </group>
+                                    <group string="Campos ocultables en expediente">
+                                        <field name="hide_encuadre_id"/>
+                                        <field name="hide_estimated_need_date"/>
+                                        <field name="hide_recommended_supplier_id"/>
+                                        <field name="hide_analytic_account_id"/>
+                                        <field name="hide_amount_estimated"/>
+                                    </group>
+                                    <field name="dynamic_placeholder_model" invisible="1"/>
+                                    <group string="Disposición (por etapa)">
+                                        <field name="require_disposition"/>
+                                        <field name="disposition_file_required" invisible="not require_disposition"/>
+                                        <field name="default_disposition_notes"
+                                               widget="html"
+                                               options="{'dynamic_placeholder': true, 'dynamic_placeholder_model_reference_field': 'dynamic_placeholder_model'}"
+                                               invisible="not require_disposition"
+                                               placeholder="Observaciones predeterminadas para Disposición en esta etapa... Admite {{ object.campo }} del expediente."/>
+                                    </group>
+                                    <group string="Resolución (por etapa)">
+                                        <field name="require_resolution"/>
+                                        <field name="resolution_file_required" invisible="not require_resolution"/>
+                                        <field name="default_resolution_notes"
+                                               widget="html"
+                                               options="{'dynamic_placeholder': true, 'dynamic_placeholder_model_reference_field': 'dynamic_placeholder_model'}"
+                                               invisible="not require_resolution"
+                                               placeholder="Observaciones predeterminadas para Resolución en esta etapa... Admite {{ object.campo }} del expediente."/>
+                                    </group>
+                                    <!--
+                                        Documentos obligatorios: se eligen tipos del catálogo
+                                        (Configuración › Tipos de documento). Para avanzar de
+                                        etapa hay que subir, en esta misma etapa, un documento
+                                        con archivo de cada tipo listado.
+                                    -->
+                                    <group string="Solapas visibles (por etapa)">
+                                        <field name="visible_page_ids"
+                                               widget="many2many_tags"
+                                               options="{'no_create': True, 'no_quick_create': True}"
+                                               placeholder="Vacío = se muestran todas las solapas..."/>
+                                    </group>
+                                    <group string="Documentos del expediente (por etapa)">
+                                        <field name="required_document_type_ids"
+                                               widget="many2many_tags"
+                                               options="{'no_quick_create': True}"
+                                               placeholder="Escriba para buscar tipos de documento..."/>
+                                    </group>
+                                    <group string="Importes (por etapa)">
+                                        <field name="committed_from_expedient"/>
+                                    </group>
+                                    <group string="Flujo">
+                                        <field name="is_final_stage"/>
+                                    </group>
+                                    <group string="Aviso a los asignados (por etapa)">
+                                        <field name="notify_stage_assignees"/>
+                                    </group>
+                                    <group string="Notificación a oferentes (por etapa)">
+                                        <field name="require_notification"/>
+                                        <field name="notification_template_id" invisible="not require_notification" required="require_notification"/>
+                                        <field name="notification_mail_server_id" invisible="not require_notification"/>
+                                    </group>
+                                </form>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+</odoo>

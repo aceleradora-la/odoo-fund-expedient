@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Vista reducida para selección de proveedores recomendados -->
+    <record id="view_res_partner_recommended_supplier_list" model="ir.ui.view">
+        <field name="name">res.partner.recommended.supplier.list</field>
+        <field name="model">res.partner</field>
+        <field name="priority">99</field>
+        <field name="arch" type="xml">
+            <list string="Proveedores" create="0" delete="0" edit="0">
+                <field name="name"/>
+                <field name="vat" string="CUIT/NIF"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_res_partner_recommended_supplier_search" model="ir.ui.view">
+        <field name="name">res.partner.recommended.supplier.search</field>
+        <field name="model">res.partner</field>
+        <field name="priority">99</field>
+        <field name="arch" type="xml">
+            <search string="Buscar proveedor">
+                <field name="name" string="Nombre"/>
+                <field name="vat" string="CUIT/NIF"/>
+            </search>
+        </field>
+    </record>
+</odoo>

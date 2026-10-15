@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_fund_expedient_form_tier_validation" model="ir.ui.view">
+        <field name="name">fund.expedient.form.tier.validation</field>
+        <field name="model">fund.expedient</field>
+        <field name="inherit_id" ref="fund_expedient.view_fund_expedient_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header" position="inside">
+                <!-- Tier validation (QWeb): el cliente OWL debe cargar estos campos o can_review queda undefined y oculta Validar -->
+                <field name="need_validation" invisible="1"/>
+                <field name="validation_status" invisible="1"/>
+                <field name="can_review" invisible="1"/>
+                <field name="hide_reviews" invisible="1"/>
+                <field name="next_review" invisible="1"/>
+                <field name="has_comment" invisible="1"/>
+                <field name="tier_stage_locked" invisible="1"/>
+                <field name="can_restart_validation_stage" invisible="1"/>
+                <field name="stage_validation_status" invisible="1"/>
+                <field name="has_stage_reviews" invisible="1"/>
+                <field name="requestor_user_id" invisible="1"/>
+            </xpath>
+            <!--
+                Se suma la condición de tier a la del módulo base (que ya oculta el
+                botón si la etapa tiene requisitos pendientes o el usuario no opera
+                la etapa): mientras haya una validación en curso o rechazada no se
+                puede avanzar, y el cartel de situación explica de quién se espera.
+            -->
+            <xpath expr="//button[@name='action_next_stage']" position="attributes">
+                <attribute name="invisible">state == 'cancel' or not can_edit_in_stage or not has_next_stage or not stage_requirements_ok or validation_status in ('pending', 'waiting', 'rejected')</attribute>
+            </xpath>
+            <xpath expr="//notebook" position="inside">
+                <page string="Aprobaciones" name="tier_reviews">
+                    <field name="review_ids" nolabel="1">
+                        <list create="0" delete="0">
+                            <field name="stage_id" optional="show"/>
+                            <field name="sequence" optional="show"/>
+                            <field name="status" optional="show"/>
+                            <field name="todo_by" optional="show"/>
+                            <field name="done_by" optional="show"/>
+                            <field name="reviewed_date" optional="show"/>
+                            <field name="comment" optional="show"/>
+                        </list>
+                    </field>
+                </page>
+            </xpath>
+        </field>
+    </record>
+
+    <!--
+        Filtro "Esperando mi aprobación": vive en este módulo porque depende de
+        las tier reviews (del expediente o de su Solicitud).
+    -->
+    <record id="view_fund_expedient_search_tier_validation" model="ir.ui.view">
+        <field name="name">fund.expedient.search.tier.validation</field>
+        <field name="model">fund.expedient</field>
+        <field name="inherit_id" ref="fund_expedient.view_fund_expedient_search"/>
+        <field name="arch" type="xml">
+            <xpath expr="//filter[@name='my_holder']" position="after">
+                <filter string="Esperando mi aprobación" name="pending_my_approval"
+                        domain="[('pending_my_approval', '=', True)]"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

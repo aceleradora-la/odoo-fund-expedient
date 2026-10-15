@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="fund_expedient.SupplierCuitTagsField">
+        <div class="o_field_tags d-inline-flex flex-wrap align-items-center gap-1 w-100">
+            <TagsList tags="tags"/>
+            <t t-if="!props.readonly">
+                <input type="text"
+                       class="o_input fund_cuit_input flex-grow-1"
+                       t-ref="cuitInput"
+                       placeholder="Escribí el CUIT del proveedor"
+                       autocomplete="off"
+                       t-att-disabled="state.busy"
+                       t-on-input="onInput"
+                       t-on-keydown="onKeydown"/>
+            </t>
+        </div>
+        <div t-if="state.candidate and !props.readonly" class="d-flex align-items-center mt-1 fund_cuit_candidate">
+            <a href="#" class="badge rounded-pill text-bg-primary text-decoration-none text-wrap text-start py-2 px-3"
+               t-att-title="'Agregar a proveedores recomendados (' + state.candidate.vat + ')'"
+               t-on-click.prevent="onConfirm">
+                <i class="fa fa-plus me-1"/><t t-esc="state.candidate.display_name"/>
+            </a>
+            <button type="button" class="btn btn-link btn-sm text-muted p-0 ms-2" title="Descartar"
+                    aria-label="Descartar" t-on-click="onDiscard">
+                <i class="fa fa-times"/>
+            </button>
+        </div>
+        <div t-if="state.message" class="small mt-1" t-att-class="messageClass">
+            <span t-esc="state.message"/>
+            <a t-if="state.canCreate and !props.readonly" href="#" class="ms-2 fw-bold"
+               t-on-click="onCreate">
+                <i class="fa fa-cloud-download me-1"/>Crear desde ARCA y agregar
+            </a>
+        </div>
+    </t>
+
+</templates>

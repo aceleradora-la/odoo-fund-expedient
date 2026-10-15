@@ -2,18 +2,170 @@
 <odoo>
     <menuitem id="menu_fund_expedient_root"
               name="Expedientes"
+              web_icon="fund_expedient,static/description/icon.svg"
               sequence="50"/>
 
+    <menuitem id="menu_fund_expedient_config"
+              name="Configuración"
+              parent="menu_fund_expedient_root"
+              sequence="100"/>
+
+    <!-- Acciones (definir antes de los menuitems que las referencian) -->
+    <record id="action_fund_expedient_stage" model="ir.actions.act_window">
+        <field name="name">Etapas de expediente</field>
+        <field name="res_model">fund.expedient.stage</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <record id="action_fund_expedient_encuadre" model="ir.actions.act_window">
+        <field name="name">Encuadres</field>
+        <field name="res_model">fund.expedient.encuadre</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <record id="action_fund_expedient_document_type" model="ir.actions.act_window">
+        <field name="name">Tipos de documento</field>
+        <field name="res_model">fund.expedient.document.type</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Cree un tipo de documento
+            </p>
+            <p>
+                Los tipos de documento se usan para clasificar los documentos del expediente
+                y para exigirlos por etapa (en Tipos de expediente › Asignaciones por etapa ›
+                Tipos de documento obligatorios).
+            </p>
+        </field>
+    </record>
+
+    <record id="action_fund_expedient_page" model="ir.actions.act_window">
+        <field name="name">Solapas del expediente</field>
+        <field name="res_model">fund.expedient.page</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p>
+                Catálogo de las solapas del formulario del expediente. Sirve para
+                elegir, en cada etapa del tipo de expediente, cuáles se muestran
+                («Solapas visibles» en las Asignaciones por etapa).
+            </p>
+        </field>
+    </record>
+
+    <record id="action_fund_expedient_disposition_type" model="ir.actions.act_window">
+        <field name="name">Tipos de disposición</field>
+        <field name="res_model">fund.expedient.disposition.type</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Cree un tipo de disposición
+            </p>
+            <p>
+                Los tipos que «cierran el expediente» lo llevan a la etapa del flujo
+                marcada con ese mismo Resultado final. Los demás dejan que el proceso
+                continúe con las etapas siguientes.
+            </p>
+        </field>
+    </record>
+
+    <record id="action_fund_expedient_type" model="ir.actions.act_window">
+        <field name="name">Tipos de expediente</field>
+        <field name="res_model">fund.expedient.type</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <!-- Configuración legacy (partidas/categorías) removida de la UI:
+         el módulo migra a cuentas analíticas estándar de Odoo. -->
+
+    <record id="action_fund_expedient_sequence" model="ir.actions.act_window">
+        <field name="name">Secuencia de expedientes</field>
+        <field name="res_model">ir.sequence</field>
+        <field name="view_mode">form</field>
+        <field name="res_id" ref="sequence_fund_expedient"/>
+        <field name="target">current</field>
+    </record>
+
+    <record id="action_fund_expedient_disposition_report" model="ir.actions.act_window">
+        <field name="name">Disposiciones</field>
+        <field name="res_model">fund.expedient.disposition</field>
+        <field name="view_mode">list,pivot,form</field>
+        <field name="view_id" ref="view_fund_expedient_disposition_list_report"/>
+    </record>
+
+    <record id="action_fund_expedient_resolution_report" model="ir.actions.act_window">
+        <field name="name">Resoluciones</field>
+        <field name="res_model">fund.expedient.resolution</field>
+        <field name="view_mode">list,pivot,form</field>
+        <field name="view_id" ref="view_fund_expedient_resolution_list_report"/>
+    </record>
+
+    <record id="action_fund_expedient_spend_request" model="ir.actions.act_window">
+        <field name="name">Solicitudes de Gasto</field>
+        <field name="res_model">fund.expedient.spend.request</field>
+        <field name="view_mode">list,pivot,form</field>
+        <field name="view_id" ref="view_fund_expedient_spend_request_list"/>
+        <field name="search_view_id" ref="view_fund_expedient_spend_request_search"/>
+    </record>
+
+    <!-- Menuitems (después de las acciones) -->
     <menuitem id="menu_fund_expedient_list"
               name="Expedientes"
               parent="menu_fund_expedient_root"
               action="action_fund_expedient"
               sequence="10"/>
 
-    <menuitem id="menu_fund_expedient_config"
-              name="Configuración"
+    <menuitem id="menu_fund_expedient_reports"
+              name="Reportes"
               parent="menu_fund_expedient_root"
-              sequence="100"/>
+              sequence="15"/>
+    <menuitem id="menu_fund_expedient_dashboard"
+              name="Expedientes"
+              parent="menu_fund_expedient_reports"
+              action="action_fund_expedient_dashboard"
+              sequence="10"/>
+
+    <menuitem id="menu_fund_expedient_reports_resolutions"
+              name="Resoluciones"
+              parent="menu_fund_expedient_reports"
+              action="action_fund_expedient_resolution_report"
+              sequence="20"
+              groups="fund_expedient.group_fund_expedient_manager"/>
+
+    <menuitem id="menu_fund_expedient_reports_dispositions"
+              name="Disposiciones"
+              parent="menu_fund_expedient_reports"
+              action="action_fund_expedient_disposition_report"
+              sequence="25"
+              groups="fund_expedient.group_fund_expedient_manager"/>
+
+    <menuitem id="menu_fund_expedient_reports_spend_requests"
+              name="Solicitudes de Gasto / Ingreso"
+              parent="menu_fund_expedient_reports"
+              action="action_fund_expedient_spend_request"
+              sequence="30"
+              groups="fund_expedient.group_fund_expedient_manager"/>
+
+    <!-- Contrataciones: solo el grupo «Expedientes: Contrataciones». -->
+    <menuitem id="menu_fund_expedient_reports_locacion"
+              name="Contrataciones (Locación)"
+              parent="menu_fund_expedient_reports"
+              action="action_expedient_locacion_contrataciones"
+              sequence="40"
+              groups="fund_expedient.group_fund_expedient_contracting"/>
+
+    <menuitem id="menu_fund_expedient_reports_locacion_projection"
+              name="Proyección de Locación"
+              parent="menu_fund_expedient_reports"
+              action="action_expedient_locacion_projection"
+              sequence="45"
+              groups="fund_expedient.group_fund_expedient_contracting"/>
+
+    <menuitem id="menu_fund_expedient_reports_locacion_invoices"
+              name="Facturación de contrataciones"
+              parent="menu_fund_expedient_reports"
+              action="action_expedient_locacion_invoices"
+              sequence="47"
+              groups="fund_expedient.group_fund_expedient_contracting"/>
 
     <menuitem id="menu_expedient_stage"
               name="Etapas de expediente"
@@ -29,52 +181,33 @@
               sequence="20"
               groups="fund_expedient.group_fund_expedient_manager"/>
 
-    <menuitem id="menu_budget_position"
-              name="Partidas presupuestarias"
+    <menuitem id="menu_expedient_document_type"
+              name="Tipos de documento"
               parent="menu_fund_expedient_config"
-              action="action_fund_budget_position"
-              sequence="30"
+              action="action_fund_expedient_document_type"
+              sequence="22"
               groups="fund_expedient.group_fund_expedient_manager"/>
 
-    <menuitem id="menu_budget_position_category"
-              name="Categorías de partida"
+    <menuitem id="menu_expedient_page"
+              name="Solapas del expediente"
               parent="menu_fund_expedient_config"
-              action="action_fund_budget_position_category"
-              sequence="40"
+              action="action_fund_expedient_page"
+              sequence="23"
               groups="fund_expedient.group_fund_expedient_manager"/>
 
-    <record id="action_fund_expedient_stage" model="ir.actions.act_window">
-        <field name="name">Etapas de expediente</field>
-        <field name="res_model">fund.expedient.stage</field>
-        <field name="view_mode">list</field>
-    </record>
+    <menuitem id="menu_expedient_disposition_type"
+              name="Tipos de disposición"
+              parent="menu_fund_expedient_config"
+              action="action_fund_expedient_disposition_type"
+              sequence="24"
+              groups="fund_expedient.group_fund_expedient_manager"/>
 
-    <record id="action_fund_expedient_encuadre" model="ir.actions.act_window">
-        <field name="name">Encuadres</field>
-        <field name="res_model">fund.expedient.encuadre</field>
-        <field name="view_mode">list</field>
-    </record>
-
-    <record id="action_fund_budget_position" model="ir.actions.act_window">
-        <field name="name">Partidas presupuestarias</field>
-        <field name="res_model">fund.budget.position</field>
-        <field name="view_mode">list,form</field>
-        <field name="context">{'default_type': 'normal'}</field>
-    </record>
-
-    <record id="action_fund_budget_position_category" model="ir.actions.act_window">
-        <field name="name">Categorías de partida</field>
-        <field name="res_model">fund.budget.position.category</field>
-        <field name="view_mode">list</field>
-    </record>
-
-    <record id="action_fund_expedient_sequence" model="ir.actions.act_window">
-        <field name="name">Secuencia de expedientes</field>
-        <field name="res_model">ir.sequence</field>
-        <field name="view_mode">form</field>
-        <field name="res_id" ref="sequence_fund_expedient"/>
-        <field name="target">current</field>
-    </record>
+    <menuitem id="menu_expedient_type"
+              name="Tipos de expediente"
+              parent="menu_fund_expedient_config"
+              action="action_fund_expedient_type"
+              sequence="25"
+              groups="fund_expedient.group_fund_expedient_manager"/>
 
     <menuitem id="menu_expedient_sequence"
               name="Numeración de expedientes"
@@ -82,4 +215,23 @@
               action="action_fund_expedient_sequence"
               sequence="5"
               groups="fund_expedient.group_fund_expedient_manager"/>
+
+    <menuitem id="menu_expedient_config"
+              name="Configuración de expedientes"
+              parent="menu_fund_expedient_config"
+              action="action_expedient_config"
+              sequence="42"
+              groups="fund_expedient.group_fund_expedient_manager"/>
+
+    <!--
+        Presupuesto. El presupuesto se carga en Contabilidad (presupuestos
+        analíticos); acá solo se mira la ejecución. Los presupuestos propios
+        de Expedientes (`fund.budget` y sus ajustes) dejaron de usarse: sus
+        menús se quitan, los modelos y los datos quedan hasta confirmar que
+        nada los necesita. El reporte lo aporta fund_expedient_account_budget.
+    -->
+    <menuitem id="menu_fund_budget_root"
+              name="Presupuesto"
+              parent="menu_fund_expedient_root"
+              sequence="20"/>
 </odoo>

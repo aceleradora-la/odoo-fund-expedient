@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!--
+        Una fila por solapa del formulario del expediente. El `code` coincide
+        con el atributo `name` del `<page>` correspondiente: si se cambia acá,
+        deja de funcionar la visibilidad por etapa.
+    -->
+    <data noupdate="1">
+        <record id="page_description" model="fund.expedient.page">
+            <field name="name">Descripción/Memo</field>
+            <field name="code">description</field>
+            <field name="sequence">10</field>
+        </record>
+        <record id="page_lines" model="fund.expedient.page">
+            <field name="name">Líneas</field>
+            <field name="code">lines</field>
+            <field name="sequence">20</field>
+        </record>
+        <record id="page_spend_request" model="fund.expedient.page">
+            <field name="name">Solicitud de Gasto / Ingreso</field>
+            <field name="code">spend_request</field>
+            <field name="sequence">30</field>
+        </record>
+        <record id="page_dispositions" model="fund.expedient.page">
+            <field name="name">Disposiciones</field>
+            <field name="code">dispositions</field>
+            <field name="sequence">40</field>
+        </record>
+        <record id="page_resolutions" model="fund.expedient.page">
+            <field name="name">Resoluciones</field>
+            <field name="code">resolutions</field>
+            <field name="sequence">50</field>
+        </record>
+        <record id="page_notification_mails" model="fund.expedient.page">
+            <field name="name">Notificaciones (correo)</field>
+            <field name="code">notification_mails</field>
+            <field name="sequence">60</field>
+        </record>
+        <record id="page_stage_documents" model="fund.expedient.page">
+            <field name="name">Documentos por etapa</field>
+            <field name="code">stage_documents</field>
+            <field name="sequence">70</field>
+        </record>
+        <record id="page_children" model="fund.expedient.page">
+            <field name="name">Expedientes relacionados</field>
+            <field name="code">children</field>
+            <field name="sequence">80</field>
+        </record>
+        <record id="page_purchases" model="fund.expedient.page">
+            <field name="name">Solicitudes de cotización</field>
+            <field name="code">purchases</field>
+            <field name="sequence">90</field>
+        </record>
+        <record id="page_invoices" model="fund.expedient.page">
+            <field name="name">Facturas</field>
+            <field name="code">invoices</field>
+            <field name="sequence">100</field>
+        </record>
+        <record id="page_sale_invoices" model="fund.expedient.page">
+            <field name="name">Facturas de venta</field>
+            <field name="code">sale_invoices</field>
+            <field name="sequence">110</field>
+        </record>
+        <record id="page_payments" model="fund.expedient.page">
+            <field name="name">Pagos</field>
+            <field name="code">payments</field>
+            <field name="sequence">120</field>
+        </record>
+    </data>
+</odoo>
