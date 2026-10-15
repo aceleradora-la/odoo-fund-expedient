@@ -14,6 +14,8 @@ _FUND_EXPEDIENT_MODELS = (
 _MY_APPROVALS_MODELS = (
     "fund.expedient",
     "fund.expedient.spend.request",
+    # Aprobación del pago de facturas (account_move_payment_tier_validation).
+    "account.move",
 )
 
 
@@ -55,12 +57,18 @@ class TierReview(models.Model):
         selection=[
             ("expedient", "Expediente"),
             ("spend_request", "Solicitud de Gasto"),
+            ("vendor_bill", "Factura de proveedor"),
         ],
         string="Tipo de registro",
         compute="_compute_fund_approval_links",
         store=True,
         index=True,
         search="_search_fund_record_type",
+    )
+    res_display_name = fields.Char(
+        string="Documento",
+        compute="_compute_res_display_name",
+        help="Nombre del registro a aprobar.",
     )
     approval_qty = fields.Integer(
         string="Cantidad",
@@ -90,6 +98,18 @@ class TierReview(models.Model):
                 rec.approval_duration_days = 0.0
 
     @api.depends("model", "res_id")
+    def _compute_res_display_name(self):
+        # sudo: quien ve la revisión ve qué documento es, aunque no tenga
+        # acceso al registro (p. ej. una factura para un aprobador sin contabilidad).
+        for rec in self:
+            record = (
+                self.env[rec.model].sudo().browse(rec.res_id).exists()
+                if rec.model in self.env and rec.res_id
+                else False
+            )
+            rec.res_display_name = record.display_name if record else False
+
+    @api.depends("model", "res_id")
     def _compute_fund_approval_links(self):
         SpendRequest = self.env["fund.expedient.spend.request"]
         Expedient = self.env["fund.expedient"]
@@ -110,6 +130,8 @@ class TierReview(models.Model):
                     rec.fund_spend_request_id = spend_request.id
                     rec.fund_expedient_id = spend_request.expedient_id
                     rec.fund_record_type = "spend_request"
+            elif rec.model == "account.move":
+                rec.fund_record_type = "vendor_bill"
 
     @api.model
     def _search_fund_expedient_id(self, operator, value):
@@ -127,10 +149,12 @@ class TierReview(models.Model):
             return [("model", "=", "fund.expedient")]
         if value == "spend_request":
             return [("model", "=", "fund.expedient.spend.request")]
+        if value == "vendor_bill":
+            return [("model", "=", "account.move")]
         return [("id", "=", False)]
 
     def action_open_fund_record(self):
-        """Abrir el expediente o la SG vinculada a esta validación."""
+        """Abrir el expediente, la SG o la factura vinculada a esta validación."""
         self.ensure_one()
         if self.model not in _MY_APPROVALS_MODELS or not self.res_id:
             return False

@@ -99,7 +99,7 @@
           "tag": "chart",
           "data": {
             "type": "odoo_bar",
-            "title": { "text": "Tiempo promedio de aprobación (días) por aprobador" },
+            "title": { "text": "Tiempo promedio de aprobación de expedientes (días) por aprobador" },
             "background": "#FFFFFF",
             "legendPosition": "none",
             "verticalAxisPosition": "left",
@@ -115,6 +115,113 @@
               "comparison": null,
               "context": {},
               "domain": [
+                ["model", "!=", "account.move"],
+                ["status", "=", "approved"]
+              ],
+              "groupBy": ["done_by"],
+              "orderBy": []
+            },
+            "fieldMatching": {
+              "gf_period": { "chain": "reviewed_date", "type": "date", "offset": 0 }
+            }
+          }
+        },
+        {
+          "id": "fig_apr_bill_done_5d1e",
+          "x": 680,
+          "y": 370,
+          "width": 660,
+          "height": 320,
+          "tag": "chart",
+          "data": {
+            "type": "odoo_bar",
+            "title": { "text": "Pagos de facturas aprobados por aprobador" },
+            "background": "#FFFFFF",
+            "legendPosition": "none",
+            "verticalAxisPosition": "left",
+            "stacked": false,
+            "metaData": {
+              "groupBy": ["done_by"],
+              "measure": "approval_qty",
+              "order": null,
+              "resModel": "tier.review",
+              "mode": "bar"
+            },
+            "searchParams": {
+              "comparison": null,
+              "context": {},
+              "domain": [
+                ["fund_record_type", "=", "vendor_bill"],
+                ["status", "=", "approved"]
+              ],
+              "groupBy": ["done_by"],
+              "orderBy": []
+            },
+            "fieldMatching": {
+              "gf_period": { "chain": "reviewed_date", "type": "date", "offset": 0 }
+            }
+          }
+        },
+        {
+          "id": "fig_apr_bill_pending_8e42",
+          "x": 0,
+          "y": 710,
+          "width": 660,
+          "height": 320,
+          "tag": "chart",
+          "data": {
+            "type": "odoo_bar",
+            "title": { "text": "Facturas con el pago pendiente de aprobación, por aprobador" },
+            "background": "#FFFFFF",
+            "legendPosition": "top",
+            "verticalAxisPosition": "left",
+            "stacked": true,
+            "metaData": {
+              "groupBy": ["todo_by", "status"],
+              "measure": "approval_qty",
+              "order": null,
+              "resModel": "tier.review",
+              "mode": "bar"
+            },
+            "searchParams": {
+              "comparison": null,
+              "context": {},
+              "domain": [
+                ["fund_record_type", "=", "vendor_bill"],
+                ["status", "in", ["waiting", "pending"]]
+              ],
+              "groupBy": ["todo_by", "status"],
+              "orderBy": []
+            },
+            "fieldMatching": {}
+          }
+        },
+        {
+          "id": "fig_apr_bill_time_2a7b",
+          "x": 680,
+          "y": 710,
+          "width": 660,
+          "height": 320,
+          "tag": "chart",
+          "data": {
+            "type": "odoo_bar",
+            "title": { "text": "Tiempo promedio de aprobación de pagos de facturas (días) por aprobador" },
+            "background": "#FFFFFF",
+            "legendPosition": "none",
+            "verticalAxisPosition": "left",
+            "stacked": false,
+            "metaData": {
+              "groupBy": ["done_by"],
+              "measure": "approval_duration_days",
+              "order": null,
+              "resModel": "tier.review",
+              "mode": "bar"
+            },
+            "searchParams": {
+              "comparison": null,
+              "context": {},
+              "domain": [
+                ["fund_record_type", "=", "vendor_bill"],
                 ["status", "=", "approved"]
               ],
               "groupBy": ["done_by"],

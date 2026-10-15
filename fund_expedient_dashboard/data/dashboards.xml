@@ -27,7 +27,10 @@
     <!--
         Aprobaciones: validaciones de expedientes y de solicitudes de gasto
         por aprobador, y tiempo promedio de aprobación (tier.review, de
-        expedient_tier_validation). Lo ven los usuarios de Expedientes.
+        expedient_tier_validation). También las aprobaciones de pago de
+        facturas de proveedor (account_move_payment_tier_validation):
+        aprobadas, pendientes y tiempo promedio. Lo ven los usuarios de
+        Expedientes.
         Reemplaza al que se cargaba a mano (tablero_aprobaciones.json).
     -->
     <record id="spreadsheet_dashboard_aprobaciones" model="spreadsheet.dashboard">

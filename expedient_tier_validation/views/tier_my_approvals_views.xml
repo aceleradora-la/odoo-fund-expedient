@@ -12,6 +12,7 @@
                   decoration-muted="status in ('forwarded', 'cancel')">
                 <field name="model" column_invisible="1"/>
                 <field name="fund_record_type" string="Tipo" optional="show"/>
+                <field name="res_display_name" optional="show"/>
                 <field name="fund_expedient_id" string="Expediente"/>
                 <field name="fund_spend_request_id" string="Solicitud de Gasto" optional="show"/>
                 <field name="stage_id" string="Etapa" optional="show"/>
@@ -26,7 +27,7 @@
                 <field name="comment" string="Comentario" optional="hide"/>
                 <button name="action_open_fund_record" type="object"
                         string="Abrir registro" icon="fa-external-link"
-                        invisible="model not in ('fund.expedient', 'fund.expedient.spend.request')"/>
+                        invisible="model not in ('fund.expedient', 'fund.expedient.spend.request', 'account.move')"/>
             </list>
         </field>
     </record>
@@ -71,6 +72,8 @@
                         domain="[('model', '=', 'fund.expedient')]"/>
                 <filter string="Solicitudes de Gasto" name="tier_model_spend_request"
                         domain="[('model', '=', 'fund.expedient.spend.request')]"/>
+                <filter string="Facturas de proveedor" name="tier_model_vendor_bill"
+                        domain="[('model', '=', 'account.move')]"/>
                 <separator/>
                 <filter string="Pendientes (todos)" name="tier_pending_all"
                         domain="[('status', 'in', ('pending', 'waiting'))]"
@@ -107,14 +110,15 @@
             <form string="Validación" create="0" delete="0" edit="0">
                 <header>
                     <button name="action_open_fund_record" type="object"
-                            string="Abrir expediente / SG" class="btn-primary"
-                            invisible="model not in ('fund.expedient', 'fund.expedient.spend.request')"/>
+                            string="Abrir registro" class="btn-primary"
+                            invisible="model not in ('fund.expedient', 'fund.expedient.spend.request', 'account.move')"/>
                 </header>
                 <sheet>
                     <group>
                         <group>
                             <field name="model" invisible="1"/>
                             <field name="fund_record_type"/>
+                            <field name="res_display_name"/>
                             <field name="fund_expedient_id"/>
                             <field name="fund_spend_request_id"/>
                             <field name="stage_id"/>
@@ -140,7 +144,7 @@
         <field name="name">Validaciones</field>
         <field name="res_model">tier.review</field>
         <field name="view_mode">list,pivot,form</field>
-        <field name="domain">[('model', 'in', ('fund.expedient', 'fund.expedient.spend.request'))]</field>
+        <field name="domain">[('model', 'in', ('fund.expedient', 'fund.expedient.spend.request', 'account.move'))]</field>
         <field name="context">{'search_default_tier_pending_mine': 1}</field>
         <field name="view_ids" eval="[(5, 0, 0),
             (0, 0, {'view_mode': 'list', 'view_id': ref('view_tier_review_list_my_approvals')}),
@@ -154,7 +158,8 @@
             </p>
             <p>
                 Cada fila es una aprobación (tier). Desde aquí puede ver cuándo se
-                solicitó y cuándo se validó, y abrir el expediente o la solicitud de gasto.
+                solicitó y cuándo se validó, y abrir el expediente, la solicitud de gasto
+                o la factura de proveedor.
             </p>
         </field>
     </record>
