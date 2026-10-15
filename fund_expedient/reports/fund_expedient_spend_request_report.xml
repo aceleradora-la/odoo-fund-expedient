@@ -71,7 +71,7 @@
                 <h2 class="mb-1" style="font-size: 20px;">
                     <span t-if="o.operation_type == 'income'">Solicitud de Ingreso</span>
                     <span t-else="">Solicitud de Gasto</span>
-                    <span t-if="o.number and o.number != '/'" t-esc="o.number"/>
+                    <span t-if="o.number and o.number != '/'" t-out="o.number"/>
                 </h2>
                 <!--
                     Subtítulo: dejamos solo la fase (Preventiva / Definitiva).
@@ -223,7 +223,7 @@
                                 </td>
                             </tr>
                             <tr t-else="">
-                                <td t-esc="line_index + 1"/>
+                                <td t-out="line_index + 1"/>
                                 <td><span t-field="line.product_id"/></td>
                                 <td><span t-field="line.name"/></td>
                                 <td class="text-end"><span t-field="line.product_qty"/></td>
@@ -275,14 +275,14 @@
                             <t t-foreach="analytic_accounts.sorted(key=lambda a: (a.code or '', a.name or ''))" t-as="acc">
                                 <t t-set="group_lines" t-value="detail_lines.filtered(lambda l: l.analytic_account_id == acc)"/>
                                 <tr>
-                                    <td><span t-esc="acc.code or ''"/></td>
-                                    <td><span t-esc="acc.name or ''"/></td>
+                                    <td><span t-out="acc.code or ''"/></td>
+                                    <td><span t-out="acc.name or ''"/></td>
                                     <td class="text-end">
-                                        <span t-esc="sum(group_lines.mapped('amount_estimated_line'))"
+                                        <span t-out="sum(group_lines.mapped('amount_estimated_line'))"
                                               t-options='{"widget": "monetary", "display_currency": o.currency_id}'/>
                                     </td>
                                     <td class="text-end">
-                                        <span t-esc="sum(group_lines.mapped('amount_final_line'))"
+                                        <span t-out="sum(group_lines.mapped('amount_final_line'))"
                                               t-options='{"widget": "monetary", "display_currency": o.currency_id}'/>
                                     </td>
                                 </tr>
@@ -293,11 +293,11 @@
                                 <td/>
                                 <td><em>Sin cuenta analítica</em></td>
                                 <td class="text-end">
-                                    <span t-esc="sum(no_acc_lines.mapped('amount_estimated_line'))"
+                                    <span t-out="sum(no_acc_lines.mapped('amount_estimated_line'))"
                                           t-options='{"widget": "monetary", "display_currency": o.currency_id}'/>
                                 </td>
                                 <td class="text-end">
-                                    <span t-esc="sum(no_acc_lines.mapped('amount_final_line'))"
+                                    <span t-out="sum(no_acc_lines.mapped('amount_final_line'))"
                                           t-options='{"widget": "monetary", "display_currency": o.currency_id}'/>
                                 </td>
                             </tr>
@@ -306,11 +306,11 @@
                             <tr>
                                 <th colspan="2" class="text-end">Totales</th>
                                 <th class="text-end">
-                                    <span t-esc="sum(detail_lines.mapped('amount_estimated_line'))"
+                                    <span t-out="sum(detail_lines.mapped('amount_estimated_line'))"
                                           t-options='{"widget": "monetary", "display_currency": o.currency_id}'/>
                                 </th>
                                 <th class="text-end">
-                                    <span t-esc="sum(detail_lines.mapped('amount_final_line'))"
+                                    <span t-out="sum(detail_lines.mapped('amount_final_line'))"
                                           t-options='{"widget": "monetary", "display_currency": o.currency_id}'/>
                                 </th>
                             </tr>
@@ -343,13 +343,13 @@
                         <tbody>
                             <tr t-foreach="all_suppliers" t-as="sup" class="text-center">
                                 <t t-set="contact" t-value="sup.child_ids.filtered(lambda c: c.type == 'contact')[:1]"/>
-                                <td><span t-esc="sup.display_name or ''"/></td>
-                                <td><span t-esc="(contact.name if contact else '') or ''"/></td>
+                                <td><span t-out="sup.display_name or ''"/></td>
+                                <td><span t-out="(contact.name if contact else '') or ''"/></td>
                                 <td>
-                                    <span t-esc="(contact.email if contact and contact.email else sup.email) or ''"/>
+                                    <span t-out="(contact.email if contact and contact.email else sup.email) or ''"/>
                                 </td>
                                 <td>
-                                    <span t-esc="(contact.phone if contact and (contact.phone or contact.mobile) else (sup.phone or sup.mobile)) or ''"/>
+                                    <span t-out="(contact.phone if contact and (contact.phone or contact.mobile) else (sup.phone or sup.mobile)) or ''"/>
                                 </td>
                             </tr>
                         </tbody>

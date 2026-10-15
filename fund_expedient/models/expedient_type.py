@@ -185,13 +185,10 @@ class ExpedientTypeStageAssign(models.Model):
         readonly=True,
     )
 
-    _sql_constraints = [
-        (
-            "type_stage_uniq",
-            "unique(type_id, stage_id)",
-            "Ya existe una asignación para este tipo y etapa.",
-        )
-    ]
+    _type_stage_uniq = models.Constraint(
+        "unique(type_id, stage_id)",
+        "Ya existe una asignación para este tipo y etapa.",
+    )
 
     @api.depends("type_id", "stage_id")
     def _compute_display_name(self):

@@ -221,16 +221,19 @@ def post_init_hook(cr_or_env, registry=None):
     # toque manualmente cada expediente/SG.
     # ----------------------------------------------------------------------
 
+    # Odoo 19: el departamento del empleado vive en su versión actual
+    # (hr_version), no en hr_employee.
     # 1) Expediente: derivar departamento del empleado solicitante.
     cr.execute(
         """
         UPDATE fund_expedient fe
-           SET requestor_department_id = he.department_id
+           SET requestor_department_id = hv.department_id
           FROM hr_employee he
+          JOIN hr_version hv ON hv.id = he.current_version_id
          WHERE fe.requestor_id = he.id
-           AND he.department_id IS NOT NULL
+           AND hv.department_id IS NOT NULL
            AND (fe.requestor_department_id IS NULL
-                OR fe.requestor_department_id <> he.department_id)
+                OR fe.requestor_department_id <> hv.department_id)
         """
     )
     # 2) Expediente: derivar manager del departamento del solicitante.
@@ -239,7 +242,8 @@ def post_init_hook(cr_or_env, registry=None):
         UPDATE fund_expedient fe
            SET requestor_department_manager_id = hd.manager_id
           FROM hr_employee he
-          JOIN hr_department hd ON hd.id = he.department_id
+          JOIN hr_version hv ON hv.id = he.current_version_id
+          JOIN hr_department hd ON hd.id = hv.department_id
          WHERE fe.requestor_id = he.id
            AND hd.manager_id IS NOT NULL
            AND (fe.requestor_department_manager_id IS NULL

@@ -23,7 +23,9 @@ class FundExpedientDocumentFileViewer extends Component {
             if (!this.canDownload) {
                 document.body.classList.add("o_fund_expedient_no_download");
             }
-            const preview = this.mailStore.Attachment.insert({
+            // Odoo 19: los modelos del store de mail se registran por su
+            // nombre de modelo Python («ir.attachment», antes «Attachment»).
+            const preview = this.mailStore["ir.attachment"].insert({
                 id: this.attachmentId,
                 filename: this.filename,
                 name: this.filename,

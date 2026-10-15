@@ -2,7 +2,7 @@
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 
 from odoo import _, api, models
-from odoo.osv import expression
+from odoo.fields import Domain
 
 
 class FundExpedient(models.Model):
@@ -72,8 +72,8 @@ class FundExpedient(models.Model):
         if user._is_public():
             return [("id", "=", False)]
         company_domain = [("company_id", "in", user.company_ids.ids + [False])]
-        access_domain = expression.OR([[c] for c in self._portal_access_clauses(user)])
-        return expression.AND([company_domain, access_domain])
+        access_domain = Domain.OR(Domain([c]) for c in self._portal_access_clauses(user))
+        return list(Domain(company_domain) & access_domain)
 
     def _portal_user_can_access(self):
         """True si el usuario actual puede ver este expediente en el portal.

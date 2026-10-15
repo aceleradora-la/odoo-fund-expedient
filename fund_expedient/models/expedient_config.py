@@ -110,13 +110,10 @@ class ExpedientConfig(models.Model):
         help="Evita repetir el resumen dentro del mismo período.",
     )
 
-    _sql_constraints = [
-        (
-            "company_uniq",
-            "unique(company_id)",
-            "Solo puede haber una configuración por compañía.",
-        )
-    ]
+    _company_uniq = models.Constraint(
+        "unique(company_id)",
+        "Solo puede haber una configuración por compañía.",
+    )
 
     @api.model
     def get_service_product(self, company):

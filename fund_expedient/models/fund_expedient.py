@@ -6,7 +6,7 @@ import logging
 from odoo import SUPERUSER_ID, api, fields, models
 from odoo.exceptions import UserError
 from odoo import _
-from odoo.osv import expression
+from odoo.fields import Domain
 from odoo.tools import html2plaintext
 
 _logger = logging.getLogger(__name__)
@@ -2230,7 +2230,9 @@ class FundExpedient(models.Model):
         if pool:
             return pool
         group = self.env.ref("fund_expedient.group_fund_expedient_user", raise_if_not_found=False)
-        return group.users.filtered(lambda u: not u.share) if group else self.env["res.users"]
+        # all_user_ids: incluye a quienes tienen el grupo por implicación
+        # (Administrador), como hacía `users` hasta Odoo 18.
+        return group.all_user_ids.filtered(lambda u: not u.share) if group else self.env["res.users"]
 
     @api.depends("state", "responsible_user_id", "assignable_user_ids")
     @api.depends_context("uid")
@@ -2494,7 +2496,7 @@ class FundExpedient(models.Model):
         return True
 
     @api.model
-    def name_search(self, name="", args=None, operator="ilike", limit=100):
+    def name_search(self, name="", domain=None, operator="ilike", limit=100):
         """Con `fund_expedient_link_all`, busca entre TODOS los expedientes.
 
         Lo usan los campos «Expedientes» de facturas, OC y pagos (ver
@@ -2507,15 +2509,15 @@ class FundExpedient(models.Model):
         if (
             self.env.context.get("fund_expedient_link_all")
             and not self.env.su
-            and self._link_search_domain_is_safe(args)
+            and self._link_search_domain_is_safe(domain)
         ):
             self.browse().check_access("read")
-            domain = list(args or [])
+            search_domain = Domain(domain or Domain.TRUE)
             if name:
-                domain = expression.AND([domain, [("number", operator, name)]])
-            records = self.sudo().search_fetch(domain, ["number"], limit=limit)
+                search_domain &= Domain("number", operator, name)
+            records = self.sudo().search_fetch(search_domain, ["number"], limit=limit)
             return [(record.id, record.display_name) for record in records]
-        return super().name_search(name=name, args=args, operator=operator, limit=limit)
+        return super().name_search(name=name, domain=domain, operator=operator, limit=limit)
 
     def web_read(self, specification):
         """Leer solo el número de cualquier expediente.
@@ -3136,7 +3138,7 @@ class FundExpedient(models.Model):
         if assign.use_requestor:
             req_user = self.requestor_id.user_id
             return req_user if req_user else self.env["res.users"]
-        user_ids = assign.group_ids.users | assign.user_ids
+        user_ids = assign.group_ids.all_user_ids | assign.user_ids
         if assign.job_ids:
             employees = self.env["hr.employee"].search(
                 [("job_id", "in", assign.job_ids.ids)]

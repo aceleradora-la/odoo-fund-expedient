@@ -89,13 +89,10 @@ class FundBudget(models.Model):
         currency_field="currency_id",
     )
 
-    _sql_constraints = [
-        (
-            "budget_company_fiscalyear_unique",
-            "unique(company_id, fiscalyear)",
-            "Ya existe un presupuesto para esa compañía y año.",
-        ),
-    ]
+    _budget_company_fiscalyear_unique = models.Constraint(
+        "unique(company_id, fiscalyear)",
+        "Ya existe un presupuesto para esa compañía y año.",
+    )
 
     @api.constrains("fiscalyear")
     def _check_fiscalyear(self):

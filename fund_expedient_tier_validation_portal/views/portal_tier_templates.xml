@@ -21,13 +21,13 @@
         <t t-set="show_form" t-value="tier.get('tier_can_review') or tier.get('tier_need_validation') or tier.get('tier_can_restart')"/>
         <div t-attf-id="#{anchor_id or ''}" class="card mb-3 o_portal_tier_panel">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <span t-esc="title"/>
+                <span t-out="title"/>
                 <span t-attf-class="badge text-bg-#{
                     'success' if tier.get('tier_status') == 'validated' else
                     'danger' if tier.get('tier_status') == 'rejected' else
                     'warning' if tier.get('tier_status') in ('pending', 'waiting') else
                     'secondary'
-                }" t-esc="tier.get('tier_status_label')"/>
+                }" t-out="tier.get('tier_status_label')"/>
             </div>
             <div class="card-body">
                 <t t-if="tier.get('tier_can_review')">
@@ -47,12 +47,12 @@
                     <ul class="list-group list-group-flush mb-3">
                         <li t-foreach="tier['tier_reviews']" t-as="review" class="list-group-item d-flex justify-content-between align-items-center">
                             <span>
-                                <t t-esc="review.name or review.display_name"/>
+                                <t t-out="review.name or review.display_name"/>
                                 <small t-if="review.reviewer_ids" class="text-muted d-block">
-                                    <t t-esc="', '.join(review.reviewer_ids.mapped('name'))"/>
+                                    <t t-out="', '.join(review.reviewer_ids.mapped('name'))"/>
                                 </small>
                                 <small t-if="review.comment" class="d-block fst-italic">
-                                    «<t t-esc="review.comment"/>»
+                                    «<t t-out="review.comment"/>»
                                 </small>
                             </span>
                             <span t-attf-class="badge #{
@@ -60,7 +60,7 @@
                                 'text-bg-danger' if review.status == 'rejected' else
                                 'text-bg-warning' if review.status == 'pending' else
                                 'text-bg-light'
-                            }" t-esc="tier['tier_review_labels'].get(review.status, review.status)"/>
+                            }" t-out="tier['tier_review_labels'].get(review.status, review.status)"/>
                         </li>
                     </ul>
                 </t>
@@ -99,7 +99,7 @@
             <t t-if="panel_footer_link">
                 <div class="card-footer text-end">
                     <a t-att-href="panel_footer_link" class="btn btn-link btn-sm">
-                        <t t-esc="panel_footer_label or 'Ver detalle'"/>
+                        <t t-out="panel_footer_label or 'Ver detalle'"/>
                     </a>
                 </div>
             </t>
@@ -158,7 +158,7 @@
 
                 <t t-if="portal_flash">
                     <div t-attf-class="alert alert-#{portal_flash.get('type', 'danger')}" role="alert">
-                        <t t-esc="portal_flash.get('message')"/>
+                        <t t-out="portal_flash.get('message')"/>
                     </div>
                 </t>
 
