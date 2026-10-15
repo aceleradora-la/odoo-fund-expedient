@@ -44,6 +44,7 @@ class ExpedientDispositionType(models.Model):
         default=lambda self: self.env.company,
     )
 
-    _sql_constraints = [
-        ("code_uniq", "unique(code)", "Ya existe un tipo de disposición con ese código."),
-    ]
+    _code_uniq = models.Constraint(
+        "unique(code)",
+        "Ya existe un tipo de disposición con ese código.",
+    )

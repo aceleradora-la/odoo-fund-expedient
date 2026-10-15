@@ -119,13 +119,10 @@ class FundExpedientResolution(models.Model):
 
 
 
-    _sql_constraints = [
-        (
-            "expedient_stage_number_uniq",
-            "unique(expedient_id, stage_id, number)",
-            "Ya existe una resolución con ese número para este expediente y etapa.",
-        )
-    ]
+    _expedient_stage_number_uniq = models.Constraint(
+        "unique(expedient_id, stage_id, number)",
+        "Ya existe una resolución con ese número para este expediente y etapa.",
+    )
 
     @api.model_create_multi
     def create(self, vals_list):

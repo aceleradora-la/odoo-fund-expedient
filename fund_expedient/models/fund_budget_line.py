@@ -83,13 +83,10 @@ class FundBudgetLine(models.Model):
         currency_field="currency_id",
     )
 
-    _sql_constraints = [
-        (
-            "budget_line_unique_analytic",
-            "unique(budget_id, analytic_account_id)",
-            "La cuenta analítica debe ser única dentro del presupuesto.",
-        ),
-    ]
+    _budget_line_unique_analytic = models.Constraint(
+        "unique(budget_id, analytic_account_id)",
+        "La cuenta analítica debe ser única dentro del presupuesto.",
+    )
 
     @api.depends(
         "m01",
