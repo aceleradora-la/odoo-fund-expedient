@@ -1,6 +1,8 @@
 # Copyright 2025
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 
+from lxml import etree
+
 from odoo import api, fields, models, _
 from odoo.exceptions import UserError, ValidationError
 
@@ -523,6 +525,20 @@ class FundExpedient(models.Model):
                     r.status in ("waiting", "pending", "rejected", "approved") for r in stage_reviews
                 )
             )
+
+    def _add_tier_validation_buttons(self, node, params):
+        """Botones por etapa: plantilla propia, no la global de base_tier_validation."""
+        str_element = self.env["ir.qweb"]._render(
+            "expedient_tier_validation.tier_validation_buttons_stage", params
+        )
+        return etree.fromstring(str_element)
+
+    def _add_tier_validation_label(self, node, params):
+        """Avisos por etapa: plantilla propia, no la global de base_tier_validation."""
+        str_element = self.env["ir.qweb"]._render(
+            "expedient_tier_validation.tier_validation_label_stage", params
+        )
+        return etree.fromstring(str_element)
 
     @api.depends(
         "review_ids.status",

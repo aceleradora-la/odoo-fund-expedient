@@ -1,8 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+    <!-- Las plantillas de base_tier_validation se inyectan en el formulario de
+         todo modelo con tier validation automática (p. ej. account.move con
+         account_move_payment_tier_validation). Los ajustes por etapa usan campos
+         que solo existen en fund.expedient, así que van en copias propias
+         (primary) que fund.expedient renderiza en _add_tier_validation_*. -->
+
     <!-- Ajuste de botones de tier validation para expedientes:
          - Mostrar "Reiniciar la validación" solo si aplica a la etapa actual -->
-    <template id="tier_validation_buttons_stage" inherit_id="base_tier_validation.tier_validation_buttons">
+    <template id="tier_validation_buttons_stage" inherit_id="base_tier_validation.tier_validation_buttons" primary="True">
         <xpath expr="//button[@name='restart_validation']" position="attributes">
             <!-- En Odoo 18 este botón usa el atributo invisible (no modifiers) -->
             <attribute name="invisible">not can_restart_validation_stage or hide_reviews</attribute>
@@ -13,7 +19,8 @@
         </xpath>
     </template>
 
-    <!-- El fragmento QWeb debe declarar can_review junto a los botones; si no, OWL deja undefined y oculta Validar -->
+    <!-- El fragmento QWeb debe declarar can_review junto a los botones; si no, OWL deja undefined y oculta Validar.
+         can_review y hide_reviews son de tier.validation: vale para todos los modelos. -->
     <template id="tier_validation_label_fields" inherit_id="base_tier_validation.tier_validation_label">
         <xpath expr="//button[@name='validate_tier']" position="before">
             <field name="can_review" invisible="1"/>
@@ -21,7 +28,7 @@
         </xpath>
     </template>
 
-    <template id="tier_validation_label_stage" inherit_id="base_tier_validation.tier_validation_label">
+    <template id="tier_validation_label_stage" inherit_id="base_tier_validation.tier_validation_label" primary="True">
         <xpath expr="//div[@role='alert' and contains(@class,'alert-warning')]" position="attributes">
             <attribute name="t-attf-invisible">stage_validation_status == 'validated' or hide_reviews or stage_validation_status == 'rejected' or not has_stage_reviews</attribute>
         </xpath>
@@ -34,4 +41,3 @@
     </template>
 
 </odoo>
-
