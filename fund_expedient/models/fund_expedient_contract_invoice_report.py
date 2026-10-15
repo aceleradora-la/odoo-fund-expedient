@@ -35,7 +35,11 @@ class FundExpedientContractInvoiceReport(models.Model):
     move_id = fields.Many2one("account.move", string="Factura", readonly=True)
     expedient_id = fields.Many2one("fund.expedient", string="Expediente", readonly=True)
     partner_id = fields.Many2one("res.partner", string="Proveedor", readonly=True)
-    date = fields.Date(string="Fecha", readonly=True)
+    # Fecha contable del asiento: es la que manda en los reportes y en el
+    # tablero de Contrataciones (el mes en que la factura impacta en la
+    # contabilidad). La fecha de factura queda aparte, para consulta.
+    date = fields.Date(string="Fecha contable", readonly=True)
+    invoice_date = fields.Date(string="Fecha de factura", readonly=True)
     company_id = fields.Many2one("res.company", string="Compañía", readonly=True)
     currency_id = fields.Many2one("res.currency", string="Moneda", readonly=True)
     analytic_account_id = fields.Many2one(
@@ -106,7 +110,8 @@ class FundExpedientContractInvoiceReport(models.Model):
                     m.id AS move_id,
                     e.id AS expedient_id,
                     m.commercial_partner_id AS partner_id,
-                    COALESCE(m.invoice_date, m.date) AS date,
+                    m.date AS date,
+                    m.invoice_date AS invoice_date,
                     m.company_id,
                     rc.currency_id,
                     e.analytic_account_id,
