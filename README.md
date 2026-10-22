@@ -16,19 +16,19 @@ Clonar o descargar la rama que coincida con tu versión de Odoo.
 | Módulo | Descripción |
 |--------|-------------|
 | **fund_expedient** | Expedientes, etapas, cuentas analíticas, encuadres, relación con Purchase y Project. |
-| **expedient_tier_validation** | Validación por niveles (tier validation) sobre expedientes. Requiere [base_tier_validation](https://github.com/OCA/server-ux) (OCA). |
+| **expedient_tier_validation** | Validación por niveles (tier validation) sobre expedientes. Requiere [base_tier_validation](https://github.com/OCA/server-ux) (OCA) y la app **Mis aprobaciones** ([tier-validation-apps](https://github.com/aceleradora-la/tier-validation-apps)), que es la bandeja de aprobaciones. |
 
 ## Instalación
 
 1. Añadir esta ruta como directorio de addons en Odoo (solo la ruta que contiene `fund_expedient` y `expedient_tier_validation`).
 2. Actualizar lista de aplicaciones.
 3. Instalar **Fundación - Expedientes**.
-4. Opcional: instalar **base_tier_validation** (OCA server-ux, rama según tu Odoo) y **Expedientes - Validación por niveles**.
+4. Opcional: instalar **base_tier_validation** (OCA server-ux, rama según tu Odoo), **Mis aprobaciones** ([tier-validation-apps](https://github.com/aceleradora-la/tier-validation-apps)) y **Expedientes - Validación por niveles**.
 
 ## Dependencias Odoo
 
 - **fund_expedient**: `mail`, `hr`, `purchase`, `project`
-- **expedient_tier_validation**: `fund_expedient`, `base_tier_validation`
+- **expedient_tier_validation**: `fund_expedient`, `base_tier_validation`, `tier_validation_my_approvals`
 
 ## Licencia
 
