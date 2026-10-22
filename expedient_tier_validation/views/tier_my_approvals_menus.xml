@@ -1,15 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
+    <!-- Acceso directo a la app Mis aprobaciones, filtrado a expedientes y SG. -->
     <menuitem id="menu_fund_expedient_my_approvals"
               name="Mis aprobaciones"
               parent="fund_expedient.menu_fund_expedient_root"
-              sequence="12"/>
-
-    <menuitem id="menu_fund_expedient_my_approvals_validations"
-              name="Validaciones"
-              parent="menu_fund_expedient_my_approvals"
               action="action_tier_review_my_approvals"
-              sequence="10"/>
+              sequence="12"/>
 
 </odoo>

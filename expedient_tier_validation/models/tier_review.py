@@ -11,10 +11,6 @@ _FUND_EXPEDIENT_MODELS = (
     "fund.expedient.disposition",
     "fund.expedient.resolution",
 )
-_MY_APPROVALS_MODELS = (
-    "fund.expedient",
-    "fund.expedient.spend.request",
-)
 
 
 class TierReview(models.Model):
@@ -62,32 +58,8 @@ class TierReview(models.Model):
         index=True,
         search="_search_fund_record_type",
     )
-    approval_qty = fields.Integer(
-        string="Cantidad",
-        default=1,
-        required=True,
-        aggregator="sum",
-        help="Medida fija para pivote/gráficos (1 por validación).",
-    )
-    approval_duration_days = fields.Float(
-        string="Días hasta aprobación",
-        compute="_compute_approval_duration_days",
-        store=True,
-        aggregator="avg",
-        help="Días entre la creación de la revisión (solicitud) y su aprobación. "
-        "Solo se calcula para revisiones aprobadas; el resto queda en 0. "
-        "Medida para promediar tiempos de aprobación en pivote/gráficos "
-        "(filtrar status='approved' para evitar sesgo por los ceros).",
-    )
-
-    @api.depends("status", "reviewed_date", "create_date")
-    def _compute_approval_duration_days(self):
-        for rec in self:
-            if rec.status == "approved" and rec.reviewed_date and rec.create_date:
-                delta = rec.reviewed_date - rec.create_date
-                rec.approval_duration_days = delta.total_seconds() / 86400.0
-            else:
-                rec.approval_duration_days = 0.0
+    # El nombre del documento, la cantidad y los días hasta la aprobación los
+    # define la app Mis aprobaciones (tier_validation_my_approvals).
 
     @api.depends("model", "res_id")
     def _compute_fund_approval_links(self):
@@ -128,20 +100,6 @@ class TierReview(models.Model):
         if value == "spend_request":
             return [("model", "=", "fund.expedient.spend.request")]
         return [("id", "=", False)]
-
-    def action_open_fund_record(self):
-        """Abrir el expediente o la SG vinculada a esta validación."""
-        self.ensure_one()
-        if self.model not in _MY_APPROVALS_MODELS or not self.res_id:
-            return False
-        return {
-            "type": "ir.actions.act_window",
-            "name": self.env[self.model]._description,
-            "res_model": self.model,
-            "res_id": self.res_id,
-            "view_mode": "form",
-            "target": "current",
-        }
 
     def _fill_fund_context_vals(self, vals, review=None):
         """Completar etapa/fase en reviews creadas fuera de request_validation (p. ej. forward)."""

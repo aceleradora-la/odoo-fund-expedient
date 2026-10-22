@@ -4,7 +4,7 @@
 {
     "name": "Expedientes - Validación por niveles",
     "summary": "Extiende los expedientes con un proceso de validación por niveles (tier validation).",
-    "version": "18.0.4.26",
+    "version": "18.0.4.27",
     "category": "Administration",
     "website": "https://aceleradora.la",
     "author": "aceleradora.la",
@@ -14,6 +14,8 @@
     "depends": [
         "fund_expedient",
         "base_tier_validation",
+        # Bandeja de aprobaciones (repo aceleradora-la/tier-validation-apps).
+        "tier_validation_my_approvals",
     ],
     "data": [
         "security/fund_expedient_lease_privacy_reviewers.xml",
