@@ -1177,9 +1177,14 @@ class FundExpedient(models.Model):
                 self.description = self.type_id.default_description
 
         # Evitar quedar en una etapa incompatible con el tipo seleccionado.
+        # Un expediente NUEVO arranca siempre en la etapa inicial de su tipo:
+        # la etapa por defecto del formulario es la primera «borrador» según
+        # la secuencia general, que puede ser una etapa del tipo pero no su
+        # primera (el orden del flujo es el de la lista de etapas del tipo).
         if self.type_id:
             allowed = self.type_id.stage_assign_ids.mapped("stage_id")
-            if allowed and (not self.stage_id or self.stage_id not in allowed):
+            is_new = not self._origin.id
+            if allowed and (is_new or not self.stage_id or self.stage_id not in allowed):
                 self.stage_id = self._get_initial_stage_for_type(
                     self.type_id, company=self.company_id or self.env.company
                 )
