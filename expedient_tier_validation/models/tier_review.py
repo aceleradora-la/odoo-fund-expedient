@@ -51,6 +51,7 @@ class TierReview(models.Model):
         selection=[
             ("expedient", "Expediente"),
             ("spend_request", "Solicitud de Gasto"),
+            ("vendor_bill", "Factura de proveedor"),
         ],
         string="Tipo de registro",
         compute="_compute_fund_approval_links",
@@ -82,6 +83,8 @@ class TierReview(models.Model):
                     rec.fund_spend_request_id = spend_request.id
                     rec.fund_expedient_id = spend_request.expedient_id
                     rec.fund_record_type = "spend_request"
+            elif rec.model == "account.move":
+                rec.fund_record_type = "vendor_bill"
 
     @api.model
     def _search_fund_expedient_id(self, operator, value):
@@ -99,6 +102,8 @@ class TierReview(models.Model):
             return [("model", "=", "fund.expedient")]
         if value == "spend_request":
             return [("model", "=", "fund.expedient.spend.request")]
+        if value == "vendor_bill":
+            return [("model", "=", "account.move")]
         return [("id", "=", False)]
 
     def _fill_fund_context_vals(self, vals, review=None):

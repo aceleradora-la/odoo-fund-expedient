@@ -92,13 +92,18 @@ en los módulos e **Insertar en hoja de cálculo** (te da el formato exacto de t
 > (`fund_expedient_dashboard/data/files/aprobaciones_dashboard.json`, copia de este archivo). Ya no
 > hace falta importarlo; el importado a mano se puede borrar.
 
-Tres gráficos sobre `tier.review`, agrupados **por aprobador** (`done_by`):
+Seis gráficos sobre `tier.review`, agrupados **por aprobador** (`done_by`, o `todo_by` para lo
+pendiente). Los tres de facturas (desde 18.0.1.3.0) muestran la aprobación del pago de facturas
+de proveedor (módulo `account_move_payment_tier_validation`); sin ese módulo quedan vacíos.
 
 | Gráfico | Tipo | Medida | Agrupado por | Filtro (domain) |
 |---|---|---|---|---|
 | Aprobaciones de expedientes por aprobador y etapa | barras apiladas | `approval_qty` | `done_by`, `stage_id` | `fund_record_type=expedient`, `status=approved` |
 | Aprobaciones de Solicitudes de Gasto por aprobador y fase | barras apiladas | `approval_qty` | `done_by`, `spend_phase` | `fund_record_type=spend_request`, `status=approved` |
-| Tiempo promedio de aprobación (días) por aprobador | barras | `approval_duration_days` (promedio) | `done_by` | `status=approved` |
+| Tiempo promedio de aprobación de expedientes (días) por aprobador | barras | `approval_duration_days` (promedio) | `done_by` | `model!=account.move`, `status=approved` |
+| Pagos de facturas aprobados por aprobador | barras | `approval_qty` | `done_by` | `fund_record_type=vendor_bill`, `status=approved` |
+| Facturas con el pago pendiente de aprobación, por aprobador | barras apiladas | `approval_qty` | `todo_by`, `status` | `fund_record_type=vendor_bill`, `status in (waiting, pending)` — sin filtro de período |
+| Tiempo promedio de aprobación de pagos de facturas (días) por aprobador | barras | `approval_duration_days` (promedio) | `done_by` | `fund_record_type=vendor_bill`, `status=approved` |
 
 Filtro global **Período** cableado a `reviewed_date` (fecha de validación) en los 3 gráficos.
 
