@@ -25,9 +25,15 @@ las etapas que faltaban respecto del Excel:
     documentación y proyecto de acto, firma del acto y pago.
 11. Tipos nuevos: Beneficios del personal, Reconocimiento excepcional -
     erogaciones previas, y Suscripciones y licencias digitales.
+12. Regímenes de Reconocimiento excepcional y de Beneficios (Acta 61): la SG
+    de los reconocimientos la autoriza también el Director Ejecutivo; el acto
+    se firma por niveles (Anexo I); documentos obligatorios del requerimiento;
+    *TRÁMITE CONCLUIDO* después del pago / la acreditación; la firma de
+    Beneficios es solo del Director.
 
 NO toca: quién opera las etapas que ya existen, los montos del art. 9, ni
-documentos obligatorios fuera de las firmas y el pago (pendientes de validar).
+documentos obligatorios fuera de las firmas, el pago y el requerimiento de los
+regímenes de la sección 12 (pendientes de validar).
 
 Es idempotente: busca por nombre y solo crea o corrige lo que falta; se puede
 correr varias veces. No toca expedientes; solo avisa si alguno queda en una
@@ -187,6 +193,13 @@ DISPO = asegurar_doc("Disposición firmada", 50)
 RESO = asegurar_doc("Resolución firmada", 51)
 NOTA = asegurar_doc("Nota firmada", 52)
 PAGO_DOC = asegurar_doc("Constancia de pago", 53)
+# Requerimiento de los regímenes de Reconocimiento (arts. 11 y 17) y de
+# Beneficios (art. 5); conformidad de la prestación (art. 18 g).
+FACTURA = asegurar_doc("Factura", 54)
+CUIT_CBU = asegurar_doc("Constancia de CUIT y CBU", 55)
+PROPUESTA = asegurar_doc("Propuesta o presupuesto", 56)
+PROYECTO = asegurar_doc("Proyecto de acto o convenio", 57)
+CONFORMIDAD = asegurar_doc("Conformidad de recepción", 58)
 
 seccion("2. Nombres de etapas")
 for viejo, nuevo in (
@@ -271,14 +284,14 @@ else:
     AUDITORIA = depto("Dirección Ejecutiva / Auditoria Interna")
     ASESOR = depto("Dirección Ejecutiva / Asesor Estratégico")
 
-    def nivel(nombre, desde, dominio):
+    def nivel(nombre, desde, dominio, **extra):
         if Tier.with_context(active_test=False).search([("name", "=", nombre)], limit=1):
             return
         fuente = Tier.search([("name", "=", desde)], limit=1)
         if not fuente:
             aviso(f"no está la regla «{desde}» para copiar «{nombre}»")
             return
-        fuente.copy({"name": nombre, "definition_domain": dominio})
+        fuente.copy(dict(extra, name=nombre, definition_domain=dominio))
         hecho(f"regla de aprobación «{nombre}»")
 
     nivel(
@@ -368,6 +381,10 @@ INSTRUMENTACION = asegurar_etapa("INSTRUMENTACIÓN DEL BENEFICIO", DOC_CONTRACTU
 ACREDITAR = asegurar_etapa("ACREDITAR PRESTACIÓN EFECTIVA", DOC_CONTRACTUAL)
 EVALUACION_TEC = asegurar_etapa("EVALUACIÓN TÉCNICA Y ECONÓMICA", DICTAMEN_1)
 FIRMA_NOTA = asegurar_etapa("FIRMA NOTA", FIRMA_DISPO_1)
+# Cierre de los reconocimientos: en la etapa final no se controlan los
+# documentos (de ahí no se avanza), así que la constancia de pago y la
+# conformidad se exigen al salir de PAGO / ACREDITAR hacia esta (art. 22).
+CONCLUIDO = asegurar_etapa("TRÁMITE CONCLUIDO", DOC_CONTRACTUAL)
 
 # Plantillas: asignaciones existentes de las que se copian solapas y ocultos.
 P_PEDIDO = asignacion(RECONOCIMIENTO, PEDIDO)
@@ -377,20 +394,30 @@ P_FINAL = asignacion(RECONOCIMIENTO, DOC_CONTRACTUAL) or P_DICTAMEN
 
 no_final = {"is_final_stage": False}
 final = {"is_final_stage": True}
-firma_acto = dict(operan(DIRECCION, PRESIDENCIA), required_document_type_ids=[(6, 0, DISPO.ids)])
-pago = dict(operan(AYF), required_document_type_ids=[(6, 0, PAGO_DOC.ids)])
 
-circuito(
-    RECONOCIMIENTO,
-    [
-        (PEDIDO, P_PEDIDO, None),
-        (VERIFICACION, P_DICTAMEN, dict(operan(COMPRAS), **no_final)),
-        (CERTIFICA, P_CERTIFICA, None),
-        (DICTAMEN_1, P_DICTAMEN, None),
-        (FIRMA_ACTO, P_DICTAMEN, dict(firma_acto, **no_final)),
-        (PAGO, P_FINAL, dict(pago, **final)),
-    ],
-)
+
+def docs(*tipos):
+    return {"required_document_type_ids": [(6, 0, [t.id for t in tipos])]}
+
+
+sin_docs = {"required_document_type_ids": [(5, 0, 0)]}
+firma_acto = dict(operan(DIRECCION, PRESIDENCIA), **docs(DISPO))
+pago = dict(operan(AYF), **docs(PAGO_DOC))
+pedido_reconocimiento = docs(FACTURA, CUIT_CBU)
+concluido = dict(operan(AYF), **sin_docs, **final)
+
+pasos_reconocimiento = [
+    (PEDIDO, P_PEDIDO, pedido_reconocimiento),
+    (VERIFICACION, P_DICTAMEN, dict(operan(COMPRAS), **no_final)),
+    (CERTIFICA, P_CERTIFICA, None),
+    (DICTAMEN_1, P_DICTAMEN, None),
+    (FIRMA_ACTO, P_DICTAMEN, dict(firma_acto, **no_final)),
+    (PAGO, P_FINAL, dict(pago, **no_final)),
+]
+circuito(RECONOCIMIENTO, pasos_reconocimiento)
+# El cierre copia la asignación de PAGO (recién asegurada).
+P_CIERRE = asignacion(RECONOCIMIENTO, PAGO)
+circuito(RECONOCIMIENTO, pasos_reconocimiento + [(CONCLUIDO, P_CIERRE, concluido)])
 viejo = asignacion(RECONOCIMIENTO, DOC_CONTRACTUAL)
 if viejo:
     en_curso = Expedient.search_count(
@@ -438,10 +465,12 @@ BENEFICIOS = tipo_nuevo("BENEFICIOS DEL PERSONAL")
 circuito(
     BENEFICIOS,
     [
-        (PEDIDO, P_PEDIDO, dict(operan(RRHH), **pedido)),
+        (PEDIDO, P_PEDIDO, dict(operan(RRHH), **pedido, **docs(PROPUESTA, PROYECTO))),
         (CERTIFICA, P_CERTIFICA, None),
         (DICTAMEN_1, P_DICTAMEN, None),
-        (FIRMA_ACTO, P_DICTAMEN, dict(firma_acto, **no_final)),
+        # Art. 8: firma solo el Director Ejecutivo; se instrumenta por
+        # disposición o convenio, así que no se exige un documento fijo.
+        (FIRMA_ACTO, P_DICTAMEN, dict(operan(DIRECCION), **sin_docs, **no_final)),
         (INSTRUMENTACION, P_FINAL, dict(operan(RRHH), required_document_type_ids=[(5, 0, 0)], **final)),
     ],
 )
@@ -450,22 +479,20 @@ EROGACIONES = tipo_nuevo("RECONOCIMIENTO EXCEPCIONAL - EROGACIONES PREVIAS")
 circuito(
     EROGACIONES,
     [
-        (PEDIDO, P_PEDIDO, pedido),
+        (PEDIDO, P_PEDIDO, dict(pedido, **pedido_reconocimiento)),
         (VERIFICACION, P_DICTAMEN, dict(operan(COMPRAS), **no_final)),
         (CERTIFICA, P_CERTIFICA, None),
         (DICTAMEN_1, P_DICTAMEN, None),
         (FIRMA_ACTO, P_DICTAMEN, dict(firma_acto, **no_final)),
         (PAGO, P_FINAL, dict(pago, **no_final)),
+        # Art. 18 g: el área requirente acredita la prestación. Con pago
+        # escalonado (cap. IV) se vuelve a PAGO para el tramo siguiente.
         (
             ACREDITAR,
             P_FINAL,
-            {
-                "use_requestor": True,
-                "group_ids": [(5, 0, 0)],
-                "required_document_type_ids": [(5, 0, 0)],
-                **final,
-            },
+            {"use_requestor": True, "group_ids": [(5, 0, 0)], **docs(CONFORMIDAD), **no_final},
         ),
+        (CONCLUIDO, asignacion(RECONOCIMIENTO, CONCLUIDO), concluido),
     ],
 )
 
@@ -482,13 +509,48 @@ evaluacion = {
 circuito(
     SUSCRIPCIONES,
     [
-        (PEDIDO, P_PEDIDO, pedido),
+        (PEDIDO, P_PEDIDO, dict(pedido, **sin_docs)),
         (EVALUACION_TEC, P_DICTAMEN, evaluacion),
         (CERTIFICA, P_CERTIFICA, None),
         (FIRMA_NOTA, P_DICTAMEN, dict(operan(DIRECCION), required_document_type_ids=[(6, 0, NOTA.ids)], **no_final)),
         (PAGO, P_FINAL, dict(pago, **final)),
     ],
 )
+
+seccion("12. Validaciones de los reconocimientos excepcionales")
+if Tier is None:
+    aviso("tier.definition no está instalado: se saltea")
+else:
+    reconocimientos = f"[{RECONOCIMIENTO.id}, {EROGACIONES.id}]"
+    # Arts. 12 c y 18 c: la SG la autorizan el Gerente de AyF (regla general)
+    # y el Director Ejecutivo. Secuencia menor: firma después del Gerente.
+    nivel(
+        "Validación SG Preventiva - Reconocimiento excepcional (Director Ejecutivo)",
+        "Validación SG Preventiva entre 1001 UF y 5000 UF",
+        f'["&", ("spend_state", "=", "preventiva"), ("expedient_type_id", "in", {reconocimientos})]',
+    )
+    # Anexo I: quién firma el acto según el monto (en UF). El Director valida;
+    # lo que firman el Tesorero / Presidente o el Consejo lo confirma
+    # Presidencia (Secretaría) al subirlo.
+    firma = f'("type_id", "in", {reconocimientos}), ("stage_id", "=", {FIRMA_ACTO.id})'
+    nivel(
+        "Firma acto Reconocimiento hasta 3000 UF - Director Ejecutivo",
+        "Validación Pedido/Informe Técnico Comunicaciones",
+        f'["&", "&", {firma}, ("amount_estimated_unit", "<=", 3000)]',
+    )
+    nivel(
+        "Firma acto Reconocimiento entre 3000 y 5000 UF - Tesorero o Presidente - Subido",
+        "SG Firmada por Presidente hasta 10000 UF - Subido",
+        f'["&", "&", "&", {firma}, ("amount_estimated_unit", ">", 3000), '
+        f'("amount_estimated_unit", "<=", 5000)]',
+        reviewer_group_id=PRESIDENCIA.id,
+    )
+    nivel(
+        "Firma acto Reconocimiento mayor a 5000 UF - Consejo - Subido",
+        "SG Firmada por Presidente hasta 10000 UF - Subido",
+        f'["&", "&", {firma}, ("amount_estimated_unit", ">", 5000)]',
+        reviewer_group_id=PRESIDENCIA.id,
+    )
 
 # ---------------------------------------------------------------------------
 seccion("Resumen")
