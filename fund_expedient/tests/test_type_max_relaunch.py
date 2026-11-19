@@ -24,6 +24,13 @@ class TestTypeMaxAndRelaunch(TransactionCase):
     def setUpClass(cls):
         super().setUpClass()
         cls.env = cls.env(context=dict(cls.env.context, tracking_disable=True))
+        # En una base con datos (p. ej. la copia de prod de odoo.sh) puede haber
+        # niveles de aprobación sobre expedientes y solicitudes: no tienen que
+        # influir en estos tests.
+        if "tier.definition" in cls.env:
+            cls.env["tier.definition"].search(
+                [("model", "like", "fund.expedient")]
+            ).active = False
         Stage = cls.env["fund.expedient.stage"]
         cls.st_req = Stage.create({"name": "T Requerimiento", "state_type": "draft"})
         cls.st_prev = Stage.create(
@@ -117,7 +124,8 @@ class TestTypeMaxAndRelaunch(TransactionCase):
         self.assertFalse(expedient.type_max_amount_warning)
         self._go_to(expedient, self.st_prev)
         expedient.action_create_spend_request_initial()
-        # Con expedient_tier_validation y sin niveles configurados se aprueba sola.
+        # Con expedient_tier_validation y sin niveles se aprueba sola; sin ese
+        # módulo queda generada.
         self.assertIn(expedient.spend_request_ids.preventiva_state, ("generated", "approved"))
 
     def test_type_change_clears_warning(self):
@@ -249,7 +257,8 @@ class TestTypeMaxAndRelaunch(TransactionCase):
             lambda a: a.stage_id == self.st_failed
         ).group_ids = group
         expedient = self._expedient(1000.0)
-        self._go_to(expedient, self.st_failed)
+        self._go_to(expedient, self.st_final)
+        self._declare_failed(expedient)
         outsider = new_test_user(
             self.env, login="t_relaunch_outsider", groups="fund_expedient.group_fund_expedient_user"
         )

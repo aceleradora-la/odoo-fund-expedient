@@ -3166,7 +3166,10 @@ class FundExpedient(models.Model):
             if rec.state != "no_award":
                 rec.can_relaunch = False
                 continue
-            users = rec._get_assignable_user_ids()
+            # Con sudo: es solo saber si el usuario actual está en la etapa; la
+            # configuración de la etapa (grupos y sus usuarios) no tiene por qué
+            # ser legible para él.
+            users = rec.sudo()._get_assignable_user_ids()
             rec.can_relaunch = is_manager or not users or self.env.user in users
 
     def action_open_relaunch_wizard(self):
