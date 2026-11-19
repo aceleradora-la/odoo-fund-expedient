@@ -33,6 +33,9 @@ las etapas que faltaban respecto del Excel:
 13. Etapa inicial de cada tipo: la opera el solicitante y quien crea queda
     como responsable, en vez de «Usuario interno» / «Expedientes / Usuario»
     (que suscribía a todos los usuarios como seguidores de cada expediente).
+14. OBRAS (locación de obra, mismo circuito que SERVICIOS) y AUSPICIOS A
+    EVENTOS (evaluación de Dirección Ejecutiva, convenio firmado, pago y
+    acreditación de la contraprestación), que no tenían etapas.
 
 NO toca: quién opera las etapas que ya existen, los montos del art. 9, ni
 documentos obligatorios fuera de las firmas, el pago y el requerimiento de los
@@ -573,11 +576,66 @@ for t in Type.search([]):
             f"{t.name} / {primera.stage_id.name}",
         )
 
+seccion("14. Obras y Auspicios a eventos")
+SERVICIOS = tipo("SERVICIOS")
+OBRAS = tipo("OBRAS")
+AUSPICIOS = tipo("AUSPICIOS A EVENTOS")
+
+
+def numeracion(t):
+    if not t.sequence_id:
+        t.action_create_type_sequence()
+        hecho(f"{t.name}: numeración propia")
+
+
+# OBRAS es la locación de obra: el mismo circuito que SERVICIOS (locación de
+# servicios), con su tipo de contrato y su moneda de aprobación.
+escribir(
+    OBRAS,
+    {"contract_kind": "work_lease", "approval_currency_id": SERVICIOS.approval_currency_id.id},
+    OBRAS.name,
+)
+for a in SERVICIOS.stage_assign_ids.sorted(lambda r: (r.sequence, r.id)):
+    actual = asignacion(OBRAS, a.stage_id)
+    if actual:
+        escribir(actual, {"sequence": a.sequence}, f"{OBRAS.name} / {a.stage_id.name}")
+    else:
+        a.copy({"type_id": OBRAS.id})
+        hecho(f"{OBRAS.name}: agrega «{a.stage_id.name}»")
+numeracion(OBRAS)
+
+# AUSPICIOS: la Fundación aporta fondos a un evento de terceros a cambio de
+# una contraprestación (logo, espacio, etc.), que el área acredita al final.
+EVAL_AUSPICIO = asegurar_etapa("EVALUACIÓN DEL AUSPICIO", DICTAMEN_1)
+ACREDITAR_CONTRA = asegurar_etapa("ACREDITAR CONTRAPRESTACIÓN", DOC_CONTRACTUAL)
+CONVENIO_AUSPICIO = asegurar_doc("Convenio de auspicio firmado", 59)
+EVIDENCIA = asegurar_doc("Evidencia de la contraprestación", 60)
+inicial = {"group_ids": [(5, 0, 0)], "use_requestor": True, "assign_creator": True}
+circuito(
+    AUSPICIOS,
+    [
+        (PEDIDO, P_PEDIDO, dict(inicial, **pedido, **sin_docs)),
+        (EVAL_AUSPICIO, P_DICTAMEN, dict(operan(DIRECCION), **sin_docs, **no_final)),
+        (CERTIFICA, P_CERTIFICA, None),
+        (DICTAMEN_1, P_DICTAMEN, None),
+        (FIRMA_ACTO, P_DICTAMEN, dict(operan(DIRECCION), **docs(CONVENIO_AUSPICIO), **no_final)),
+        (PAGO, P_FINAL, dict(pago, **no_final)),
+        (
+            ACREDITAR_CONTRA,
+            P_FINAL,
+            {"use_requestor": True, "group_ids": [(5, 0, 0)], **docs(EVIDENCIA), **no_final},
+        ),
+        (CONCLUIDO, asignacion(RECONOCIMIENTO, CONCLUIDO), concluido),
+    ],
+)
+numeracion(AUSPICIOS)
+
 # ---------------------------------------------------------------------------
 seccion("Resumen")
 print(f"{len(cambios)} cambio(s), {len(avisos)} aviso(s).")
 for t in (COMPULSA, DIRECTA, PRIVADA, PUBLICA, PRORROGA, AUMENTO, DISMINUCION,
-          RECONOCIMIENTO, BENEFICIOS, EROGACIONES, SUSCRIPCIONES):
+          RECONOCIMIENTO, BENEFICIOS, EROGACIONES, SUSCRIPCIONES, SERVICIOS, OBRAS,
+          AUSPICIOS):
     etapas = []
     for a in t.stage_assign_ids.sorted(lambda r: (r.sequence, r.id)):
         marca = " (final)" if a.is_final_stage else ""
