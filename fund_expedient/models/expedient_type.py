@@ -318,6 +318,15 @@ class ExpedientType(models.Model):
         help="Moneda estándar de Odoo usada para expresar totales del expediente para este tipo. "
         "Las conversiones se realizan usando cotizaciones estándar (Monedas).",
     )
+    max_amount_unit = fields.Monetary(
+        string="Monto máximo",
+        currency_field="approval_currency_id",
+        help="Tope del procedimiento, en la moneda del tipo (p. ej. 4.000 UF para la "
+        "Compulsa abreviada). Si el total del expediente lo supera, se avisa en el "
+        "expediente y no se puede generar la Solicitud: con la preventiva hay que "
+        "cambiar el tipo; con la definitiva, declarar el expediente fracasado e "
+        "iniciar uno nuevo del procedimiento que corresponda. Vacío: sin tope.",
+    )
     default_description = fields.Html(
         string="Descripción/Memo por defecto",
         sanitize="email_outgoing",

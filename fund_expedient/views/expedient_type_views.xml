@@ -31,6 +31,7 @@
                         </group>
                         <group>
                             <field name="approval_currency_id"/>
+                            <field name="max_amount_unit"/>
                             <field name="unit_mode" invisible="1"/>
                             <field name="company_id" groups="base.group_multi_company"/>
                             <field name="sequence_id" readonly="1"/>

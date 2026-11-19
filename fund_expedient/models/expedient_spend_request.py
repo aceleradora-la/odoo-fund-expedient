@@ -409,6 +409,7 @@ class FundExpedientSpendRequest(models.Model):
             raise UserError(_("La Solicitud de Gasto debe estar vinculada a un expediente."))
         if exp.stage_id.spend_request_mode != "preventiva":
             raise UserError(_("La etapa actual no permite crear Solicitud de Gasto preventiva."))
+        exp._check_type_max_amount("preventiva")
         if not self.number or self.number == "/":
             self.number = self._next_number()
         self.write(
@@ -459,6 +460,7 @@ class FundExpedientSpendRequest(models.Model):
                     "la Solicitud de Gasto definitiva."
                 )
             )
+        exp._check_type_max_amount("definitiva")
 
         self.write(
             {

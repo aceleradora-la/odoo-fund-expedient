@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_fund_expedient_outcome_wizard_form" model="ir.ui.view">
+        <field name="name">fund.expedient.outcome.wizard.form</field>
+        <field name="model">fund.expedient.outcome.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Declarar resultado">
+                <div class="alert alert-info" role="status">
+                    Subí la disposición firmada. El expediente queda cerrado en la etapa del
+                    resultado elegido y no puede volver a avanzar.
+                </div>
+                <group>
+                    <field name="expedient_id"/>
+                    <field name="disposition_type_id" options="{'no_create': True, 'no_open': True}"/>
+                    <field name="reference"/>
+                    <field name="file_data" filename="file_name"/>
+                    <field name="file_name" invisible="1"/>
+                    <field name="document_type_id" options="{'no_create': True, 'no_open': True}"/>
+                    <field name="notes" placeholder="Opcional: motivo"/>
+                </group>
+                <footer>
+                    <button name="action_confirm" type="object" string="Declarar y cerrar"
+                            class="btn-primary"
+                            confirm="El expediente se cierra y no puede volver a avanzar. ¿Continuar?"/>
+                    <button string="Cancelar" special="cancel" class="btn-secondary"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>

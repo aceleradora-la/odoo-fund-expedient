@@ -3,11 +3,11 @@
 
 import logging
 
-from odoo import SUPERUSER_ID, api, fields, models
+from odoo import SUPERUSER_ID, Command, api, fields, models
 from odoo.exceptions import UserError
 from odoo import _
 from odoo.osv import expression
-from odoo.tools import html2plaintext
+from odoo.tools import format_amount, html2plaintext
 
 _logger = logging.getLogger(__name__)
 
@@ -896,6 +896,31 @@ class FundExpedient(models.Model):
         store=True,
         currency_field="approval_currency_id",
         help="Total confirmado expresado en la moneda configurada en el Tipo de Expediente.",
+    )
+    # Tope del procedimiento (p. ej. Compulsa abreviada: 4.000 UF). Ver
+    # `_check_type_max_amount`: el cartel avisa desde la carga y la Solicitud
+    # no se genera por encima del tope.
+    type_max_amount_unit = fields.Monetary(
+        related="type_id.max_amount_unit",
+        currency_field="approval_currency_id",
+        string="Monto máximo del tipo",
+    )
+    type_max_amount_warning = fields.Char(
+        string="Aviso de monto máximo",
+        compute="_compute_type_max_amount_warning",
+    )
+    can_relaunch = fields.Boolean(
+        string="Puede iniciar un expediente nuevo",
+        compute="_compute_can_relaunch",
+        help="Cerrado sin adjudicar (desierto, sin efecto, fracasado) y el usuario "
+        "está asignado a esa etapa de cierre (o la etapa no tiene asignación), o es "
+        "administrador de expedientes.",
+    )
+    can_declare_outcome = fields.Boolean(
+        string="Puede declarar el resultado",
+        compute="_compute_can_declare_outcome",
+        help="El tipo tiene etapas de cierre (Desierto, Sin efecto, Fracasado) y el "
+        "usuario opera la etapa actual.",
     )
     report_count = fields.Integer(
         string="Cantidad",
@@ -2944,7 +2969,7 @@ class FundExpedient(models.Model):
             limit=1,
         )
 
-    def _apply_disposition_outcome(self, disposition_type, disposition=None):
+    def _apply_disposition_outcome(self, disposition_type, disposition=None, reference=None):
         """Cierra el expediente en la etapa final del resultado indicado.
 
         Se invoca desde la Disposición (botón «Aplicar disposición»). El salto
@@ -2988,11 +3013,286 @@ class FundExpedient(models.Model):
                 "por aplicación de la disposición %(disp)s.",
                 old=old_stage.name or "",
                 new=target.name,
-                disp=disposition.name if disposition else "",
+                disp=disposition.name if disposition else (reference or ""),
             ),
             subtype_xmlid="mail.mt_note",
         )
         return True
+
+    # ------------------------------------------------------------------
+    # Monto máximo del tipo y cierre por resultado sin Disposición de Odoo
+    # ------------------------------------------------------------------
+
+    def _type_max_amount_excess(self, phase=None):
+        """(total, tope) si el total supera el monto máximo del tipo; si no, None.
+
+        Con `phase` se mide el total de esa fase de la Solicitud: el estimado
+        para la preventiva y el confirmado para la definitiva. Sin fase (el
+        cartel), el confirmado si ya hay uno y, si no, el estimado.
+        """
+        self.ensure_one()
+        limit = self.type_id.max_amount_unit
+        if not limit:
+            return None
+        if phase == "preventiva":
+            total = self.amount_estimated_unit
+        elif phase == "definitiva":
+            total = self.amount_estimated_confirmed_unit
+        else:
+            total = self.amount_estimated_confirmed_unit or self.amount_estimated_unit
+        currency = self.approval_currency_id or self.currency_id
+        if currency.compare_amounts(total or 0.0, limit) <= 0:
+            return None
+        return total, limit
+
+    def _format_type_amount(self, amount):
+        self.ensure_one()
+        currency = self.approval_currency_id or self.currency_id
+        return format_amount(self.env, amount, currency)
+
+    @api.depends(
+        "type_id.max_amount_unit",
+        "amount_estimated_unit",
+        "amount_estimated_confirmed_unit",
+        "state",
+    )
+    def _compute_type_max_amount_warning(self):
+        for rec in self:
+            excess = rec._type_max_amount_excess() if rec.state not in CLOSED_STATES else None
+            if not excess:
+                rec.type_max_amount_warning = False
+                continue
+            total, limit = excess
+            rec.type_max_amount_warning = _(
+                "El total del expediente (%(total)s) supera el monto máximo de «%(type)s» "
+                "(%(limit)s). Antes de certificar fondos, cambie el tipo al procedimiento "
+                "que corresponda; si ya hay ofertas, declare el expediente fracasado e "
+                "inicie uno nuevo.",
+                total=rec._format_type_amount(total),
+                type=rec.type_id.name or "",
+                limit=rec._format_type_amount(limit),
+            )
+
+    def _check_type_max_amount(self, phase):
+        """No deja generar la Solicitud por encima del monto máximo del tipo."""
+        self.ensure_one()
+        excess = self._type_max_amount_excess(phase)
+        if not excess:
+            return
+        total, limit = excess
+        values = {
+            "doc": self._spend_request_doc_label(),
+            "total": self._format_type_amount(total),
+            "type": self.type_id.name or "",
+            "limit": self._format_type_amount(limit),
+        }
+        if phase == "preventiva":
+            raise UserError(
+                _(
+                    "No se puede generar la %(doc)s preventiva: el total estimado "
+                    "(%(total)s) supera el monto máximo de «%(type)s» (%(limit)s). "
+                    "Cambie el tipo de expediente al procedimiento que corresponda.",
+                    **values,
+                )
+            )
+        raise UserError(
+            _(
+                "No se puede generar la %(doc)s definitiva: el total confirmado "
+                "(%(total)s) supera el monto máximo de «%(type)s» (%(limit)s). "
+                "Declare el expediente fracasado (botón «Declarar resultado») e "
+                "inicie uno nuevo del procedimiento que corresponda.",
+                **values,
+            )
+        )
+
+    @api.depends("type_id.stage_assign_ids.stage_id.final_outcome_type_id", "state")
+    @api.depends_context("uid")
+    def _compute_can_declare_outcome(self):
+        for rec in self:
+            rec.can_declare_outcome = bool(
+                rec.type_id
+                and rec.state not in CLOSED_STATES
+                and rec.can_edit_in_stage
+                and rec.type_id._ordered_stages().filtered("final_outcome_type_id")
+            )
+
+    def action_open_outcome_wizard(self):
+        """Declarar desierto / sin efecto / fracasado subiendo la disposición firmada.
+
+        Las disposiciones se firman por fuera de Odoo: no se crea el registro de
+        Disposición (que tiene su propia numeración); se sube el documento y el
+        expediente pasa a la etapa de cierre del resultado elegido.
+        """
+        self.ensure_one()
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Declarar resultado"),
+            "res_model": "fund.expedient.outcome.wizard",
+            "view_mode": "form",
+            "target": "new",
+            "context": {"default_expedient_id": self.id},
+        }
+
+    def _declare_outcome(self, disposition_type, document_vals, reference):
+        """Sube la disposición firmada a la etapa actual y cierra el expediente."""
+        self.ensure_one()
+        if not disposition_type.closes_expedient:
+            raise UserError(
+                _("«%s» no cierra el expediente.") % (disposition_type.name or "")
+            )
+        if not self._find_outcome_stage(disposition_type):
+            raise UserError(
+                _(
+                    "El tipo «%(type)s» no tiene una etapa de cierre para «%(outcome)s». "
+                    "Agréguela a las Asignaciones por etapa del tipo de expediente.",
+                    type=self.type_id.name or "",
+                    outcome=disposition_type.name or "",
+                )
+            )
+        self.env["fund.expedient.document"].create(
+            dict(document_vals, expedient_id=self.id, stage_id=self.stage_id.id)
+        )
+        return self._apply_disposition_outcome(disposition_type, reference=reference)
+
+    # ------------------------------------------------------------------
+    # Nuevo expediente a partir de uno cerrado sin adjudicar
+    # ------------------------------------------------------------------
+
+    @api.depends("state", "stage_id", "type_id.stage_assign_ids")
+    @api.depends_context("uid")
+    def _compute_can_relaunch(self):
+        is_manager = self.env.user.has_group("fund_expedient.group_fund_expedient_manager")
+        for rec in self:
+            if rec.state != "no_award":
+                rec.can_relaunch = False
+                continue
+            users = rec._get_assignable_user_ids()
+            rec.can_relaunch = is_manager or not users or self.env.user in users
+
+    def action_open_relaunch_wizard(self):
+        self.ensure_one()
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Iniciar nuevo expediente"),
+            "res_model": "fund.expedient.relaunch.wizard",
+            "view_mode": "form",
+            "target": "new",
+            "context": {"default_expedient_id": self.id},
+        }
+
+    def _relaunch_documents(self):
+        """Documentos que pasan al expediente nuevo: los del requerimiento.
+
+        Los de la primera etapa del tipo (la nota o formulario de requerimiento)
+        y los que forman la especificación técnica o las condiciones
+        particulares. Las ofertas, actas y disposiciones del procedimiento que
+        fracasó quedan en el expediente original.
+        """
+        self.ensure_one()
+        first_stage = self.type_id._flow_stages()[:1]
+        return self.document_ids.filtered(
+            lambda doc: doc.file_data
+            and (
+                doc.stage_id == first_stage
+                or doc.document_type_id.is_technical_spec
+                or doc.document_type_id.is_particular_conditions
+            )
+        )
+
+    def _relaunch_as(self, new_type):
+        """Crea un expediente nuevo del tipo `new_type` con los datos de este.
+
+        Copia solicitante, objeto, descripción, cuenta analítica, lugar y fecha
+        de la necesidad, proveedores recomendados, líneas (sin importes
+        definitivos) y los documentos del requerimiento. Arranca en la primera
+        etapa del tipo nuevo, con su propio número, y queda vinculado a este
+        como expediente relacionado. La Solicitud de Gasto no se copia: el
+        nuevo procedimiento certifica fondos de nuevo.
+        """
+        self.ensure_one()
+        if self.state != "no_award":
+            raise UserError(
+                _(
+                    "Solo se inicia un expediente nuevo desde uno cerrado sin adjudicar "
+                    "(desierto, sin efecto o fracasado)."
+                )
+            )
+        if not self.can_relaunch:
+            raise UserError(
+                _(
+                    "Solo los usuarios asignados a la etapa «%s» pueden iniciar un "
+                    "expediente nuevo a partir de este."
+                )
+                % (self.stage_id.name or "")
+            )
+        if new_type.operation_type != self.operation_type:
+            raise UserError(
+                _("El tipo nuevo tiene que ser del mismo tipo de operación (gasto o ingreso).")
+            )
+        vals = {
+            "type_id": new_type.id,
+            "company_id": self.company_id.id,
+            "requestor_id": self.requestor_id.id,
+            "contract_object": self.contract_object,
+            "description": self.description,
+            "analytic_account_id": self.analytic_account_id.id,
+            "estimated_need_date": self.estimated_need_date,
+            "delivery_location": self.delivery_location,
+            "recommended_supplier_ids": [Command.set(self.recommended_supplier_ids.ids)],
+        }
+        if self.encuadre_id and self.encuadre_id in new_type.encuadre_ids:
+            vals["encuadre_id"] = self.encuadre_id.id
+        if not self.line_ids:
+            vals["amount_estimated_manual"] = self.amount_estimated_manual
+        new = self.create(vals)
+        # Los totales de línea son calculados (no se copian solos): se pasa el
+        # estimado y se deja el definitivo en cero, que lo fija el procedimiento
+        # nuevo. `skip_final_amount_check`: el alta no es una edición del usuario.
+        for line in self.line_ids.with_context(skip_final_amount_check=True):
+            line.copy(
+                {
+                    "expedient_id": new.id,
+                    "amount_estimated_line": line.amount_estimated_line,
+                    "amount_final_line": 0.0,
+                    "price_unit_final": 0.0,
+                }
+            )
+        Document = self.env["fund.expedient.document"].with_context(
+            skip_document_stage_check=True
+        )
+        for doc in self._relaunch_documents():
+            Document.create(
+                {
+                    "expedient_id": new.id,
+                    "stage_id": new.stage_id.id,
+                    "name": doc.name,
+                    "document_type_id": doc.document_type_id.id,
+                    "file_data": doc.file_data,
+                    "file_name": doc.file_name,
+                    "notes": doc.notes,
+                }
+            )
+        # Se vincula después de crear: con `parent_id` en el alta el nuevo
+        # tomaría el número de este con sufijo, y es un procedimiento aparte.
+        new.with_context(skip_validation_check=True).write({"parent_id": self.id})
+        self.message_post(
+            body=_(
+                "Se inició el expediente %(new)s (%(type)s) a partir de este.",
+                new=new.display_name,
+                type=new_type.name,
+            ),
+            subtype_xmlid="mail.mt_note",
+        )
+        new.message_post(
+            body=_(
+                "Expediente iniciado a partir de %(old)s (%(type)s, %(stage)s).",
+                old=self.display_name,
+                type=self.type_id.name,
+                stage=self.stage_id.name,
+            ),
+            subtype_xmlid="mail.mt_note",
+        )
+        return new
 
     def action_view_purchase_orders(self):
         self.ensure_one()

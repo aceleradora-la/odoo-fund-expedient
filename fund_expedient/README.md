@@ -12,6 +12,15 @@ Módulo de Odoo 18 para la gestión de expedientes de una fundación.
 - Relación con **Proyectos** (project.project): campo Proyecto en expediente e icono en proyecto.
 - Relación **expediente padre/hijos** (otros expedientes).
 - Vistas **Lista** y **Kanban** (agrupado por etapa).
+- **Monto máximo por tipo** (p. ej. Compulsa abreviada: 4.000 UF): cartel en el expediente cuando el
+  total lo supera y bloqueo al generar la Solicitud. Con la preventiva hay que cambiar el tipo; con
+  la definitiva, declarar el expediente fracasado.
+- **Declarar resultado** (desierto, sin efecto, fracasado) subiendo la disposición firmada como
+  documento, sin crear la Disposición de Odoo. El tipo necesita la etapa de cierre del resultado en
+  sus asignaciones por etapa.
+- **Iniciar nuevo expediente** desde uno cerrado sin adjudicar: elige el tipo (p. ej. Licitación),
+  copia solicitante, objeto, cuenta analítica, líneas y documentos del requerimiento, y queda
+  vinculado como expediente relacionado.
 
 ## Dependencias
 

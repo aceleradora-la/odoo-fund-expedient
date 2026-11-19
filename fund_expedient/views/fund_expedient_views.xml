@@ -120,6 +120,8 @@
                     <field name="can_take_responsibility" invisible="1"/>
                     <field name="can_manage_responsible" invisible="1"/>
                     <field name="visible_page_codes" invisible="1"/>
+                    <field name="can_declare_outcome" invisible="1"/>
+                    <field name="can_relaunch" invisible="1"/>
                     <!--
                         «Etapa anterior» no depende de los requisitos de la etapa
                         (se vuelve justamente para corregirlos), pero sí se oculta
@@ -181,6 +183,14 @@
                             class="btn-secondary"
                             invisible="not can_manage_responsible or not responsible_user_id"
                             confirm="El expediente vuelve a estar en manos de todos los asignados de la etapa. ¿Continuar?"/>
+                    <button name="action_open_outcome_wizard" type="object"
+                            string="Declarar resultado"
+                            class="btn-secondary" icon="fa-ban"
+                            invisible="not can_declare_outcome"/>
+                    <button name="action_open_relaunch_wizard" type="object"
+                            string="Iniciar nuevo expediente"
+                            class="btn-primary" icon="fa-repeat"
+                            invisible="not can_relaunch"/>
                     <button name="action_reopen" type="object" string="Reabrir"
                             class="btn-secondary" icon="fa-undo"
                             groups="fund_expedient.group_fund_expedient_manager"
@@ -216,6 +226,11 @@
                         Qué falta para avanzar. Se muestra solo mientras el expediente
                         esté activo: en cancelado o en una etapa de cierre ya no aplica.
                     -->
+                    <div class="alert alert-danger d-flex align-items-center" role="alert"
+                         invisible="not type_max_amount_warning">
+                        <i class="fa fa-exclamation-circle me-2" title="Monto máximo" aria-hidden="true"/>
+                        <field name="type_max_amount_warning" nolabel="1" readonly="1"/>
+                    </div>
                     <div class="alert alert-warning d-flex align-items-center" role="alert"
                          invisible="stage_requirements_ok or state in ('cancel', 'no_award')">
                         <i class="fa fa-exclamation-triangle me-2" aria-hidden="true"/>
