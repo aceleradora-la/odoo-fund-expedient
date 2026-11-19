@@ -30,6 +30,9 @@ las etapas que faltaban respecto del Excel:
     se firma por niveles (Anexo I); documentos obligatorios del requerimiento;
     *TRÁMITE CONCLUIDO* después del pago / la acreditación; la firma de
     Beneficios es solo del Director.
+13. Etapa inicial de cada tipo: la opera el solicitante y quien crea queda
+    como responsable, en vez de «Usuario interno» / «Expedientes / Usuario»
+    (que suscribía a todos los usuarios como seguidores de cada expediente).
 
 NO toca: quién opera las etapas que ya existen, los montos del art. 9, ni
 documentos obligatorios fuera de las firmas, el pago y el requerimiento de los
@@ -551,6 +554,24 @@ else:
         f'["&", "&", {firma}, ("amount_estimated_unit", ">", 5000)]',
         reviewer_group_id=PRESIDENCIA.id,
     )
+
+seccion("13. Etapa inicial: el solicitante y quien crea, no todos los usuarios")
+# Al crear, los usuarios que operan la etapa quedan como participantes y
+# seguidores. Con la etapa inicial asignada a «Usuario interno» o a
+# «Expedientes / Usuario», cada expediente nuevo suscribía a todos. Queda a
+# cargo del solicitante, y quien lo crea (p. ej. Compras por otra área) queda
+# como responsable. No cambia quién puede crear expedientes.
+AMPLIOS = env.ref("base.group_user") | env.ref("fund_expedient.group_fund_expedient_user")
+for t in Type.search([]):
+    primera = t.stage_assign_ids.filtered(
+        lambda a: not a.stage_id.final_outcome_type_id
+    ).sorted(lambda a: (a.sequence, a.id))[:1]
+    if primera and primera.group_ids & AMPLIOS:
+        escribir(
+            primera,
+            {"group_ids": [(5, 0, 0)], "use_requestor": True, "assign_creator": True},
+            f"{t.name} / {primera.stage_id.name}",
+        )
 
 # ---------------------------------------------------------------------------
 seccion("Resumen")
