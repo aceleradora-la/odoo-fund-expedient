@@ -141,3 +141,7 @@ class FundExpedientSpendRequest(models.Model):
             if not rec._get_applicable_tier_definitions():
                 rec.with_context(skip_validation_check=True).definitiva_state = "approved"
         return res
+
+    def _my_approvals_partners(self):
+        """Mis aprobaciones: el proveedor del expediente."""
+        return self.expedient_id._my_approvals_partners() if self.expedient_id else self.env["res.partner"]

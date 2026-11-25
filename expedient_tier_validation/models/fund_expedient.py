@@ -901,3 +901,16 @@ class FundExpedient(models.Model):
                 skip_document_check=True,
             ).write({"stage_id": target.id})
         return True
+
+    def _my_approvals_partners(self):
+        """Proveedor para la columna «Contacto / Proveedor» de Mis aprobaciones.
+
+        El de las órdenes de compra confirmadas; si todavía no hay (p. ej. al
+        certificar fondos), los proveedores recomendados del expediente y de
+        sus líneas. Se lee en sudo: la bandeja solo informa el nombre.
+        """
+        expedient = self.sudo()
+        orders = expedient.purchase_order_ids.filtered(lambda o: o.state in ("purchase", "done"))
+        if orders:
+            return orders.partner_id
+        return expedient.recommended_supplier_ids | expedient.line_ids.recommended_supplier_ids

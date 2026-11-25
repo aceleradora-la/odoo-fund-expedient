@@ -43,3 +43,7 @@ class FundExpedientDisposition(models.Model):
             if open_reviews:
                 open_reviews.sudo().unlink()
         return res
+
+    def _my_approvals_partners(self):
+        """Mis aprobaciones: el proveedor del expediente."""
+        return self.expedient_id._my_approvals_partners() if self.expedient_id else self.env["res.partner"]
