@@ -36,7 +36,10 @@ las etapas que faltaban respecto del Excel:
 14. SERVICIOS y ADENDA SERVICIOS: *TRÁMITE CONCLUIDO* después de la etapa
     final actual (que deja de serlo), operada por AyF. Los expedientes que
     estaban cerrados en la etapa final vieja pasan a *TRÁMITE CONCLUIDO*
-    (solo cambia la etapa; quedan cerrados, con su fecha de cierre).
+    (solo cambia la etapa; quedan cerrados, con su fecha de cierre). En
+    SERVICIOS (y OBRAS) *TRÁMITE CONCLUIDO* reemplaza a *FINALIZADO*, que no
+    tenía nadie a cargo: la etapa sale del circuito si no queda ningún
+    expediente en ella.
 15. OBRAS (locación de obra, mismo circuito que SERVICIOS) y AUSPICIOS A
     EVENTOS (evaluación de Dirección Ejecutiva, convenio firmado, pago y
     acreditación de la contraprestación), que no tenían etapas.
@@ -589,6 +592,59 @@ seccion("14. TRÁMITE CONCLUIDO en SERVICIOS y ADENDA SERVICIOS")
 # de OBRAS, que copia el circuito de SERVICIOS.
 SERVICIOS = tipo("SERVICIOS")
 ADENDA = tipo("ADENDA SERVICIOS")
+# FINALIZADO (el cierre viejo de SERVICIOS, sin nadie a cargo) se reemplaza por
+# TRÁMITE CONCLUIDO: no queda como etapa intermedia.
+FINALIZADO = Stage.search([("name", "=", "FINALIZADO")], limit=1)
+
+
+def pasar_a_concluido(t, a):
+    """Los expedientes cerrados del tipo en la etapa de `a` pasan a CONCLUIDO.
+
+    Para que sigan cerrados y en la proyección de contratos. Solo cambia la
+    etapa: BaseModel.write saltea los controles de avance, el responsable, los
+    avisos y los seguidores; la fecha de cierre original se conserva.
+    """
+    cerrados = Expedient.with_context(active_test=False).search(
+        [("type_id", "=", t.id), ("stage_id", "=", a.stage_id.id), ("state", "=", "done")]
+    )
+    if not cerrados:
+        return
+    models.BaseModel.write(cerrados, {"stage_id": CONCLUIDO.id})
+    for e in cerrados:
+        e.message_post(
+            body=f"Pasa de «{a.stage_id.name}» a «{CONCLUIDO.name}», la nueva etapa "
+            f"final de {t.name} (configuración de tipos de expediente).",
+            subtype_xmlid="mail.mt_note",
+        )
+    hecho(
+        f"{t.name}: {len(cerrados)} expediente(s) de «{a.stage_id.name}» pasan a "
+        f"«{CONCLUIDO.name}»: {', '.join(cerrados.mapped(lambda e: e.number or str(e.id)))}"
+    )
+
+
+def sacar_finalizado(t):
+    """Saca FINALIZADO del circuito del tipo si no queda ningún expediente ahí."""
+    a = asignacion(t, FINALIZADO) if FINALIZADO else Assign
+    if not a:
+        return
+    pasar_a_concluido(t, a)
+    quedan = Expedient.with_context(active_test=False).search(
+        [("type_id", "=", t.id), ("stage_id", "=", FINALIZADO.id)]
+    )
+    if quedan:
+        # Queda justo antes de CONCLUIDO, sin ser la final.
+        orden = asignacion(t, CONCLUIDO).sequence - 5
+        escribir(a, dict(no_final, sequence=orden), f"{t.name} / {FINALIZADO.name}")
+        aviso(
+            f"{t.name}: {len(quedan)} expediente(s) en «{FINALIZADO.name}» sin cerrar "
+            f"({', '.join(quedan.mapped(lambda e: e.number or str(e.id)))}); la etapa "
+            "queda en el circuito. Revisarlos."
+        )
+        return
+    a.unlink()
+    hecho(f"{t.name}: saca «{FINALIZADO.name}» (la reemplaza {CONCLUIDO.name})")
+
+
 for t in (SERVICIOS, ADENDA):
     flujo = t.stage_assign_ids.filtered(
         lambda a: not a.stage_id.final_outcome_type_id
@@ -599,41 +655,28 @@ for t in (SERVICIOS, ADENDA):
         aviso(f"{t.name}: no tiene etapas; se saltea")
         continue
     viejas_finales = previas.filtered("is_final_stage")
+    # FINALIZADO no cuenta: CONCLUIDO va en su lugar.
+    base = previas.filtered(lambda a: a.stage_id != FINALIZADO) or previas
     valores = dict(
         concluido,
         user_ids=[(5, 0, 0)],
         assign_creator=False,
-        sequence=max(previas.mapped("sequence")) + 10,
+        sequence=max(base.mapped("sequence")) + 10,
     )
     if cierre:
         escribir(cierre, valores, f"{t.name} / {CONCLUIDO.name}")
     else:
         # Copia la última etapa del propio tipo (solapas y campos ocultos).
-        previas[-1].copy(dict(valores, type_id=t.id, stage_id=CONCLUIDO.id))
+        base[-1].copy(dict(valores, type_id=t.id, stage_id=CONCLUIDO.id))
         hecho(f"{t.name}: agrega «{CONCLUIDO.name}» al final")
     for a in viejas_finales:
-        # Los expedientes que ya estaban cerrados en esa etapa (contratos
-        # firmados) pasan a CONCLUIDO, para que sigan cerrados y en la
-        # proyección de contratos. Solo cambia la etapa: BaseModel.write
-        # saltea los controles de avance, el responsable, los avisos y los
-        # seguidores; la fecha de cierre original se conserva.
-        cerrados = Expedient.with_context(active_test=False).search(
-            [("type_id", "=", t.id), ("stage_id", "=", a.stage_id.id), ("state", "=", "done")]
-        )
+        if a.stage_id == FINALIZADO:
+            continue  # la resuelve sacar_finalizado
+        # Los cerrados en la final vieja (contratos firmados) pasan a CONCLUIDO
+        # antes de que la etapa deje de ser final.
+        pasar_a_concluido(t, a)
         escribir(a, no_final, f"{t.name} / {a.stage_id.name}")
-        if not cerrados:
-            continue
-        models.BaseModel.write(cerrados, {"stage_id": CONCLUIDO.id})
-        for e in cerrados:
-            e.message_post(
-                body=f"Pasa de «{a.stage_id.name}» a «{CONCLUIDO.name}», la nueva etapa "
-                f"final de {t.name} (configuración de tipos de expediente).",
-                subtype_xmlid="mail.mt_note",
-            )
-        hecho(
-            f"{t.name}: {len(cerrados)} expediente(s) de «{a.stage_id.name}» pasan a "
-            f"«{CONCLUIDO.name}»: {', '.join(cerrados.mapped(lambda e: e.number or str(e.id)))}"
-        )
+    sacar_finalizado(t)
 
 seccion("15. Obras y Auspicios a eventos")
 OBRAS = tipo("OBRAS")
@@ -654,6 +697,8 @@ escribir(
     OBRAS.name,
 )
 for a in SERVICIOS.stage_assign_ids.sorted(lambda r: (r.sequence, r.id)):
+    if a.stage_id == FINALIZADO:
+        continue  # solo si quedó en SERVICIOS por expedientes abiertos
     actual = asignacion(OBRAS, a.stage_id)
     if actual:
         escribir(
@@ -664,6 +709,8 @@ for a in SERVICIOS.stage_assign_ids.sorted(lambda r: (r.sequence, r.id)):
     else:
         a.copy({"type_id": OBRAS.id})
         hecho(f"{OBRAS.name}: agrega «{a.stage_id.name}»")
+# Si OBRAS ya había copiado FINALIZADO de una corrida anterior, también se saca.
+sacar_finalizado(OBRAS)
 numeracion(OBRAS)
 
 # AUSPICIOS: la Fundación aporta fondos a un evento de terceros a cambio de
