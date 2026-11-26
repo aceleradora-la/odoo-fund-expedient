@@ -33,7 +33,9 @@ las etapas que faltaban respecto del Excel:
 13. Etapa inicial de cada tipo: la opera el solicitante y quien crea queda
     como responsable, en vez de «Usuario interno» / «Expedientes / Usuario»
     (que suscribía a todos los usuarios como seguidores de cada expediente).
-14. OBRAS (locación de obra, mismo circuito que SERVICIOS) y AUSPICIOS A
+14. SERVICIOS y ADENDA SERVICIOS: *TRÁMITE CONCLUIDO* después de la etapa
+    final actual (que deja de serlo), operada por AyF.
+15. OBRAS (locación de obra, mismo circuito que SERVICIOS) y AUSPICIOS A
     EVENTOS (evaluación de Dirección Ejecutiva, convenio firmado, pago y
     acreditación de la contraprestación), que no tenían etapas.
 
@@ -576,8 +578,47 @@ for t in Type.search([]):
             f"{t.name} / {primera.stage_id.name}",
         )
 
-seccion("14. Obras y Auspicios a eventos")
+seccion("14. TRÁMITE CONCLUIDO en SERVICIOS y ADENDA SERVICIOS")
+# Como en los reconocimientos: la etapa final pasa a ser TRÁMITE CONCLUIDO,
+# después de la que hoy es la final (FIRMA CONTRATO), y la opera AyF. Va antes
+# de OBRAS, que copia el circuito de SERVICIOS.
 SERVICIOS = tipo("SERVICIOS")
+ADENDA = tipo("ADENDA SERVICIOS")
+for t in (SERVICIOS, ADENDA):
+    flujo = t.stage_assign_ids.filtered(
+        lambda a: not a.stage_id.final_outcome_type_id
+    ).sorted(lambda a: (a.sequence, a.id))
+    cierre = flujo.filtered(lambda a: a.stage_id == CONCLUIDO)
+    previas = flujo - cierre
+    if not previas:
+        aviso(f"{t.name}: no tiene etapas; se saltea")
+        continue
+    for a in previas.filtered("is_final_stage"):
+        # Los expedientes que están en esta etapa dejan de estar finalizados
+        # (y salen de la proyección de contratos) hasta pasar a CONCLUIDO.
+        en_etapa = Expedient.search_count(
+            [("type_id", "=", t.id), ("stage_id", "=", a.stage_id.id)]
+        )
+        escribir(a, no_final, f"{t.name} / {a.stage_id.name}")
+        if en_etapa:
+            aviso(
+                f"{t.name}: {en_etapa} expediente(s) en «{a.stage_id.name}», que deja "
+                f"de ser la final; quedan abiertos hasta pasar a «{CONCLUIDO.name}»."
+            )
+    valores = dict(
+        concluido,
+        user_ids=[(5, 0, 0)],
+        assign_creator=False,
+        sequence=max(previas.mapped("sequence")) + 10,
+    )
+    if cierre:
+        escribir(cierre, valores, f"{t.name} / {CONCLUIDO.name}")
+    else:
+        # Copia la última etapa del propio tipo (solapas y campos ocultos).
+        previas[-1].copy(dict(valores, type_id=t.id, stage_id=CONCLUIDO.id))
+        hecho(f"{t.name}: agrega «{CONCLUIDO.name}» al final")
+
+seccion("15. Obras y Auspicios a eventos")
 OBRAS = tipo("OBRAS")
 AUSPICIOS = tipo("AUSPICIOS A EVENTOS")
 
@@ -598,7 +639,11 @@ escribir(
 for a in SERVICIOS.stage_assign_ids.sorted(lambda r: (r.sequence, r.id)):
     actual = asignacion(OBRAS, a.stage_id)
     if actual:
-        escribir(actual, {"sequence": a.sequence}, f"{OBRAS.name} / {a.stage_id.name}")
+        escribir(
+            actual,
+            {"sequence": a.sequence, "is_final_stage": a.is_final_stage},
+            f"{OBRAS.name} / {a.stage_id.name}",
+        )
     else:
         a.copy({"type_id": OBRAS.id})
         hecho(f"{OBRAS.name}: agrega «{a.stage_id.name}»")
@@ -634,8 +679,8 @@ numeracion(AUSPICIOS)
 seccion("Resumen")
 print(f"{len(cambios)} cambio(s), {len(avisos)} aviso(s).")
 for t in (COMPULSA, DIRECTA, PRIVADA, PUBLICA, PRORROGA, AUMENTO, DISMINUCION,
-          RECONOCIMIENTO, BENEFICIOS, EROGACIONES, SUSCRIPCIONES, SERVICIOS, OBRAS,
-          AUSPICIOS):
+          RECONOCIMIENTO, BENEFICIOS, EROGACIONES, SUSCRIPCIONES, SERVICIOS, ADENDA,
+          OBRAS, AUSPICIOS):
     etapas = []
     for a in t.stage_assign_ids.sorted(lambda r: (r.sequence, r.id)):
         marca = " (final)" if a.is_final_stage else ""
