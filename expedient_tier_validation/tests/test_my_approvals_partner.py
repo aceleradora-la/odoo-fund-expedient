@@ -75,3 +75,36 @@ class TestMyApprovalsPartner(TransactionCase):
             {"expedient_id": self.expedient.id}
         )
         self.assertEqual(spend_request._my_approvals_partners(), self.recommended)
+
+    def test_expedient_amount_definitive_wins(self):
+        currency = self.env.company.currency_id
+        self.expedient.with_context(skip_validation_check=True).write(
+            {"amount_estimated_manual": 1000.0}
+        )
+        self.review.invalidate_recordset(["document_amount", "document_currency_id"])
+        self.assertEqual(self.review.document_amount, 1000.0)
+        self.assertEqual(self.review.document_currency_id, currency)
+        self.expedient.with_context(skip_validation_check=True).write(
+            {"amount_estimated_confirmed_manual": 900.0}
+        )
+        self.review.invalidate_recordset(["document_amount", "document_currency_id"])
+        self.assertEqual(self.review.document_amount, 900.0)
+
+    def test_spend_request_amount_by_phase(self):
+        SpendRequest = self.env["fund.expedient.spend.request"]
+        values = {
+            "expedient_id": self.expedient.id,
+            "amount_preventiva": 500.0,
+            "amount_definitiva": 450.0,
+        }
+        preventive = SpendRequest.new(dict(values, spend_state="preventiva"))
+        definitive = SpendRequest.new(dict(values, spend_state="definitiva"))
+        self.assertEqual(preventive._my_approvals_amount()[0], 500.0)
+        self.assertEqual(definitive._my_approvals_amount()[0], 450.0)
+
+    def test_default_amount_from_amount_total(self):
+        # Sin método propio (como una factura o una OC): amount_total y su moneda.
+        order = self.env["purchase.order"].create({"partner_id": self.awarded.id})
+        amount, currency = self.env["tier.review"]._my_approvals_amount_of(order)
+        self.assertEqual(amount, order.amount_total)
+        self.assertEqual(currency, order.currency_id)

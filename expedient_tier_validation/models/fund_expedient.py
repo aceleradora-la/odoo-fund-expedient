@@ -914,3 +914,12 @@ class FundExpedient(models.Model):
         if orders:
             return orders.partner_id
         return expedient.recommended_supplier_ids | expedient.line_ids.recommended_supplier_ids
+
+    def _my_approvals_amount(self):
+        """Importe para la columna «Importe» de Mis aprobaciones.
+
+        El definitivo si ya lo tiene; si no, el estimado (preventivo).
+        """
+        expedient = self.sudo()
+        amount = expedient.amount_estimated_confirmed or expedient.amount_estimated
+        return amount, expedient.currency_id

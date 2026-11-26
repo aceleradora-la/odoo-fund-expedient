@@ -46,3 +46,9 @@ class FundExpedientResolution(models.Model):
     def _my_approvals_partners(self):
         """Mis aprobaciones: el proveedor del expediente."""
         return self.expedient_id._my_approvals_partners() if self.expedient_id else self.env["res.partner"]
+
+    def _my_approvals_amount(self):
+        """Mis aprobaciones: el importe del expediente."""
+        if self.expedient_id:
+            return self.expedient_id._my_approvals_amount()
+        return 0.0, self.env["res.currency"]

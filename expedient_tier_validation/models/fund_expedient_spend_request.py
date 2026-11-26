@@ -145,3 +145,10 @@ class FundExpedientSpendRequest(models.Model):
     def _my_approvals_partners(self):
         """Mis aprobaciones: el proveedor del expediente."""
         return self.expedient_id._my_approvals_partners() if self.expedient_id else self.env["res.partner"]
+
+    def _my_approvals_amount(self):
+        """Mis aprobaciones: el importe de la fase que se aprueba."""
+        request = self.sudo()
+        if request.spend_state == "definitiva":
+            return request.amount_definitiva, request.currency_id
+        return request.amount_preventiva, request.currency_id
