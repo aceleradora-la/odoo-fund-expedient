@@ -34,7 +34,9 @@ las etapas que faltaban respecto del Excel:
     como responsable, en vez de «Usuario interno» / «Expedientes / Usuario»
     (que suscribía a todos los usuarios como seguidores de cada expediente).
 14. SERVICIOS y ADENDA SERVICIOS: *TRÁMITE CONCLUIDO* después de la etapa
-    final actual (que deja de serlo), operada por AyF.
+    final actual (que deja de serlo), operada por AyF. Los expedientes que
+    estaban cerrados en la etapa final vieja pasan a *TRÁMITE CONCLUIDO*
+    (solo cambia la etapa; quedan cerrados, con su fecha de cierre).
 15. OBRAS (locación de obra, mismo circuito que SERVICIOS) y AUSPICIOS A
     EVENTOS (evaluación de Dirección Ejecutiva, convenio firmado, pago y
     acreditación de la contraprestación), que no tenían etapas.
@@ -44,8 +46,9 @@ documentos obligatorios fuera de las firmas, el pago y el requerimiento de los
 regímenes de la sección 12 (pendientes de validar).
 
 Es idempotente: busca por nombre y solo crea o corrige lo que falta; se puede
-correr varias veces. No toca expedientes; solo avisa si alguno queda en una
-etapa que deja de estar en el circuito de su tipo (y en ese caso no la saca).
+correr varias veces. No toca expedientes, salvo los de la sección 14; avisa si
+alguno queda en una etapa que deja de estar en el circuito de su tipo (y en
+ese caso no la saca).
 
 Uso, desde la shell de odoo.sh (o cualquier `odoo-bin shell`):
 
@@ -56,6 +59,8 @@ Para grabar, agregar TIPOS_GRABAR=1.
 """
 
 import os
+
+from odoo import models
 
 GRABAR = os.environ.get("TIPOS_GRABAR") == "1"
 env = env  # noqa: F821  (la provee odoo-bin shell)
@@ -593,18 +598,7 @@ for t in (SERVICIOS, ADENDA):
     if not previas:
         aviso(f"{t.name}: no tiene etapas; se saltea")
         continue
-    for a in previas.filtered("is_final_stage"):
-        # Los expedientes que están en esta etapa dejan de estar finalizados
-        # (y salen de la proyección de contratos) hasta pasar a CONCLUIDO.
-        en_etapa = Expedient.search_count(
-            [("type_id", "=", t.id), ("stage_id", "=", a.stage_id.id)]
-        )
-        escribir(a, no_final, f"{t.name} / {a.stage_id.name}")
-        if en_etapa:
-            aviso(
-                f"{t.name}: {en_etapa} expediente(s) en «{a.stage_id.name}», que deja "
-                f"de ser la final; quedan abiertos hasta pasar a «{CONCLUIDO.name}»."
-            )
+    viejas_finales = previas.filtered("is_final_stage")
     valores = dict(
         concluido,
         user_ids=[(5, 0, 0)],
@@ -617,6 +611,29 @@ for t in (SERVICIOS, ADENDA):
         # Copia la última etapa del propio tipo (solapas y campos ocultos).
         previas[-1].copy(dict(valores, type_id=t.id, stage_id=CONCLUIDO.id))
         hecho(f"{t.name}: agrega «{CONCLUIDO.name}» al final")
+    for a in viejas_finales:
+        # Los expedientes que ya estaban cerrados en esa etapa (contratos
+        # firmados) pasan a CONCLUIDO, para que sigan cerrados y en la
+        # proyección de contratos. Solo cambia la etapa: BaseModel.write
+        # saltea los controles de avance, el responsable, los avisos y los
+        # seguidores; la fecha de cierre original se conserva.
+        cerrados = Expedient.with_context(active_test=False).search(
+            [("type_id", "=", t.id), ("stage_id", "=", a.stage_id.id), ("state", "=", "done")]
+        )
+        escribir(a, no_final, f"{t.name} / {a.stage_id.name}")
+        if not cerrados:
+            continue
+        models.BaseModel.write(cerrados, {"stage_id": CONCLUIDO.id})
+        for e in cerrados:
+            e.message_post(
+                body=f"Pasa de «{a.stage_id.name}» a «{CONCLUIDO.name}», la nueva etapa "
+                f"final de {t.name} (configuración de tipos de expediente).",
+                subtype_xmlid="mail.mt_note",
+            )
+        hecho(
+            f"{t.name}: {len(cerrados)} expediente(s) de «{a.stage_id.name}» pasan a "
+            f"«{CONCLUIDO.name}»: {', '.join(cerrados.mapped(lambda e: e.number or str(e.id)))}"
+        )
 
 seccion("15. Obras y Auspicios a eventos")
 OBRAS = tipo("OBRAS")
